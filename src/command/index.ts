@@ -1,7 +1,7 @@
 import "reflect-metadata";
 
-import { Entry } from "./entry/Entry.js";
-
-export const entry = new Entry("command");
-
-export * from "./entry/GroupEntry.js";
+export * from "./entry/index.js";
+export * from "./command.js";
+export * from "./CommandRegistry.js";
+export * from "./argument/index.js";
+export * from "./Context.js";

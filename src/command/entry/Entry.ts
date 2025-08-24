@@ -1,4 +1,6 @@
 import { Awaitable } from "discord.js";
+import { Context } from "../Context.js";
+import { GroupEntry } from "./GroupEntry.js";
 
 export enum EntryDecortatorType {
 	Main = "main",
@@ -7,7 +9,8 @@ export enum EntryDecortatorType {
 	Error = "error",
 }
 
-export type CommandHookMethod = (...args: unknown[]) => Awaitable<void>;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type CommandHookMethod = (ctx: Context, ...args: any[]) => Awaitable<void>;
 
 export interface CommandHook {
 	type: EntryDecortatorType;
@@ -15,37 +18,46 @@ export interface CommandHook {
 	entry: Entry;
 }
 
+export const HOOKS_KEY = Symbol("hooks");
+
 export class Entry {
-	public metaKey: symbol;
+	public main: ReturnType<Entry["makeDecorator"]>;
+	public pre: ReturnType<Entry["makeDecorator"]>;
+	public post: ReturnType<Entry["makeDecorator"]>;
+	public error: ReturnType<Entry["makeDecorator"]>;
 
-	public constructor(public name: string) {
-		this.metaKey = Symbol(name);
+	public constructor(
+		public name: string,
+		public parent?: GroupEntry,
+	) {
+		this.main = this.makeDecorator(EntryDecortatorType.Main);
+		this.pre = this.makeDecorator(EntryDecortatorType.Pre);
+		this.post = this.makeDecorator(EntryDecortatorType.Post);
+		this.error = this.makeDecorator(EntryDecortatorType.Error);
 	}
 
 	// eslint-disable-next-line @typescript-eslint/no-unsafe-function-type
-	private static getHooks(key: symbol, constructor: Function): CommandHook[] {
-		return (Reflect.getMetadata(key, constructor) as CommandHook[] | undefined) ?? [];
+	public static getHooks(constructor: Function): CommandHook[] {
+		return (Reflect.getMetadata(HOOKS_KEY, constructor) as CommandHook[] | undefined) ?? [];
 	}
 
 	// eslint-disable-next-line @typescript-eslint/no-unsafe-function-type
-	private static setHooks(key: symbol, hooks: CommandHook[], constructor: Function): void {
-		Reflect.defineMetadata(key, hooks, constructor);
+	public static setHooks(hooks: CommandHook[], constructor: Function): void {
+		Reflect.defineMetadata(HOOKS_KEY, hooks, constructor);
 	}
 
 	private makeDecorator(type: EntryDecortatorType) {
-		const { metaKey } = this;
-
 		const entry = this as Entry;
 
 		return () => {
-			return function <T extends CommandHookMethod>(
+			return function (
 				target: object,
 				_key: string,
-				descriptor: TypedPropertyDescriptor<T>,
+				descriptor: TypedPropertyDescriptor<CommandHookMethod>,
 			) {
 				const { constructor } = target;
 
-				const hooks = Entry.getHooks(metaKey, constructor);
+				const hooks = Entry.getHooks(constructor);
 
 				const { value: method } = descriptor;
 
@@ -59,13 +71,8 @@ export class Entry {
 					entry,
 				});
 
-				Entry.setHooks(metaKey, hooks, constructor);
+				Entry.setHooks(hooks, constructor);
 			};
 		};
 	}
-
-	public main = this.makeDecorator(EntryDecortatorType.Main);
-	public pre = this.makeDecorator(EntryDecortatorType.Pre);
-	public post = this.makeDecorator(EntryDecortatorType.Post);
-	public error = this.makeDecorator(EntryDecortatorType.Error);
 }
