@@ -1,4 +1,4 @@
-import { Client, ClientOptions } from "discord.js";
+import { Client, ClientOptions, Events } from "discord.js";
 import { CommandRegistry } from "./command/CommandRegistry.js";
 
 export interface BakitClientOptions extends ClientOptions {
@@ -11,13 +11,13 @@ export class BakitClient<Ready extends boolean = boolean> extends Client<Ready> 
 		super(options);
 
 		this.once(
-			"ready",
+			Events.ClientReady,
 			(client) => void this.registerApplicationCommands(client as BakitClient<true>),
 		);
 	}
 
 	private async registerApplicationCommands(client: BakitClient<true>): Promise<void> {
-		const commands = CommandRegistry.commands.map((c) => CommandRegistry.getSlashCommandData(c));
+		const commands = CommandRegistry.commands.map((c) => CommandRegistry.buildSlashCommand(c));
 		await client.application.commands.set(commands);
 	}
 }

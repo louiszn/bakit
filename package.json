@@ -39,6 +39,7 @@
 	},
 	"dependencies": {
 		"reflect-metadata": "^0.2.2",
-		"tsx": "^4.20.5"
+		"tsx": "^4.20.5",
+		"type-fest": "^4.41.0"
 	}
 }

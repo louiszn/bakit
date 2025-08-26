@@ -1,4 +1,5 @@
 import {
+	ApplicationCommandOptionBase,
 	Collection,
 	RESTPostAPIApplicationCommandsJSONBody,
 	SlashCommandBuilder,
@@ -6,147 +7,173 @@ import {
 	SlashCommandSubcommandBuilder,
 	SlashCommandSubcommandGroupBuilder,
 } from "discord.js";
-import { CommandConstructor, UseCommandOptions } from "./command.js";
-import { entry, Entry, EntryDecortatorType, GroupEntry } from "./entry/index.js";
-import { Arg } from "./argument/index.js";
 
-const OPTIONS_KEY = Symbol("options");
+import { Command, CommandConstructor } from "./Command.js";
+import { CommandHook } from "./CommandEntry.js";
+import { Arg, ArgumentOptions, ArgumentType } from "./argument/index.js";
+import {
+	BaseCommandEntry,
+	CommandGroupEntry,
+	HookExecutionState,
+	SubcommandEntry,
+} from "./CommandEntry.js";
 
 // eslint-disable-next-line @typescript-eslint/no-extraneous-class
 export class CommandRegistry {
 	public static commands = new Collection<string, CommandConstructor>();
 
-	public static register(constructor: CommandConstructor, options: UseCommandOptions): void {
-		this.setOptions(constructor, options);
-	}
-
 	public static add(constructor: CommandConstructor) {
-		const options = this.getOptions(constructor);
+		const root = Command.getRoot(constructor);
 
-		if (!options) {
-			throw new Error(`"${constructor.name}" is not registered`);
+		if (!root) {
+			throw new Error(`No root found for "${constructor.name}"`);
 		}
+
+		const { options } = root;
 
 		this.commands.set(options.name, constructor);
 	}
 
-	public static getOptions(constructor: CommandConstructor): UseCommandOptions | undefined {
-		return Reflect.getMetadata(OPTIONS_KEY, constructor) as UseCommandOptions | undefined;
-	}
-
-	public static setOptions(constructor: CommandConstructor, options: UseCommandOptions): void {
-		Reflect.defineMetadata(OPTIONS_KEY, options, constructor);
-	}
-
-	public static getSlashCommandData(
+	public static buildSlashCommand(
 		constructor: CommandConstructor,
 	): RESTPostAPIApplicationCommandsJSONBody {
 		const builder = new SlashCommandBuilder();
 
-		const options = this.getOptions(constructor);
+		const root = Command.getRoot(constructor);
 
-		if (!options) {
-			throw new Error(`Missing command options for "${constructor.name}"`);
+		if (!root) {
+			throw new Error(`No root found for "${constructor.name}"`);
 		}
+
+		const { options } = root;
 
 		builder.setName(options.name);
 		builder.setDescription(options.description || "");
 		builder.setNSFW(Boolean(options.nsfw));
 
-		this.buildCommandOptions(builder, constructor);
+		this.buildSlashCommandOptions(builder, constructor);
 
 		return builder.toJSON();
 	}
 
-	private static buildCommandOptions(
+	private static buildSlashCommandOptions(
 		builder: SlashCommandBuilder,
 		constructor: CommandConstructor,
 	) {
-		const hooks = Entry.getHooks(constructor).filter(
-			(hook) => hook.type === EntryDecortatorType.Main,
-		);
+		const root = Command.getRoot(constructor);
 
-		const root = hooks.find((hook) => hook.entry === entry);
-		const rootArgs = root ? Arg.getMethodArgs(root.method) : [];
-
-		const groupHooks = hooks.filter((hook) => hook.entry instanceof GroupEntry);
-
-		if (root && groupHooks.length === 1) {
-			for (const arg of rootArgs) {
-				this.addSlashCommandOption(builder, arg);
-			}
+		if (!root) {
+			throw new Error(`No root found for "${constructor.name}"`);
 		}
 
-		for (const group of groupHooks) {
-			let parentBuilder: SlashCommandBuilder | SlashCommandSubcommandGroupBuilder = builder;
-			const parentArgs = [...rootArgs];
+		const hooks = new Collection(
+			BaseCommandEntry.getHooks(constructor)
+				.filter((hook) => hook.state === HookExecutionState.Main)
+				.map((hook) => [hook.entry, hook]),
+		);
 
-			if (group.entry !== entry) {
-				parentBuilder = new SlashCommandSubcommandGroupBuilder()
-					.setName(group.entry.name)
-					.setDescription(group.entry.name);
+		const rootHook = hooks.get(root);
 
-				builder.addSubcommandGroup(parentBuilder);
-
-				parentArgs.push(...Arg.getMethodArgs(group.method));
+		if (!root.children.size && hooks.size) {
+			if (!rootHook) {
+				return;
 			}
 
-			const subcommandHooks = hooks.filter((hook) => hook.entry.parent === group.entry);
+			for (const arg of Arg.getMethodArguments(rootHook.method)) {
+				this.buildSlashCommandOption(builder, arg);
+			}
 
-			for (const subcommand of subcommandHooks) {
-				const subcommandBuilder = new SlashCommandSubcommandBuilder()
-					.setName(subcommand.entry.name)
-					.setDescription(subcommand.entry.name);
+			return;
+		}
 
-				const args = [...parentArgs, ...Arg.getMethodArgs(subcommand.method)];
+		for (const child of root.children.values()) {
+			const hook = hooks.get(child);
 
-				for (const arg of args) {
-					this.addSlashCommandOption(subcommandBuilder, arg);
+			const inheritedArgs = [];
+
+			if (rootHook) {
+				inheritedArgs.push(...Arg.getMethodArguments(rootHook.method));
+			}
+
+			if (child instanceof SubcommandEntry) {
+				this.buildSubcommand(builder, child, hook, inheritedArgs);
+			} else if (child instanceof CommandGroupEntry) {
+				if (hook) {
+					inheritedArgs.push(...Arg.getMethodArguments(hook.method));
 				}
 
-				parentBuilder.addSubcommand(subcommandBuilder);
+				const { options } = child;
+
+				const group = new SlashCommandSubcommandGroupBuilder()
+					.setName(options.name)
+					.setDescription(options.description);
+
+				for (const subChild of child.children.values()) {
+					this.buildSubcommand(group, subChild, hooks.get(subChild), inheritedArgs);
+				}
+
+				builder.addSubcommandGroup(group);
 			}
 		}
 	}
 
-	private static addSlashCommandOption(
-		builder: SlashCommandBuilder | SlashCommandOptionsOnlyBuilder | SlashCommandSubcommandBuilder,
-		arg: Arg.ArgOptions,
+	private static buildSubcommand(
+		parent: SlashCommandBuilder | SlashCommandSubcommandGroupBuilder,
+		entry: SubcommandEntry,
+		hook: CommandHook | undefined,
+		inheritedArgs: ArgumentOptions[],
 	) {
+		const { options } = entry;
+
+		const subcommand = new SlashCommandSubcommandBuilder()
+			.setName(options.name)
+			.setDescription(options.description);
+
+		const args = [...inheritedArgs];
+
+		if (hook) {
+			args.push(...Arg.getMethodArguments(hook.method));
+		}
+
+		for (const arg of args) {
+			this.buildSlashCommandOption(subcommand, arg);
+		}
+
+		parent.addSubcommand(subcommand);
+	}
+
+	private static buildSlashCommandOption(
+		builder: SlashCommandBuilder | SlashCommandOptionsOnlyBuilder | SlashCommandSubcommandBuilder,
+		arg: ArgumentOptions,
+	) {
+		const setupOption = <T extends ApplicationCommandOptionBase>(option: T) => {
+			return option
+				.setName(arg.name)
+				.setDescription(arg.description || arg.name)
+				.setRequired(Boolean(arg.required));
+		};
+
 		switch (arg.type) {
-			case Arg.ArgType.String:
-				builder.addStringOption((opt) =>
-					opt
-						.setName(arg.name)
-						.setDescription(arg.description || arg.name)
-						.setRequired(Boolean(arg.required)),
-				);
+			case ArgumentType.String: {
+				builder.addStringOption((option) => setupOption(option));
 				break;
-			case Arg.ArgType.Integer:
-				builder.addIntegerOption((opt) =>
-					opt
-						.setName(arg.name)
-						.setDescription(arg.description || arg.name)
-						.setRequired(Boolean(arg.required)),
-				);
+			}
+
+			case ArgumentType.Integer: {
+				builder.addIntegerOption((option) => setupOption(option));
 				break;
-			case Arg.ArgType.Number:
-				builder.addNumberOption((opt) =>
-					opt
-						.setName(arg.name)
-						.setDescription(arg.description || arg.name)
-						.setRequired(Boolean(arg.required)),
-				);
+			}
+
+			case ArgumentType.Number: {
+				builder.addNumberOption((option) => setupOption(option));
 				break;
-			case Arg.ArgType.User:
-			case Arg.ArgType.Member:
-				builder.addUserOption((opt) =>
-					opt
-						.setName(arg.name)
-						.setDescription(arg.description || arg.name)
-						.setRequired(Boolean(arg.required)),
-				);
+			}
+
+			case ArgumentType.User:
+			case ArgumentType.Member: {
+				builder.addUserOption((option) => setupOption(option));
 				break;
+			}
 		}
 	}
 }

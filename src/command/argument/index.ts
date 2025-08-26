@@ -1,1 +1,2 @@
-export * as Arg from "./Arg.js";
+export * from "./Arg.js";
+export * from "./Argument.js";

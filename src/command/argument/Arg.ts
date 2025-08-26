@@ -1,86 +1,60 @@
-import { CommandHookMethod } from "../entry/index.js";
-
-export enum ArgType {
-	String = "string",
-	Integer = "integer",
-	Number = "number",
-	User = "user",
-	Member = "member",
-}
-
-export interface BaseArgOptions {
-	type: ArgType;
-	name: string;
-	description?: string;
-	required?: boolean;
-}
-
-export interface StringArgOptions extends BaseArgOptions {
-	type: ArgType.String;
-}
-
-export interface IntegerArgOptions extends BaseArgOptions {
-	type: ArgType.Integer;
-}
-
-export interface NumberArgOptions extends BaseArgOptions {
-	type: ArgType.Number;
-}
-
-export interface UserArgOptions extends BaseArgOptions {
-	type: ArgType.User;
-}
-
-export interface MemberArgOptions extends BaseArgOptions {
-	type: ArgType.Member;
-}
-
-export type ArgOptions =
-	| StringArgOptions
-	| IntegerArgOptions
-	| NumberArgOptions
-	| UserArgOptions
-	| MemberArgOptions;
+import { CommandHookMethod } from "../CommandEntry.js";
+import {
+	ArgumentOptions,
+	ArgumentType,
+	IntegerArgumentOptions,
+	MemberArgumentOptions,
+	NumberArgumentOptions,
+	StringArgumentOptions,
+	UserArgumentOptions,
+} from "./Argument.js";
 
 const ARGS_KEY = Symbol("args");
 
-export function getMethodArgs(method: CommandHookMethod): ArgOptions[] {
-	return (Reflect.getMetadata(ARGS_KEY, method) as ArgOptions[] | undefined) ?? [];
-}
+// eslint-disable-next-line @typescript-eslint/no-extraneous-class
+export abstract class Arg {
+	public static string = Arg.createArgument<StringArgumentOptions>(ArgumentType.String);
+	public static integer = Arg.createArgument<IntegerArgumentOptions>(ArgumentType.Integer);
+	public static number = Arg.createArgument<NumberArgumentOptions>(ArgumentType.Number);
+	public static user = Arg.createArgument<UserArgumentOptions>(ArgumentType.User);
+	public static member = Arg.createArgument<MemberArgumentOptions>(ArgumentType.Member);
 
-export function setMethodArgs(method: CommandHookMethod, args: ArgOptions[]): void {
-	Reflect.defineMetadata(ARGS_KEY, args, method);
-}
+	public static getMethodArguments(method: CommandHookMethod): ArgumentOptions[] {
+		return (Reflect.getMetadata(ARGS_KEY, method) as ArgumentOptions[] | undefined) ?? [];
+	}
 
-export function createArg<Options extends ArgOptions>(type: Options["type"]) {
-	return function (options: Omit<Options, "type"> | string) {
-		const objOptions = typeof options === "string" ? { name: options } : options;
-		const fullOptions = { ...objOptions, type } as ArgOptions;
+	public static setMethodArguments(method: CommandHookMethod, args: ArgumentOptions[]): void {
+		Reflect.defineMetadata(ARGS_KEY, args, method);
+	}
 
-		if (!fullOptions.description) {
-			fullOptions.description = fullOptions.name;
-		}
+	protected static createArgument<Options extends ArgumentOptions>(type: Options["type"]) {
+		return function (options: Omit<Options, "type"> | string) {
+			const objOptions = typeof options === "string" ? { name: options } : options;
+			const fullOptions = { ...objOptions, type } as ArgumentOptions;
 
-		return function (target: object, key: string | symbol, _index: number) {
-			const method = Object.getOwnPropertyDescriptor(target, key)?.value as
-				| CommandHookMethod
-				| undefined;
-
-			if (!method) {
-				throw new Error("No method found");
+			if (!fullOptions.description) {
+				fullOptions.description = fullOptions.name;
 			}
 
-			const args = getMethodArgs(method);
+			if (!("required" in fullOptions)) {
+				fullOptions.required = true;
+			}
 
-			args.unshift(fullOptions);
+			return function (target: object, key: string | symbol, _index: number) {
+				const method = Object.getOwnPropertyDescriptor(target, key)?.value as
+					| CommandHookMethod
+					| undefined;
 
-			setMethodArgs(method, args);
+				if (!method) {
+					throw new Error("No method found");
+				}
+
+				const args = Arg.getMethodArguments(method);
+
+				args.unshift(fullOptions);
+
+				Arg.setMethodArguments(method, args);
+			};
 		};
-	};
+	}
 }
-
-export const string = createArg<StringArgOptions>(ArgType.String);
-export const integer = createArg<IntegerArgOptions>(ArgType.Integer);
-export const number = createArg<NumberArgOptions>(ArgType.Number);
-export const user = createArg<UserArgOptions>(ArgType.User);
-export const member = createArg<MemberArgOptions>(ArgType.Member);
