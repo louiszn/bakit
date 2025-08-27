@@ -4,5 +4,11 @@
 		"allowJs": true
 	},
 	"extends": "./tsconfig.json",
-	"include": ["src/**/*.ts", "tests/**/*.ts", "eslint.config.js", "tsup.config.ts"]
+	"include": [
+		"src/**/*.ts",
+		"tests/**/*.ts",
+		"example/**/*.ts",
+		"eslint.config.js",
+		"tsup.config.ts"
+	]
 }
