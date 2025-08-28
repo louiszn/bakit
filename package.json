@@ -4,8 +4,10 @@
 	"description": "A framework for discord.js",
 	"type": "module",
 	"exports": {
-		".": "./dist/index.js",
-		"./command": "./dist/command/index.js"
+		".": {
+			"types": "./dist/index.d.ts",
+			"import": "./dist/index.js"
+		}
 	},
 	"scripts": {
 		"build": "tsup",
@@ -36,7 +38,8 @@
 		"tsx": "^4.20.5",
 		"typescript": "^5.9.2",
 		"typescript-eslint": "^8.40.0",
-		"vitest": "^3.2.4"
+		"vitest": "^3.2.4",
+		"bakit": "link:../../.local/share/pnpm/global/5/node_modules/bakit"
 	},
 	"dependencies": {
 		"reflect-metadata": "^0.2.2",

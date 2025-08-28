@@ -4,6 +4,9 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
+overrides:
+  bakit: link:../../.local/share/pnpm/global/5/node_modules/bakit
+
 importers:
 
   .:
@@ -27,6 +30,9 @@ importers:
       '@vitest/ui':
         specifier: ^3.2.4
         version: 3.2.4(vitest@3.2.4)
+      bakit:
+        specifier: link:../../.local/share/pnpm/global/5/node_modules/bakit
+        version: link:../../.local/share/pnpm/global/5/node_modules/bakit
       discord.js:
         specifier: ^14.22.1
         version: 14.22.1
