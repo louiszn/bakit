@@ -1,16 +1,12 @@
-import {
-	RootCommandEntry,
-	RootCommandEntryCreateOptions,
-	RootCommandEntryOptions,
-} from "./CommandEntry.js";
+import { BaseCommandEntryOptions, CreateOptions, RootCommandEntry } from "./CommandEntry.js";
 
-export type CommandConstructor = new (...args: unknown[]) => unknown;
+export type CommandConstructor = new (...args: unknown[]) => object;
 
 const ROOT_KEY = Symbol("root");
 
 // eslint-disable-next-line @typescript-eslint/no-extraneous-class
 export abstract class Command {
-	public static create(options: RootCommandEntryCreateOptions | string) {
+	public static create(options: CreateOptions<BaseCommandEntryOptions>) {
 		if (typeof options === "string") {
 			options = { name: options };
 		}
@@ -19,7 +15,7 @@ export abstract class Command {
 			options.description = options.name;
 		}
 
-		return new RootCommandEntry(options as RootCommandEntryOptions);
+		return new RootCommandEntry(options as BaseCommandEntryOptions);
 	}
 
 	public static use(command: RootCommandEntry) {

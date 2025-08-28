@@ -8,6 +8,10 @@ import {
 	SlashCommandSubcommandGroupBuilder,
 } from "discord.js";
 
+import glob from "tiny-glob";
+
+import { pathToFileURL } from "node:url";
+
 import { Command, CommandConstructor } from "./Command.js";
 import { CommandHook } from "./CommandEntry.js";
 import { Arg, ArgumentOptions, ArgumentType } from "./argument/index.js";
@@ -20,7 +24,8 @@ import {
 
 // eslint-disable-next-line @typescript-eslint/no-extraneous-class
 export class CommandRegistry {
-	public static commands = new Collection<string, CommandConstructor>();
+	public static constructors = new Collection<string, CommandConstructor>();
+	public static instances = new Collection<string, object>();
 
 	public static add(constructor: CommandConstructor) {
 		const root = Command.getRoot(constructor);
@@ -31,7 +36,8 @@ export class CommandRegistry {
 
 		const { options } = root;
 
-		this.commands.set(options.name, constructor);
+		this.constructors.set(options.name, constructor);
+		this.instances.set(options.name, new constructor());
 	}
 
 	public static buildSlashCommand(
@@ -54,6 +60,29 @@ export class CommandRegistry {
 		this.buildSlashCommandOptions(builder, constructor);
 
 		return builder.toJSON();
+	}
+
+	public static async loadDirectory(pattern: string, parallel = true) {
+		const files = await glob(pattern);
+
+		const loaders = files.map(async (file) => {
+			const fileURL = pathToFileURL(file).toString();
+
+			const { default: constructor } = (await import(fileURL)) as {
+				default: CommandConstructor;
+			};
+
+			CommandRegistry.add(constructor);
+		});
+
+		if (parallel) {
+			await Promise.all(loaders);
+			return;
+		}
+
+		for (const loader of loaders) {
+			await loader;
+		}
 	}
 
 	private static buildSlashCommandOptions(
