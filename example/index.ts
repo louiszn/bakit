@@ -14,9 +14,9 @@ const client = new BakitClient({
 	enableMentionPrefix: true,
 });
 
-await CommandRegistry.loadDirectory("example/commands/**/*.ts");
+const loaded = await CommandRegistry.loadDirectory("example/commands/**/*.ts");
 
-console.log(CommandRegistry.constructors);
+console.log(`Loaded ${String(loaded.length)} commands`);
 
 client.on(Events.ClientReady, () => {
 	console.log("Bot is ready");
