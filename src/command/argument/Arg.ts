@@ -43,6 +43,62 @@ export abstract class Arg {
 		return init ? args : Object.freeze([...args]);
 	}
 
+	public static format(arg: ArgumentOptions) {
+		const { name, required, tuple } = arg;
+
+		const opening = required ? "<" : "[";
+		const closing = required ? ">" : "]";
+		const prefix = tuple ? "..." : "";
+
+		return `${opening}${prefix}${name}: ${this.describeArgumentExpectation(arg)}${closing}`;
+	}
+
+	public static describeArgumentExpectation(arg: ArgumentOptions): string {
+		const parts: string[] = [arg.type];
+
+		switch (arg.type) {
+			case ArgumentType.String: {
+				if (arg.minLength && !arg.maxLength) {
+					parts.push(`≥ ${String(arg.minLength)}`);
+				}
+
+				if (!arg.minLength && arg.maxLength) {
+					parts.push(`≤ ${String(arg.maxLength)}`);
+				}
+				if (arg.minLength && arg.maxLength) {
+					parts.push(`${String(arg.minLength)} - ${String(arg.maxLength)}`);
+				}
+
+				break;
+			}
+
+			case ArgumentType.Number:
+			case ArgumentType.Integer: {
+				if (arg.minValue !== undefined && arg.maxValue === undefined) {
+					parts.push(`≥ ${String(arg.minValue)}`);
+				}
+
+				if (arg.minValue === undefined && arg.maxValue !== undefined) {
+					parts.push(`≤ ${String(arg.maxValue)}`);
+				}
+
+				if (arg.minValue !== undefined && arg.maxValue !== undefined) {
+					parts.push(`${String(arg.minValue)} - ${String(arg.maxValue)}`);
+				}
+
+				break;
+			}
+
+			case ArgumentType.User:
+			case ArgumentType.Member: {
+				// No additional info
+				break;
+			}
+		}
+
+		return parts.join(", ");
+	}
+
 	protected static createArgument<Options extends ArgumentOptions>(type: Options["type"]) {
 		return function (options: Omit<Options, "type"> | string) {
 			const objOptions = typeof options === "string" ? { name: options } : options;

@@ -9,6 +9,7 @@ import {
 } from "../index.js";
 import { BakitClient } from "../../BakitClient.js";
 import { extractId } from "../../utils/user.js";
+import { CommandSyntaxError, CommandSyntaxErrorType } from "../../errors/CommandSyntaxError.js";
 
 export interface ArgumentResolverOptions {
 	message: Message;
@@ -119,7 +120,11 @@ export class ArgumentResolver {
 			const matchedValue = await this.matchValue(arg, value);
 
 			if (matchedValue === null) {
-				throw new Error(`Missing required ${arg.type} argument "${arg.name}"`);
+				throw new CommandSyntaxError({
+					arg,
+					type: CommandSyntaxErrorType.InvalidArgument,
+					received: value,
+				});
 			}
 
 			this.parsedValues.push(matchedValue);
@@ -150,7 +155,11 @@ export class ArgumentResolver {
 				this.parsedValues.push(matchedValue);
 				valueIndex++;
 			} else if (arg.required) {
-				throw new Error(`Missing required ${arg.type} argument "${arg.name}"`);
+				throw new CommandSyntaxError({
+					arg,
+					type: CommandSyntaxErrorType.MissingRequireArgument,
+					received: value,
+				});
 			}
 
 			argIndex++;
@@ -160,7 +169,11 @@ export class ArgumentResolver {
 			const arg = args[argIndex];
 
 			if (arg.required) {
-				throw new Error(`Missing required ${arg.type} argument "${arg.name}"`);
+				throw new CommandSyntaxError({
+					arg,
+					type: CommandSyntaxErrorType.MissingRequireArgument,
+					received: "nothing",
+				});
 			}
 
 			argIndex++;
@@ -175,7 +188,7 @@ export class ArgumentResolver {
 		const { args } = this.options;
 
 		if (argIndex !== args.length - 1) {
-			throw new Error("Tuple argument must be the last argument");
+			throw new SyntaxError("Tuple argument must be the last argument");
 		}
 
 		const values: unknown[] = [];
@@ -184,14 +197,22 @@ export class ArgumentResolver {
 			const matchedValue = await this.matchValue(arg, rest);
 
 			if (matchedValue === null) {
-				throw new Error(`Invalid value for variadic argument "${arg.name}": ${rest}`);
+				throw new CommandSyntaxError({
+					arg,
+					type: CommandSyntaxErrorType.InvalidVariadicArgumentValue,
+					received: rest,
+				});
 			}
 
 			values.push(matchedValue);
 		}
 
 		if (values.length === 0 && arg.required) {
-			throw new Error(`Missing required tuple ${arg.type} argument "${arg.name}"`);
+			throw new CommandSyntaxError({
+				arg,
+				type: CommandSyntaxErrorType.MissingRequireArgument,
+				received: "nothing",
+			});
 		}
 
 		return values;

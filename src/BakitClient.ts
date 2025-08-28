@@ -1,11 +1,14 @@
 import {
+	Awaitable,
 	ChatInputCommandInteraction,
 	Client,
 	ClientOptions,
+	codeBlock,
 	Events,
 	IntentsBitField,
 	Interaction,
 	Message,
+	MessageCreateOptions,
 } from "discord.js";
 import { CommandRegistry } from "./command/CommandRegistry.js";
 import {
@@ -26,16 +29,30 @@ import {
 } from "./command/index.js";
 import { ArgumentResolver } from "./command/argument/ArgumentResolver.js";
 import { StateBox } from "./libs/StateBox.js";
+import { CommandSyntaxError } from "./errors/index.js";
+
+export type GetSyntaxErrorMessageFunction = (
+	command: object,
+	error: CommandSyntaxError,
+	context: MessageContext,
+	args: readonly ArgumentOptions[],
+	prefix: string,
+) => Awaitable<MessageCreateOptions | undefined>;
 
 export interface BakitClientOptions extends ClientOptions {
 	prefixes?: string[];
 	enableMentionPrefix?: boolean;
+	getSyntaxErrorMessage?: GetSyntaxErrorMessageFunction | null;
 }
 
 export class BakitClient<Ready extends boolean = boolean> extends Client<Ready> {
 	declare public options: Omit<BakitClientOptions, "intents"> & { intents: IntentsBitField };
 
 	public constructor(options: BakitClientOptions) {
+		if (options.getSyntaxErrorMessage === undefined) {
+			options.getSyntaxErrorMessage = BakitClient.getSyntaxErrorMessage;
+		}
+
 		super(options);
 
 		this.once(
@@ -46,6 +63,32 @@ export class BakitClient<Ready extends boolean = boolean> extends Client<Ready> 
 		this.on(Events.InteractionCreate, (interaction) => void this.handleInteraction(interaction));
 		this.on(Events.MessageCreate, (message) => void this.handleMessage(message));
 	}
+
+	public static getSyntaxErrorMessage: GetSyntaxErrorMessageFunction = (
+		command,
+		error,
+		context,
+		args,
+		prefix,
+	) => {
+		const requiredSyntax = args.map((x) => Arg.format(x)).join(" ");
+
+		const root = Command.getRoot(command.constructor as CommandConstructor);
+
+		if (!root) {
+			return;
+		}
+
+		const content = [
+			codeBlock(error.message),
+			"Required Syntax:",
+			codeBlock(`${prefix}${root.options.name} ${requiredSyntax}`),
+		].join("\n");
+
+		return {
+			content,
+		};
+	};
 
 	private async registerApplicationCommands(client: BakitClient<true>): Promise<void> {
 		const commands = CommandRegistry.constructors.map((c) => CommandRegistry.buildSlashCommand(c));
@@ -120,13 +163,21 @@ export class BakitClient<Ready extends boolean = boolean> extends Client<Ready> 
 		context: MessageContext,
 		hooks: readonly CommandHook[],
 		instance: object,
-		resolver: ArgumentResolver,
+		resolver: ArgumentResolver | null,
 	) {
+		if (!resolver) {
+			return;
+		}
+
 		const rootEntry = Command.getRoot(instance.constructor as CommandConstructor);
 		if (!rootEntry) return;
 
 		const rootRecord = this.createHookRecord(hooks.filter((hook) => hook.entry === rootEntry));
 		resolver = await this.runMessageHooks(context, instance, rootRecord, resolver);
+
+		if (!resolver) {
+			return;
+		}
 
 		const usedValues = resolver.parsedValues.length;
 		const nextTrigger = resolver.values[usedValues + 1];
@@ -135,6 +186,10 @@ export class BakitClient<Ready extends boolean = boolean> extends Client<Ready> 
 		const nextRecord = this.createHookRecord(nextHook ? [nextHook] : []);
 
 		resolver = await this.runMessageHooks(context, instance, nextRecord, resolver);
+
+		if (!resolver) {
+			return;
+		}
 
 		if (nextRecord.main?.entry instanceof CommandGroupEntry) {
 			const groupEntry = nextRecord.main.entry;
@@ -154,16 +209,37 @@ export class BakitClient<Ready extends boolean = boolean> extends Client<Ready> 
 
 	private async runMessageHooks(
 		context: MessageContext,
-		instance: unknown,
+		instance: object,
 		record: Record<HookExecutionState, CommandHook | undefined>,
 		resolver: ArgumentResolver,
-	): Promise<ArgumentResolver> {
+	): Promise<ArgumentResolver | null> {
 		if (!record.main) {
 			return resolver;
 		}
 
 		const args = Arg.getMethodArguments(record.main.method);
-		resolver = await resolver.resolve(args as ArgumentOptions[]);
+
+		try {
+			resolver = await resolver.resolve(args as ArgumentOptions[]);
+		} catch (error) {
+			if (error instanceof CommandSyntaxError) {
+				const errorContent = await this.options.getSyntaxErrorMessage?.(
+					instance,
+					error,
+					context,
+					args,
+					resolver.options.prefix,
+				);
+
+				if (errorContent) {
+					await context.send(errorContent);
+				}
+
+				return null;
+			}
+
+			throw error;
+		}
 
 		try {
 			await record.pre?.method.call(instance, context, ...resolver.parsedValues);

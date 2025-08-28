@@ -6,7 +6,7 @@ const _root = Command.create("avatar");
 @Command.use(_root)
 export default class AvatarCommand {
 	@_root.main
-	public async execute(ctx: Context, @Arg.user({ name: "user", required: false }) user?: User) {
+	public async execute(ctx: Context, @Arg.user({ name: "target" }) user?: User) {
 		if (!user) {
 			user = ctx.author;
 		}
