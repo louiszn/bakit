@@ -62,7 +62,10 @@ export class CommandRegistry {
 		return builder.toJSON();
 	}
 
-	public static async loadDirectory(pattern: string, parallel = true) {
+	public static async loadDirectory(
+		pattern: string,
+		parallel = true,
+	): Promise<CommandConstructor[]> {
 		const files = await glob(pattern);
 
 		const loaders = files.map(async (file) => {
@@ -73,16 +76,21 @@ export class CommandRegistry {
 			};
 
 			CommandRegistry.add(constructor);
+
+			return constructor;
 		});
 
 		if (parallel) {
-			await Promise.all(loaders);
-			return;
+			return await Promise.all(loaders);
 		}
 
+		const result: CommandConstructor[] = [];
+
 		for (const loader of loaders) {
-			await loader;
+			result.push(await loader);
 		}
+
+		return result;
 	}
 
 	private static buildSlashCommandOptions(
