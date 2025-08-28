@@ -1,4 +1,5 @@
 import {
+	CacheType,
 	ChatInputCommandInteraction,
 	InteractionReplyOptions,
 	Message,
@@ -14,7 +15,7 @@ export type ContextSendOptions = ChatInputContextSendOptions | MessageContextSen
 export abstract class BaseContext<Cached extends boolean, InGuild extends boolean> {
 	public constructor(
 		public source:
-			| ChatInputCommandInteraction<Cached extends true ? "cached" : "raw">
+			| ChatInputCommandInteraction<Cached extends true ? "cached" : CacheType>
 			| Message<InGuild>,
 	) {}
 
@@ -77,7 +78,7 @@ export class ChatInputContext<
 	Cached extends boolean = boolean,
 	InGuild extends boolean = boolean,
 > extends BaseContext<Cached, InGuild> {
-	declare public source: ChatInputCommandInteraction<Cached extends true ? "cached" : "raw">;
+	declare public source: ChatInputCommandInteraction<Cached extends true ? "cached" : CacheType>;
 
 	public override async send(options: ContextSendOptions): Promise<Message<InGuild>> {
 		if (typeof options === "string") {
