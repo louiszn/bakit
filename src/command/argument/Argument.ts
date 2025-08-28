@@ -11,18 +11,25 @@ export interface BaseArgumentOptions {
 	name: string;
 	description?: string;
 	required?: boolean;
+	tuple?: boolean;
 }
 
 export interface StringArgumentOptions extends BaseArgumentOptions {
 	type: ArgumentType.String;
+	maxLength?: number;
+	minLength?: number;
 }
 
 export interface IntegerArgumentOptions extends BaseArgumentOptions {
 	type: ArgumentType.Integer;
+	maxValue?: number;
+	minValue?: number;
 }
 
 export interface NumberArgumentOptions extends BaseArgumentOptions {
 	type: ArgumentType.Number;
+	maxValue?: number;
+	minValue?: number;
 }
 
 export interface UserArgumentOptions extends BaseArgumentOptions {
