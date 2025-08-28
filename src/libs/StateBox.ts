@@ -12,14 +12,24 @@ export class StateBox {
 		const state = this.storage.getStore();
 
 		if (!state) {
-			throw new Error("No active context, did you forget to wrap it with StateBox.wrap?");
+			throw new Error("No active context, did you forget to wrap it with StateBox.wrap()?");
 		}
 
 		return state;
 	}
 
-	public static run<R>(fn: () => R): R {
-		return this.storage.run({}, fn);
+	public static run<R>(fn: () => R, store = {}): R {
+		return this.storage.run(store, fn);
+	}
+
+	public static wrap<R>(fn: () => R): () => R {
+		const currentStore = this.storage.getStore();
+
+		if (!currentStore) {
+			throw new Error("No active context, cannot wrap function outside a StateBox.run()");
+		}
+
+		return () => this.run(fn, currentStore);
 	}
 
 	public static use<T extends object>(defaultValue?: unknown) {
