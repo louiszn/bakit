@@ -1,15 +1,17 @@
-import { defineConfig } from "tsup";
+import { defineConfig, Options } from "tsup";
 
-const isProduction = process.env.NODE_ENV === "production";
+export function makeConfig(options?: Options) {
+	const isProduction = process.env.NODE_ENV === "production";
 
-export default defineConfig({
-	entry: ["src/index.ts", "src/command/index.ts"],
-	format: "esm",
-	sourcemap: !isProduction,
-	dts: true,
-	clean: true,
-	minify: false,
-	splitting: false,
-	outDir: "dist",
-	target: "es2022",
-});
+	return defineConfig({
+		format: "esm",
+		sourcemap: !isProduction,
+		dts: true,
+		clean: true,
+		minify: false,
+		splitting: false,
+		outDir: "dist",
+		target: "es2022",
+		...options,
+	});
+}

@@ -1,34 +1,15 @@
 {
 	"name": "bakit",
-	"version": "1.0.0-beta.1",
-	"description": "A framework for discord.js",
+	"private": true,
 	"type": "module",
-	"exports": {
-		".": {
-			"types": "./dist/index.d.ts",
-			"import": "./dist/index.js"
-		}
-	},
 	"scripts": {
-		"build": "tsup",
-		"type-check": "tsc --noEmit",
-		"test": "vitest run --pass-with-no-tests",
+		"build": "pnpm -r build",
+		"test": "pnpm -r test",
+		"lint": "eslint .",
+		"type-check": "pnpm -r type-check",
+		"lint:fix": "eslint . --fix",
+		"format": "prettier --write .",
 		"prepare": "husky"
-	},
-	"files": [
-		"dist"
-	],
-	"keywords": [
-		"discord.js",
-		"discord-bot",
-		"bakit",
-		"framework"
-	],
-	"author": "louiszn",
-	"license": "MIT",
-	"packageManager": "pnpm@10.15.0",
-	"peerDependencies": {
-		"discord.js": "^14.0.0"
 	},
 	"devDependencies": {
 		"@eslint/js": "^9.34.0",
@@ -46,12 +27,8 @@
 		"tsx": "^4.20.5",
 		"typescript": "^5.9.2",
 		"typescript-eslint": "^8.40.0",
-		"vitest": "^3.2.4",
-		"bakit": "link:../../.local/share/pnpm/global/5/node_modules/bakit"
+		"vitest": "^3.2.4"
 	},
-	"dependencies": {
-		"reflect-metadata": "^0.2.2",
-		"tiny-glob": "^0.2.9",
-		"type-fest": "^4.41.0"
-	}
+	"license": "MIT",
+	"packageManager": "pnpm@10.15.0"
 }

@@ -4,22 +4,9 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
-overrides:
-  bakit: link:../../.local/share/pnpm/global/5/node_modules/bakit
-
 importers:
 
   .:
-    dependencies:
-      reflect-metadata:
-        specifier: ^0.2.2
-        version: 0.2.2
-      tiny-glob:
-        specifier: ^0.2.9
-        version: 0.2.9
-      type-fest:
-        specifier: ^4.41.0
-        version: 4.41.0
     devDependencies:
       '@eslint/js':
         specifier: ^9.34.0
@@ -30,9 +17,6 @@ importers:
       '@vitest/ui':
         specifier: ^3.2.4
         version: 3.2.4(vitest@3.2.4)
-      bakit:
-        specifier: link:../../.local/share/pnpm/global/5/node_modules/bakit
-        version: link:../../.local/share/pnpm/global/5/node_modules/bakit
       discord.js:
         specifier: ^14.22.1
         version: 14.22.1
@@ -72,6 +56,21 @@ importers:
       vitest:
         specifier: ^3.2.4
         version: 3.2.4(@types/node@24.3.0)(@vitest/ui@3.2.4)(tsx@4.20.5)(yaml@2.8.1)
+
+  packages/bakit:
+    dependencies:
+      discord.js:
+        specifier: ^14.0.0
+        version: 14.22.1
+      reflect-metadata:
+        specifier: ^0.2.2
+        version: 0.2.2
+      tiny-glob:
+        specifier: ^0.2.9
+        version: 0.2.9
+      type-fest:
+        specifier: ^4.41.0
+        version: 4.41.0
 
 packages:
 

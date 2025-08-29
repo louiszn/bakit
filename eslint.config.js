@@ -11,13 +11,13 @@ export default tseslint.config(
 	tseslint.configs.recommendedTypeChecked,
 	prettier,
 	{
-		ignores: ["dist"],
+		ignores: ["**/dist/**", "**/node_modules/**"],
 	},
 	{
 		languageOptions: {
 			parserOptions: {
 				tsconfigRootDir: import.meta.dirname,
-				project: "./tsconfig.eslint.json",
+				project: ["./tsconfig.eslint.json", "./packages/*/tsconfig.json"],
 			},
 		},
 	},
