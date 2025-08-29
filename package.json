@@ -18,7 +18,12 @@
 	"files": [
 		"dist"
 	],
-	"keywords": [],
+	"keywords": [
+		"discord.js",
+		"discord-bot",
+		"bakit",
+		"framework"
+	],
 	"author": "louiszn",
 	"license": "MIT",
 	"packageManager": "pnpm@10.15.0",
