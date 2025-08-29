@@ -1,4 +1,4 @@
-import { BaseCommandEntryOptions, CreateOptions, RootCommandEntry } from "./CommandEntry.js";
+import { BaseCommandEntryOptions, CreateCommandOptions, RootCommandEntry } from "./CommandEntry.js";
 
 export type CommandConstructor = new (...args: unknown[]) => object;
 
@@ -14,7 +14,7 @@ export function getRoot(constructor: CommandConstructor) {
 	return Reflect.getMetadata(ROOT_KEY, constructor) as RootCommandEntry | undefined;
 }
 
-export function CommandFactory(options: CreateOptions<BaseCommandEntryOptions> | string) {
+export function CommandFactory(options: CreateCommandOptions<BaseCommandEntryOptions> | string) {
 	if (typeof options === "string") {
 		options = { name: options };
 	}

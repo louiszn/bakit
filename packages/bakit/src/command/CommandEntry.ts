@@ -5,7 +5,7 @@ import type { SetOptional } from "type-fest";
 import { CommandConstructor } from "./Command.js";
 import { Arg } from "./argument/Arg.js";
 
-export enum HookExecutionState {
+export enum CommandHookExecutionState {
 	Main = "main",
 	Pre = "pre",
 	Post = "post",
@@ -16,7 +16,7 @@ export enum HookExecutionState {
 export type CommandHookMethod = (ctx: Context, ...args: any[]) => Awaitable<void>;
 
 export interface CommandHook {
-	state: HookExecutionState;
+	state: CommandHookExecutionState;
 	method: CommandHookMethod;
 	entry: CommandEntry;
 }
@@ -27,7 +27,7 @@ export interface BaseCommandEntryOptions {
 	nsfw?: boolean;
 }
 
-export type CreateOptions<T extends BaseCommandEntryOptions> =
+export type CreateCommandOptions<T extends BaseCommandEntryOptions> =
 	| SetOptional<T, "description">
 	| string;
 
@@ -36,10 +36,10 @@ export const HOOKS_KEY = Symbol("hooks");
 export abstract class BaseCommandEntry {
 	private static cache = new WeakMap<CommandConstructor, CommandHook[]>();
 
-	public main = BaseCommandEntry.createMainHookDecorator(HookExecutionState.Main, this);
-	public pre = BaseCommandEntry.createMainHookDecorator(HookExecutionState.Pre, this);
-	public post = BaseCommandEntry.createMainHookDecorator(HookExecutionState.Post, this);
-	public error = BaseCommandEntry.createErrorHookDecorator(HookExecutionState.Error, this);
+	public main = BaseCommandEntry.createMainHookDecorator(CommandHookExecutionState.Main, this);
+	public pre = BaseCommandEntry.createMainHookDecorator(CommandHookExecutionState.Pre, this);
+	public post = BaseCommandEntry.createMainHookDecorator(CommandHookExecutionState.Post, this);
+	public error = BaseCommandEntry.createErrorHookDecorator(CommandHookExecutionState.Error, this);
 
 	public constructor(public options: BaseCommandEntryOptions) {}
 
@@ -66,7 +66,10 @@ export abstract class BaseCommandEntry {
 	}
 
 	private static createMainHookDecorator(
-		state: HookExecutionState.Main | HookExecutionState.Pre | HookExecutionState.Post,
+		state:
+			| CommandHookExecutionState.Main
+			| CommandHookExecutionState.Pre
+			| CommandHookExecutionState.Post,
 		entry: BaseCommandEntry,
 	) {
 		return <T extends CommandHookMethod>(
@@ -79,7 +82,7 @@ export abstract class BaseCommandEntry {
 	}
 
 	private static createErrorHookDecorator(
-		state: HookExecutionState.Error,
+		state: CommandHookExecutionState.Error,
 		entry: BaseCommandEntry,
 	) {
 		return <T extends CommandHookMethod>(
@@ -93,7 +96,7 @@ export abstract class BaseCommandEntry {
 
 	private static addHook(
 		target: object,
-		state: HookExecutionState,
+		state: CommandHookExecutionState,
 		method: CommandHookMethod | undefined,
 		entry: CommandEntry,
 	) {
@@ -110,7 +113,7 @@ export abstract class BaseCommandEntry {
 
 		if ("parent" in entry) {
 			const parentHook = hooks.find(
-				(hook) => hook.entry === entry.parent && hook.state === HookExecutionState.Main,
+				(hook) => hook.entry === entry.parent && hook.state === CommandHookExecutionState.Main,
 			);
 
 			if (parentHook) {
@@ -135,7 +138,7 @@ export abstract class BaseCommandEntry {
 export abstract class BaseCommandGroupEntry extends BaseCommandEntry {
 	public children = new Collection<string, SubcommandEntry | CommandGroupEntry>();
 
-	public subcommand(options: CreateOptions<BaseCommandEntryOptions>): SubcommandEntry {
+	public subcommand(options: CreateCommandOptions<BaseCommandEntryOptions>): SubcommandEntry {
 		if (typeof options === "string") {
 			options = { name: options };
 		}
@@ -176,7 +179,7 @@ export class RootCommandEntry extends BaseCommandGroupEntry {
 		super(options);
 	}
 
-	public group(options: CreateOptions<BaseCommandEntryOptions>): CommandGroupEntry {
+	public group(options: CreateCommandOptions<BaseCommandEntryOptions>): CommandGroupEntry {
 		if (typeof options === "string") {
 			options = { name: options };
 		}

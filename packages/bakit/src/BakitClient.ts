@@ -15,7 +15,7 @@ import {
 	BaseCommandEntry,
 	CommandGroupEntry,
 	CommandHook,
-	HookExecutionState,
+	CommandHookExecutionState,
 	RootCommandEntry,
 	SubcommandEntry,
 } from "./command/CommandEntry.js";
@@ -30,6 +30,7 @@ import {
 import { ArgumentResolver } from "./command/argument/ArgumentResolver.js";
 import { StateBox } from "./libs/StateBox.js";
 import { CommandSyntaxError } from "./errors/index.js";
+import { ListenerRegistry } from "./listener/ListenerRegistry.js";
 
 export type GetSyntaxErrorMessageFunction = (
 	command: object,
@@ -54,6 +55,8 @@ export class BakitClient<Ready extends boolean = boolean> extends Client<Ready> 
 		}
 
 		super(options);
+
+		ListenerRegistry.setClient(this);
 
 		this.once(
 			Events.ClientReady,
@@ -210,7 +213,7 @@ export class BakitClient<Ready extends boolean = boolean> extends Client<Ready> 
 	private async runMessageHooks(
 		context: MessageContext,
 		instance: object,
-		record: Record<HookExecutionState, CommandHook | undefined>,
+		record: Record<CommandHookExecutionState, CommandHook | undefined>,
 		resolver: ArgumentResolver,
 	): Promise<ArgumentResolver | null> {
 		if (!record.main) {
@@ -259,7 +262,7 @@ export class BakitClient<Ready extends boolean = boolean> extends Client<Ready> 
 	private async runChatInputHooks(
 		context: ChatInputContext,
 		instance: unknown,
-		record: Record<HookExecutionState, CommandHook | undefined>,
+		record: Record<CommandHookExecutionState, CommandHook | undefined>,
 		inheritedArgs: unknown[],
 	): Promise<undefined | unknown[]> {
 		if (!record.main) {
@@ -326,12 +329,12 @@ export class BakitClient<Ready extends boolean = boolean> extends Client<Ready> 
 	}
 
 	private createHookRecord(hooks: readonly CommandHook[]) {
-		return Object.values(HookExecutionState).reduce(
+		return Object.values(CommandHookExecutionState).reduce(
 			(acc, state) => {
 				acc[state] = hooks.find((h) => h.state === state);
 				return acc;
 			},
-			{} as Record<HookExecutionState, CommandHook | undefined>,
+			{} as Record<CommandHookExecutionState, CommandHook | undefined>,
 		);
 	}
 }
