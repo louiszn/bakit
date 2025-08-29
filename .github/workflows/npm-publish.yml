@@ -39,6 +39,8 @@ jobs:
           node-version: 20
           registry-url: https://registry.npmjs.org/
 
+      - uses: pnpm/action-setup@v4.1.0
+
       - name: Download dist
         uses: actions/download-artifact@v4
         with:
