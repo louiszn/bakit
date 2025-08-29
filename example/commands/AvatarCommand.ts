@@ -1,11 +1,11 @@
 import { User } from "discord.js";
 import { Command, Arg, type Context } from "bakit";
 
-const _root = Command.create("avatar");
+const Avatar = Command("avatar");
 
-@Command.use(_root)
+@Command.use(Avatar)
 export default class AvatarCommand {
-	@_root.main
+	@Avatar.main
 	public async execute(
 		ctx: Context,
 		@Arg.user({ name: "target", required: false }) user: User | null,

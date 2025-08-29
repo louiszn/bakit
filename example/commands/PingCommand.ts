@@ -1,10 +1,10 @@
 import { Command, type Context } from "bakit";
 
-const _root = Command.create("ping");
+const Ping = Command("ping");
 
-@Command.use(_root)
+@Command.use(Ping)
 export default class PingCommand {
-	@_root.main
+	@Ping.main
 	public async execute(ctx: Context) {
 		await ctx.send(`Pong! ${String(ctx.client.ws.ping)}ms`);
 	}

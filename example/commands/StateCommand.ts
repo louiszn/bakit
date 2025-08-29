@@ -1,15 +1,15 @@
 import { StateBox, type Context, Command } from "bakit";
 
-const _root = Command.create("state");
+const State = Command("state");
 
-@Command.use(_root)
+@Command.use(State)
 export default class StateCommand {
 	@StateBox.use(100)
 	declare myStateCount: number;
 
 	public count = 0;
 
-	@_root.pre
+	@State.pre
 	public async preExecute(ctx: Context) {
 		this.count++;
 		this.myStateCount++;
@@ -18,7 +18,7 @@ export default class StateCommand {
 		);
 	}
 
-	@_root.main
+	@State.main
 	public async execute(ctx: Context) {
 		this.count++;
 		this.myStateCount++;
@@ -27,7 +27,7 @@ export default class StateCommand {
 		);
 	}
 
-	@_root.post
+	@State.post
 	public async postExecute(ctx: Context) {
 		this.count++;
 		this.myStateCount++;
