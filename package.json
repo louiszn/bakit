@@ -12,9 +12,12 @@
 	"scripts": {
 		"build": "tsup",
 		"type-check": "tsc --noEmit",
-		"test": "vitest",
+		"test": "vitest run --pass-with-no-tests",
 		"prepare": "husky"
 	},
+	"files": [
+		"dist"
+	],
 	"keywords": [],
 	"author": "louiszn",
 	"license": "MIT",
