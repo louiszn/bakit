@@ -60,7 +60,8 @@ jobs:
           path: packages/${{ matrix.package }}/dist
 
       - run: pnpm install --frozen-lockfile
-      - run: npm publish packages/${{ matrix.package }}
+      - run: npm publish
+        working-directory: packages/${{ matrix.package }}
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
           NODE_ENV: production
