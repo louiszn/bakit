@@ -44,7 +44,8 @@ jobs:
         with:
           name: dist
           path: dist
-          
+
+      - run: pnpm install --frozen-lockfile
       - run: npm publish
         env:
           NODE_AUTH_TOKEN: ${{secrets.NPM_TOKEN}}
