@@ -18,7 +18,7 @@ import { Arg, ArgumentOptions, ArgumentType } from "./argument/index.js";
 import {
 	BaseCommandEntry,
 	CommandGroupEntry,
-	HookExecutionState,
+	CommandHookExecutionState,
 	SubcommandEntry,
 } from "./CommandEntry.js";
 
@@ -105,7 +105,7 @@ export class CommandRegistry {
 
 		const hooks = new Collection(
 			BaseCommandEntry.getHooks(constructor)
-				.filter((hook) => hook.state === HookExecutionState.Main)
+				.filter((hook) => hook.state === CommandHookExecutionState.Main)
 				.map((hook) => [hook.entry, hook]),
 		);
 
