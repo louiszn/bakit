@@ -26,13 +26,13 @@ export function ListenerFactory<
 
 const ENTRY_KEY = Symbol("entry");
 
-export function use(listener: ListenerEntry<never, never>) {
+function use(listener: ListenerEntry<never, never>) {
 	return (target: ListenerConstructor) => {
 		Reflect.defineMetadata(ENTRY_KEY, listener, target);
 	};
 }
 
-export function getEntry(constructor: ListenerConstructor) {
+function getEntry(constructor: ListenerConstructor) {
 	return Reflect.getMetadata(ENTRY_KEY, constructor) as ListenerEntry<never, never> | undefined;
 }
 

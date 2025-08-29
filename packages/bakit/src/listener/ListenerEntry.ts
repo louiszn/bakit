@@ -47,9 +47,9 @@ export interface ListenerEntryOptions<E extends EventsLike, K extends EventKey<E
 	emitter?: EventEmitter;
 }
 
-export const HOOKS_KEY = Symbol("hooks");
-
 export class ListenerEntry<E extends EventsLike, K extends EventKey<E>> {
+	public static hooksKey = Symbol("hooks");
+
 	private static cache = new WeakMap<ListenerConstructor, ListenerHook<never, never>[]>();
 
 	public main = ListenerEntry.createMainHookDecorator(ListenerHookExecutionState.Main, this);
@@ -72,13 +72,13 @@ export class ListenerEntry<E extends EventsLike, K extends EventKey<E>> {
 	): ListenerHook<E, K>[] | readonly ListenerHook<E, K>[] {
 		let hooks =
 			(this.cache.get(constructor) as ListenerHook<E, K>[] | undefined) ??
-			(Reflect.getMetadata(HOOKS_KEY, constructor) as ListenerHook<E, K>[] | undefined);
+			(Reflect.getMetadata(this.hooksKey, constructor) as ListenerHook<E, K>[] | undefined);
 
 		if (!hooks) {
 			hooks = [];
 
 			if (init) {
-				Reflect.defineMetadata(HOOKS_KEY, hooks, constructor);
+				Reflect.defineMetadata(this.hooksKey, hooks, constructor);
 				this.cache.set(constructor, hooks as unknown as ListenerHook<never, never>[]);
 			}
 		}

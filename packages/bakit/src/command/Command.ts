@@ -4,13 +4,13 @@ export type CommandConstructor = new (...args: unknown[]) => object;
 
 const ROOT_KEY = Symbol("root");
 
-export function use(command: RootCommandEntry) {
+function use(command: RootCommandEntry) {
 	return (target: CommandConstructor) => {
 		Reflect.defineMetadata(ROOT_KEY, command, target);
 	};
 }
 
-export function getRoot(constructor: CommandConstructor) {
+function getRoot(constructor: CommandConstructor) {
 	return Reflect.getMetadata(ROOT_KEY, constructor) as RootCommandEntry | undefined;
 }
 
