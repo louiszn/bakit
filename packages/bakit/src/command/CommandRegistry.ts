@@ -27,6 +27,10 @@ export class CommandRegistry {
 	public static constructors = new Collection<string, CommandConstructor>();
 	public static instances = new Collection<string, object>();
 
+	/**
+	 * Add a command to the registry.
+	 * @param constructor The command class you want to add.
+	 */
 	public static add(constructor: CommandConstructor) {
 		const root = Command.getRoot(constructor);
 
@@ -40,6 +44,11 @@ export class CommandRegistry {
 		this.instances.set(options.name, new constructor());
 	}
 
+	/**
+	 * Build a command into application command data.
+	 * @param constructor The command class you want to build.
+	 * @returns a REST JSON version of the application command data.
+	 */
 	public static buildSlashCommand(
 		constructor: CommandConstructor,
 	): RESTPostAPIApplicationCommandsJSONBody {
@@ -62,10 +71,13 @@ export class CommandRegistry {
 		return builder.toJSON();
 	}
 
-	public static async loadDirectory(
-		pattern: string,
-		parallel = true,
-	): Promise<CommandConstructor[]> {
+	/**
+	 * Load and add all commands which matched provided glob pattern to the registry.
+	 * @param pattern glob pattern to load.
+	 * @param parallel load all matched results in parallel, enabled by default.
+	 * @returns All loaded command constructors.
+	 */
+	public static async load(pattern: string, parallel = true): Promise<CommandConstructor[]> {
 		const files = await glob(pattern);
 
 		const loaders = files.map(async (file) => {

@@ -56,7 +56,7 @@ export class BakitClient<Ready extends boolean = boolean> extends Client<Ready> 
 
 		super(options);
 
-		ListenerRegistry.setClient(this);
+		ListenerRegistry["setClient"](this);
 
 		this.once(
 			Events.ClientReady,
