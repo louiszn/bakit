@@ -1,39 +1,34 @@
 import { SetOptional } from "type-fest";
-import { EventKey, EventsLike, ListenerEntry, ListenerEntryOptions } from "./ListenerEntry.js";
+import { EventsLike, ListenerEntry, ListenerEntryOptions } from "./ListenerEntry.js";
 import { ClientEvents } from "discord.js";
 
 export type ListenerConstructor = new (...args: unknown[]) => object;
 
-export type CreateListenerOptions<E extends EventsLike, K extends EventKey<E>> =
+export type CreateListenerOptions<E extends EventsLike, K extends keyof E> =
 	| SetOptional<ListenerEntryOptions<E, K>, "once">
 	| K;
 
-export function ListenerFactory<
-	E extends EventsLike = ClientEvents,
-	K extends EventKey<E> = EventKey<E>,
->(options: CreateListenerOptions<E, K>) {
-	if (typeof options !== "object") {
-		options = {
-			name: options,
-			once: false,
-		};
-	}
+export function ListenerFactory<E extends EventsLike = ClientEvents, K extends keyof E = keyof E>(
+	options: CreateListenerOptions<E, K>,
+) {
+	const normalizedOptions: ListenerEntryOptions<E, K> =
+		typeof options === "object" ? { once: false, ...options } : { name: options, once: false };
 
-	options.once = Boolean(options.once);
-
-	return new ListenerEntry(options as ListenerEntryOptions<E, K>);
+	return new ListenerEntry(normalizedOptions);
 }
 
-const ENTRY_KEY = Symbol("entry");
+export const LISTENER_ENTRY_KEY = Symbol("entry");
 
-function use(listener: ListenerEntry<never, never>) {
+function use<E extends EventsLike = ClientEvents>(listener: ListenerEntry<E, keyof E>) {
 	return (target: ListenerConstructor) => {
-		Reflect.defineMetadata(ENTRY_KEY, listener, target);
+		Reflect.defineMetadata(LISTENER_ENTRY_KEY, listener, target);
 	};
 }
 
-function getEntry(constructor: ListenerConstructor) {
-	return Reflect.getMetadata(ENTRY_KEY, constructor) as ListenerEntry<never, never> | undefined;
+function getEntry<E extends EventsLike = ClientEvents, K extends keyof E = keyof E>(
+	constructor: ListenerConstructor,
+) {
+	return Reflect.getMetadata(LISTENER_ENTRY_KEY, constructor) as ListenerEntry<E, K> | undefined;
 }
 
 export const Listener = Object.assign(ListenerFactory, {

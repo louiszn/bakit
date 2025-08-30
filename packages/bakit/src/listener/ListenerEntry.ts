@@ -4,8 +4,6 @@ import EventEmitter from "node:events";
 
 export type EventsLike = Record<keyof unknown, unknown[]>;
 
-export type EventKey<E extends EventsLike> = keyof E;
-
 export enum ListenerHookExecutionState {
 	Main = "main",
 	Pre = "pre",
@@ -13,44 +11,31 @@ export enum ListenerHookExecutionState {
 	Error = "error",
 }
 
-export type MainListenerHookMethod<E extends EventsLike, K extends EventKey<E>> = (
-	...args: E[K] & unknown[]
-) => Awaitable<void>;
-
-export type ErrorListenerHookMethod<E extends EventsLike, K extends EventKey<E>> = (
+export type MainListenerHookMethod<Args extends unknown[]> = (...args: Args) => Awaitable<void>;
+export type ErrorListenerHookMethod<Args extends unknown[]> = (
 	error: unknown,
-	...args: E[K] & unknown[]
+	...args: Args
 ) => Awaitable<void>;
 
-export interface MainListenerHook<E extends EventsLike, K extends EventKey<E>> {
-	state:
-		| ListenerHookExecutionState.Main
-		| ListenerHookExecutionState.Post
-		| ListenerHookExecutionState.Pre;
-	method: MainListenerHookMethod<E, K>;
+export interface ListenerHook<E extends EventsLike, K extends keyof E> {
+	state: ListenerHookExecutionState;
+	method: MainListenerHookMethod<E[K] & unknown[]> | ErrorListenerHookMethod<E[K] & unknown[]>;
 	entry: ListenerEntry<E, K>;
 }
 
-export interface ErrorListenerHook<E extends EventsLike, K extends EventKey<E>> {
-	state: ListenerHookExecutionState.Error;
-	method: ErrorListenerHookMethod<E, K>;
-	entry: ListenerEntry<E, K>;
-}
-
-export type ListenerHook<E extends EventsLike, K extends EventKey<E>> =
-	| MainListenerHook<E, K>
-	| ErrorListenerHook<E, K>;
-
-export interface ListenerEntryOptions<E extends EventsLike, K extends EventKey<E>> {
+export interface ListenerEntryOptions<E extends EventsLike, K extends keyof E> {
 	name: K;
 	once: boolean;
 	emitter?: EventEmitter;
 }
 
-export class ListenerEntry<E extends EventsLike, K extends EventKey<E>> {
+export class ListenerEntry<E extends EventsLike, K extends keyof E> {
 	public static hooksKey = Symbol("hooks");
 
-	private static cache = new WeakMap<ListenerConstructor, ListenerHook<never, never>[]>();
+	private static cache = new WeakMap<
+		ListenerConstructor,
+		ListenerHook<EventsLike, keyof EventsLike>[]
+	>();
 
 	public main = ListenerEntry.createMainHookDecorator(ListenerHookExecutionState.Main, this);
 	public pre = ListenerEntry.createMainHookDecorator(ListenerHookExecutionState.Pre, this);
@@ -59,19 +44,14 @@ export class ListenerEntry<E extends EventsLike, K extends EventKey<E>> {
 
 	public constructor(public options: ListenerEntryOptions<E, K>) {}
 
-	public static getHooks<E extends EventsLike, K extends EventKey<E>>(
-		constructor: ListenerConstructor,
-	): readonly ListenerHook<E, K>[];
-	public static getHooks<E extends EventsLike, K extends EventKey<E>>(
-		constructor: ListenerConstructor,
-		init: true,
-	): ListenerHook<E, K>[];
-	public static getHooks<E extends EventsLike, K extends EventKey<E>>(
+	public static getHooks<E extends EventsLike, K extends keyof E>(
 		constructor: ListenerConstructor,
 		init = false,
-	): ListenerHook<E, K>[] | readonly ListenerHook<E, K>[] {
+	): ListenerHook<E, K>[] {
+		const { cache } = this;
+
 		let hooks =
-			(this.cache.get(constructor) as ListenerHook<E, K>[] | undefined) ??
+			(cache.get(constructor) as ListenerHook<E, K>[] | undefined) ??
 			(Reflect.getMetadata(this.hooksKey, constructor) as ListenerHook<E, K>[] | undefined);
 
 		if (!hooks) {
@@ -79,21 +59,25 @@ export class ListenerEntry<E extends EventsLike, K extends EventKey<E>> {
 
 			if (init) {
 				Reflect.defineMetadata(this.hooksKey, hooks, constructor);
-				this.cache.set(constructor, hooks as unknown as ListenerHook<never, never>[]);
+
+				this.cache.set(
+					constructor,
+					hooks as unknown as ListenerHook<EventsLike, keyof EventsLike>[],
+				);
 			}
 		}
 
-		return init ? hooks : Object.freeze([...hooks]);
+		return init ? hooks : [...hooks];
 	}
 
-	private static createMainHookDecorator<E extends EventsLike, K extends EventKey<E>>(
+	private static createMainHookDecorator<E extends EventsLike, K extends keyof E>(
 		state:
 			| ListenerHookExecutionState.Main
 			| ListenerHookExecutionState.Pre
 			| ListenerHookExecutionState.Post,
 		entry: ListenerEntry<E, K>,
 	) {
-		return <T extends MainListenerHookMethod<E, K>>(
+		return <T extends MainListenerHookMethod<E[K] & unknown[]>>(
 			target: object,
 			_key: string,
 			descriptor: TypedPropertyDescriptor<T>,
@@ -102,11 +86,11 @@ export class ListenerEntry<E extends EventsLike, K extends EventKey<E>> {
 		};
 	}
 
-	private static createErrorHookDecorator<E extends EventsLike, K extends EventKey<E>>(
+	private static createErrorHookDecorator<E extends EventsLike, K extends keyof E>(
 		state: ListenerHookExecutionState.Error,
 		entry: ListenerEntry<E, K>,
 	) {
-		return <T extends ErrorListenerHookMethod<E, K>>(
+		return <T extends ErrorListenerHookMethod<E[K] & unknown[]>>(
 			target: object,
 			_key: string,
 			descriptor: TypedPropertyDescriptor<T>,
@@ -115,14 +99,17 @@ export class ListenerEntry<E extends EventsLike, K extends EventKey<E>> {
 		};
 	}
 
-	private static addHook<E extends EventsLike, K extends EventKey<E>>(
+	private static addHook<E extends EventsLike, K extends keyof E>(
 		target: object,
 		state: ListenerHookExecutionState,
-		method: MainListenerHookMethod<E, K> | ErrorListenerHookMethod<E, K> | undefined,
+		method:
+			| MainListenerHookMethod<E[K] & unknown[]>
+			| ErrorListenerHookMethod<E[K] & unknown[]>
+			| undefined,
 		entry: ListenerEntry<E, K>,
 	) {
 		const { constructor } = target;
-		const hooks = this.getHooks(constructor as ListenerConstructor, true);
+		const hooks = this.getHooks<E, K>(constructor as ListenerConstructor, true);
 
 		if (typeof method !== "function") {
 			throw new Error("CommandEntry decorator must be used with a class method.");
@@ -140,6 +127,6 @@ export class ListenerEntry<E extends EventsLike, K extends EventKey<E>> {
 			method: method as never,
 		};
 
-		hooks.push(hook as unknown as ListenerHook<never, never>);
+		hooks.push(hook);
 	}
 }
