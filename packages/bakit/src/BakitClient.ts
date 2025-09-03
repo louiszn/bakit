@@ -12,10 +12,10 @@ import {
 } from "discord.js";
 import { CommandRegistry } from "./command/CommandRegistry.js";
 import {
-	BaseCommandEntry,
 	CommandGroupEntry,
 	CommandHook,
-	CommandHookExecutionState,
+	ErrorCommandHookMethod,
+	MainCommandHookMethod,
 	RootCommandEntry,
 	SubcommandEntry,
 } from "./command/CommandEntry.js";
@@ -24,13 +24,14 @@ import {
 	ArgumentOptions,
 	ChatInputContext,
 	Command,
-	CommandConstructor,
+	Context,
 	MessageContext,
 } from "./command/index.js";
 import { ArgumentResolver } from "./command/argument/ArgumentResolver.js";
 import { StateBox } from "./libs/StateBox.js";
 import { CommandSyntaxError } from "./errors/index.js";
 import { ListenerRegistry } from "./listener/ListenerRegistry.js";
+import { ConstructorLike, HookExecutionState } from "./base/BaseEntry.js";
 
 export type GetSyntaxErrorMessageFunction = (
 	command: object,
@@ -76,7 +77,7 @@ export class BakitClient<Ready extends boolean = boolean> extends Client<Ready> 
 	) => {
 		const requiredSyntax = args.map((x) => Arg.format(x)).join(" ");
 
-		const root = Command.getRoot(command.constructor as CommandConstructor);
+		const root = Command.getRoot(command.constructor as ConstructorLike);
 
 		if (!root) {
 			return;
@@ -103,6 +104,8 @@ export class BakitClient<Ready extends boolean = boolean> extends Client<Ready> 
 			return;
 		}
 
+		const context = new MessageContext(message);
+
 		const resolver = ArgumentResolver.create(message);
 
 		if (!resolver) {
@@ -117,11 +120,7 @@ export class BakitClient<Ready extends boolean = boolean> extends Client<Ready> 
 			return;
 		}
 
-		const hooks = BaseCommandEntry.getHooks(command.constructor as CommandConstructor);
-
-		const context = new MessageContext(message);
-
-		await StateBox.run(() => this.handleMessageHooks(context, hooks, command, resolver));
+		await StateBox.run(() => this.handleMessageHooks(context, command, resolver));
 	}
 
 	private async handleInteraction(interaction: Interaction) {
@@ -137,24 +136,22 @@ export class BakitClient<Ready extends boolean = boolean> extends Client<Ready> 
 			return;
 		}
 
-		const hooks = BaseCommandEntry.getHooks(command.constructor as CommandConstructor);
-
 		const context = new ChatInputContext(interaction);
 
-		await StateBox.run(() => this.handleChatInputHooks(context, hooks, command));
+		await StateBox.run(() => this.handleChatInputHooks(context, command));
 	}
 
-	private async handleChatInputHooks(
-		context: ChatInputContext,
-		hooks: readonly CommandHook[],
-		instance: unknown,
-	) {
-		const targetHooks = this.getChatInputTargetHooks(context.source, hooks);
+	private async handleChatInputHooks(context: ChatInputContext, instance: object) {
+		const targetHooks = this.getChatInputTargetHooks(context.source, instance);
 
 		let inheritedArgs: unknown[] = [];
 
-		for (const record of [targetHooks.root, targetHooks.group, targetHooks.subcommand]) {
-			const newArgs = await this.runChatInputHooks(context, instance, record, inheritedArgs);
+		for (const hooks of [targetHooks.root, targetHooks.group, targetHooks.subcommand]) {
+			if (!hooks) {
+				continue;
+			}
+
+			const newArgs = await this.runChatInputHooks(context, instance, hooks, inheritedArgs);
 
 			if (newArgs) {
 				inheritedArgs = newArgs;
@@ -164,63 +161,70 @@ export class BakitClient<Ready extends boolean = boolean> extends Client<Ready> 
 
 	private async handleMessageHooks(
 		context: MessageContext,
-		hooks: readonly CommandHook[],
 		instance: object,
 		resolver: ArgumentResolver | null,
+	) {
+		// This is just for removing the null type
+		// resolver must not be null at first
+		if (!resolver) {
+			return;
+		}
+
+		const root = Command.getRoot(instance.constructor as ConstructorLike);
+
+		if (!root) {
+			return;
+		}
+
+		resolver = await this.runMessageHooks(context, instance, root.hooks, resolver);
+
+		if (!resolver) {
+			return;
+		}
+
+		await this.handleChildMessageHooks(context, root, instance, resolver);
+	}
+
+	private async handleChildMessageHooks(
+		context: MessageContext,
+		parent: RootCommandEntry | CommandGroupEntry,
+		instance: object,
+		resolver: ArgumentResolver | null,
+		skip = 1,
 	) {
 		if (!resolver) {
 			return;
 		}
 
-		const rootEntry = Command.getRoot(instance.constructor as CommandConstructor);
-		if (!rootEntry) return;
-
-		const rootRecord = this.createHookRecord(hooks.filter((hook) => hook.entry === rootEntry));
-		resolver = await this.runMessageHooks(context, instance, rootRecord, resolver);
-
-		if (!resolver) {
-			return;
-		}
-
 		const usedValues = resolver.parsedValues.length;
-		const nextTrigger = resolver.values[usedValues + 1];
+		const nextTrigger = resolver.values[usedValues + skip];
 
-		const nextHook = hooks.find((hook) => hook.entry.options.name === nextTrigger);
-		const nextRecord = this.createHookRecord(nextHook ? [nextHook] : []);
+		const child = parent.children.get(nextTrigger);
 
-		resolver = await this.runMessageHooks(context, instance, nextRecord, resolver);
-
-		if (!resolver) {
+		if (!child) {
 			return;
 		}
 
-		if (nextRecord.main?.entry instanceof CommandGroupEntry) {
-			const groupEntry = nextRecord.main.entry;
-			const subTrigger = resolver.values[usedValues + 2];
+		resolver = await this.runMessageHooks(context, instance, child.hooks, resolver);
 
-			const subHook = hooks.find(
-				(h) =>
-					h.entry instanceof SubcommandEntry &&
-					h.entry.options.name === subTrigger &&
-					h.entry.parent === groupEntry,
-			);
-
-			const subRecord = this.createHookRecord(subHook ? [subHook] : []);
-			resolver = await this.runMessageHooks(context, instance, subRecord, resolver);
+		if (child instanceof CommandGroupEntry) {
+			await this.handleChildMessageHooks(context, child, instance, resolver, skip + 1);
 		}
 	}
 
 	private async runMessageHooks(
 		context: MessageContext,
 		instance: object,
-		record: Record<CommandHookExecutionState, CommandHook | undefined>,
+		hooks: Record<HookExecutionState, CommandHook | undefined>,
 		resolver: ArgumentResolver,
 	): Promise<ArgumentResolver | null> {
-		if (!record.main) {
+		const mainHook = hooks[HookExecutionState.Main];
+
+		if (!mainHook) {
 			return resolver;
 		}
 
-		const args = Arg.getMethodArguments(record.main.method);
+		const args = Arg.getMethodArguments(mainHook.method);
 
 		try {
 			resolver = await resolver.resolve(args as ArgumentOptions[]);
@@ -244,97 +248,109 @@ export class BakitClient<Ready extends boolean = boolean> extends Client<Ready> 
 			throw error;
 		}
 
-		try {
-			await record.pre?.method.call(instance, context, ...resolver.parsedValues);
-			await record.main.method.call(instance, context, ...resolver.parsedValues);
-			await record.post?.method.call(instance, context, ...resolver.parsedValues);
-		} catch (error) {
-			if (record.error) {
-				await record.error.method.call(instance, context, error, ...resolver.parsedValues);
-			} else {
-				throw error;
-			}
-		}
+		await this.runHooks(context, instance, hooks, resolver.parsedValues);
 
 		return resolver;
 	}
 
 	private async runChatInputHooks(
 		context: ChatInputContext,
-		instance: unknown,
-		record: Record<CommandHookExecutionState, CommandHook | undefined>,
+		instance: object,
+		hooks: Record<HookExecutionState, CommandHook | undefined>,
 		inheritedArgs: unknown[],
 	): Promise<undefined | unknown[]> {
-		if (!record.main) {
+		const mainHook = hooks[HookExecutionState.Main];
+
+		if (!mainHook) {
 			return;
 		}
 
-		const newArgs = Arg.getMethodArguments(record.main.method).map((arg) =>
+		const newArgs = Arg.getMethodArguments(mainHook.method).map((arg) =>
 			ArgumentResolver.resolveChatInput(context.source, arg),
 		);
 
 		const argValues = [...inheritedArgs, ...newArgs];
 
-		try {
-			await record.pre?.method.call(instance, context, ...argValues);
-			await record.main.method.call(instance, context, ...argValues);
-			await record.post?.method.call(instance, context, ...argValues);
-		} catch (error) {
-			if (record.error) {
-				await record.error.method.call(instance, context, error, ...argValues);
-			} else {
-				throw error;
-			}
-		}
+		await this.runHooks(context, instance, hooks, argValues);
 
 		return argValues;
 	}
 
-	private getChatInputTargetHooks(
-		interaction: ChatInputCommandInteraction,
-		hooks: readonly CommandHook[],
+	private async runHooks(
+		context: Context,
+		instance: object,
+		hooks: Record<HookExecutionState, CommandHook | undefined>,
+		args: unknown[],
 	) {
-		const subcommand = interaction.options.getSubcommand(false);
-		const subcommandGroup = interaction.options.getSubcommandGroup(false);
+		const mainHook = hooks[HookExecutionState.Main];
+		const preHook = hooks[HookExecutionState.Pre];
+		const postHook = hooks[HookExecutionState.Post];
+		const errorHook = hooks[HookExecutionState.Error];
 
-		const root = this.createHookRecord(
-			hooks.filter((hook) => hook.entry instanceof RootCommandEntry),
-		);
+		if (!mainHook) {
+			return;
+		}
 
-		const group = this.createHookRecord(
-			hooks.filter(({ entry }) => {
-				return entry instanceof CommandGroupEntry && entry.options.name === subcommandGroup;
-			}),
-		);
+		const execute = async (hook?: CommandHook, error?: unknown) => {
+			if (!hook) {
+				return;
+			}
 
-		const sub = this.createHookRecord(
-			hooks.filter(({ entry }) => {
-				if (!(entry instanceof SubcommandEntry) || !(entry.options.name === subcommand)) {
-					return false;
-				}
+			if (hook.state === HookExecutionState.Error) {
+				await (hook.method as ErrorCommandHookMethod).call(instance, error, context, ...args);
+			} else {
+				await (hook.method as MainCommandHookMethod).call(instance, context, ...args);
+			}
+		};
 
-				if (subcommandGroup) {
-					const { parent } = entry;
-
-					if (!(parent instanceof CommandGroupEntry) || parent.options.name !== subcommandGroup) {
-						return false;
-					}
-				}
-
-				return true;
-			}),
-		);
-
-		return { root, group, subcommand: sub };
+		try {
+			await execute(preHook);
+			await execute(mainHook);
+			await execute(postHook);
+		} catch (error) {
+			if (errorHook) {
+				await execute(errorHook, error);
+			} else {
+				throw error;
+			}
+		}
 	}
 
-	private createHookRecord(hooks: readonly CommandHook[]) {
-		return Object.values(CommandHookExecutionState).reduce(
-			(acc, state) => {
-				acc[state] = hooks.find((h) => h.state === state);
-				return acc;
-			},
-			{} as Record<CommandHookExecutionState, CommandHook | undefined>,
-		);
+	private getChatInputTargetHooks(interaction: ChatInputCommandInteraction, instance: object) {
+		const subcommandName = interaction.options.getSubcommand(false);
+		const groupName = interaction.options.getSubcommandGroup(false);
+
+		const root = Command.getRoot(instance.constructor as ConstructorLike);
+
+		if (!root) {
+			throw new Error("No root found.");
+		}
+
+		let group: CommandGroupEntry | undefined;
+
+		if (groupName) {
+			const child = root.children.get(groupName);
+
+			if (child instanceof CommandGroupEntry) {
+				group = child;
+			}
+		}
+
+		let subcommand: SubcommandEntry | undefined;
+
+		if (subcommandName) {
+			const parent = group || root;
+			const child = parent.children.get(subcommandName);
+
+			if (child instanceof SubcommandEntry) {
+				subcommand = child;
+			}
+		}
+
+		return {
+			root: root.hooks,
+			group: group?.hooks,
+			subcommand: subcommand?.hooks,
+		};
 	}
 }

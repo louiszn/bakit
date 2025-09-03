@@ -1,13 +1,8 @@
-import { Listener, ListenerConstructor } from "./Listener.js";
+import { Listener } from "./Listener.js";
 import { BakitClient } from "../BakitClient.js";
-import {
-	ErrorListenerHookMethod,
-	EventsLike,
-	ListenerEntry,
-	ListenerHook,
-	ListenerHookExecutionState,
-	MainListenerHookMethod,
-} from "./ListenerEntry.js";
+import { ErrorListenerHookMethod, MainListenerHookMethod } from "./ListenerEntry.js";
+
+import { ConstructorLike, HookExecutionState } from "../base/BaseEntry.js";
 
 import glob from "tiny-glob";
 import { pathToFileURL } from "node:url";
@@ -19,12 +14,12 @@ import { pathToFileURL } from "node:url";
 export abstract class ListenerRegistry {
 	private static client: BakitClient | undefined;
 
-	public static constructors = new Set<ListenerConstructor>();
+	public static constructors = new Set<ConstructorLike>();
 
-	public static instances = new WeakMap<ListenerConstructor, object>();
+	public static instances = new WeakMap<ConstructorLike, object>();
 
 	public static executors = new WeakMap<
-		InstanceType<ListenerConstructor>,
+		InstanceType<ConstructorLike>,
 		(...args: unknown[]) => Promise<void>
 	>();
 
@@ -33,7 +28,7 @@ export abstract class ListenerRegistry {
 	 * If `options.emitter` is not provided, the registry will use the base `client` by default.
 	 * @param constructor The listener class you want to add.
 	 */
-	public static add(constructor: ListenerConstructor): void {
+	public static add(constructor: ConstructorLike): void {
 		const entry = Listener.getEntry(constructor);
 
 		if (!entry) {
@@ -67,7 +62,7 @@ export abstract class ListenerRegistry {
 	 * @param constructor The listener class you want to remove.
 	 * @returns `boolean`, returns `true` if the listener is removed successfully.
 	 */
-	public static remove(constructor: ListenerConstructor): boolean {
+	public static remove(constructor: ConstructorLike): boolean {
 		const entry = Listener.getEntry(constructor);
 
 		if (!entry) {
@@ -118,13 +113,13 @@ export abstract class ListenerRegistry {
 	 * Set base client for the registry to fallback as default emitter. This should be used only by BakitClient and stay untouched.
 	 * @param newClient base client to set for the registry.
 	 */
-	private static setClient(newClient: BakitClient) {
+	protected static setClient(newClient: BakitClient) {
 		this.client = newClient;
 	}
 
 	private static createExecutor(
-		constructor: ListenerConstructor,
-		instance: InstanceType<ListenerConstructor>,
+		constructor: ConstructorLike,
+		instance: InstanceType<ConstructorLike>,
 	) {
 		const entry = Listener.getEntry(constructor);
 
@@ -132,69 +127,55 @@ export abstract class ListenerRegistry {
 			throw new Error("Missing listener entry");
 		}
 
-		const hooks = ListenerEntry.getHooks(constructor).filter((hook) => hook.entry === entry);
-
-		const hookGroup = this.makeHookGroup(hooks);
+		const { hooks } = entry;
 
 		return async function (...args: unknown[]) {
-			if (!hookGroup.main) {
+			const mainHook = hooks[HookExecutionState.Main];
+			const preHook = hooks[HookExecutionState.Pre];
+			const postHook = hooks[HookExecutionState.Post];
+			const errorHook = hooks[HookExecutionState.Error];
+
+			if (!mainHook) {
 				return;
 			}
 
 			try {
-				if (hookGroup.pre) {
-					const preMethod = hookGroup.pre.method as MainListenerHookMethod<unknown[]>;
-					await preMethod.call(instance, ...args);
+				if (preHook) {
+					await (preHook.method as MainListenerHookMethod<unknown[]>).call(instance, ...args);
 				}
 
-				await (hookGroup.main.method as MainListenerHookMethod<unknown[]>).call(instance, ...args);
+				await (mainHook.method as MainListenerHookMethod<unknown[]>).call(instance, ...args);
 
-				if (hookGroup.post) {
-					const postMethod = hookGroup.post.method as MainListenerHookMethod<unknown[]>;
-					await postMethod.call(instance, ...args);
+				if (postHook) {
+					await (postHook.method as MainListenerHookMethod<unknown[]>).call(instance, ...args);
 				}
 			} catch (error) {
-				if (hookGroup.error) {
-					const errorMethod = hookGroup.error.method as ErrorListenerHookMethod<unknown[]>;
-					await errorMethod.call(instance, error, ...args);
+				if (errorHook) {
+					await (errorHook.method as ErrorListenerHookMethod<unknown[]>).call(
+						instance,
+						error,
+						...args,
+					);
 				} else {
 					throw error;
 				}
 			}
 		};
 	}
-
-	private static makeHookGroup<E extends EventsLike, K extends keyof E>(
-		hooks: ListenerHook<E, K>[],
-	) {
-		const hooksByType: Record<ListenerHookExecutionState, ListenerHook<E, K> | undefined> = {
-			[ListenerHookExecutionState.Pre]: undefined,
-			[ListenerHookExecutionState.Main]: undefined,
-			[ListenerHookExecutionState.Post]: undefined,
-			[ListenerHookExecutionState.Error]: undefined,
-		};
-
-		for (const hook of hooks) {
-			hooksByType[hook.state] = hook;
-		}
-
-		return hooksByType;
-	}
-
 	/**
 	 * Load and add all listeners which matched provided glob pattern to the registry.
 	 * @param pattern glob pattern to load.
 	 * @param parallel load all matched results in parallel, enabled by default.
 	 * @returns All loaded listener constructors.
 	 */
-	public static async load(pattern: string, parallel = true): Promise<ListenerConstructor[]> {
+	public static async load(pattern: string, parallel = true): Promise<ConstructorLike[]> {
 		const files = await glob(pattern);
 
 		const loaders = files.map(async (file) => {
 			const fileURL = pathToFileURL(file).toString();
 
 			const { default: constructor } = (await import(fileURL)) as {
-				default: ListenerConstructor;
+				default: ConstructorLike;
 			};
 
 			this.add(constructor);
@@ -206,7 +187,7 @@ export abstract class ListenerRegistry {
 			return Promise.all(loaders);
 		}
 
-		const result: ListenerConstructor[] = [];
+		const result: ConstructorLike[] = [];
 
 		for (const loader of loaders) {
 			result.push(await loader);

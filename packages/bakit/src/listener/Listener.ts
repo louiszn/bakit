@@ -1,37 +1,30 @@
-import { SetOptional } from "type-fest";
-import { EventsLike, ListenerEntry, ListenerEntryOptions } from "./ListenerEntry.js";
 import { ClientEvents } from "discord.js";
+import { EventsLike, ListenerEntry, ListenerEntryOptions } from "./ListenerEntry.js";
+import { SetOptional } from "type-fest";
+import { ConstructorLike } from "../base/BaseEntry.js";
 
-export type ListenerConstructor = new (...args: unknown[]) => object;
+// eslint-disable-next-line @typescript-eslint/no-namespace
+export namespace ListenerAPI {
+	export const ENTRY_KEY = Symbol("entry");
 
-export type CreateListenerOptions<E extends EventsLike, K extends keyof E> =
-	| SetOptional<ListenerEntryOptions<E, K>, "once">
-	| K;
+	export function use<E extends EventsLike, K extends keyof E>(entry: ListenerEntry<E, K>) {
+		return (target: ConstructorLike) => {
+			Reflect.defineMetadata(ENTRY_KEY, entry, target);
+		};
+	}
+
+	export function getEntry<E extends EventsLike, K extends keyof E>(target: ConstructorLike) {
+		return Reflect.getMetadata(ENTRY_KEY, target) as ListenerEntry<E, K> | undefined;
+	}
+}
 
 export function ListenerFactory<E extends EventsLike = ClientEvents, K extends keyof E = keyof E>(
-	options: CreateListenerOptions<E, K>,
+	options: SetOptional<ListenerEntryOptions<E, K>, "once"> | K,
 ) {
-	const normalizedOptions: ListenerEntryOptions<E, K> =
-		typeof options === "object" ? { once: false, ...options } : { name: options, once: false };
+	const fullOptions: ListenerEntryOptions<E, K> =
+		typeof options !== "object" ? { name: options, once: false } : { once: false, ...options };
 
-	return new ListenerEntry(normalizedOptions);
+	return new ListenerEntry(fullOptions);
 }
 
-export const LISTENER_ENTRY_KEY = Symbol("entry");
-
-function use<E extends EventsLike = ClientEvents>(listener: ListenerEntry<E, keyof E>) {
-	return (target: ListenerConstructor) => {
-		Reflect.defineMetadata(LISTENER_ENTRY_KEY, listener, target);
-	};
-}
-
-function getEntry<E extends EventsLike = ClientEvents, K extends keyof E = keyof E>(
-	constructor: ListenerConstructor,
-) {
-	return Reflect.getMetadata(LISTENER_ENTRY_KEY, constructor) as ListenerEntry<E, K> | undefined;
-}
-
-export const Listener = Object.assign(ListenerFactory, {
-	use,
-	getEntry,
-});
+export const Listener = Object.assign(ListenerFactory, ListenerAPI);

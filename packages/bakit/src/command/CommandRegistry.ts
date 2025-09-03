@@ -12,26 +12,22 @@ import glob from "tiny-glob";
 
 import { pathToFileURL } from "node:url";
 
-import { Command, CommandConstructor } from "./Command.js";
+import { Command } from "./Command.js";
 import { CommandHook } from "./CommandEntry.js";
 import { Arg, ArgumentOptions, ArgumentType } from "./argument/index.js";
-import {
-	BaseCommandEntry,
-	CommandGroupEntry,
-	CommandHookExecutionState,
-	SubcommandEntry,
-} from "./CommandEntry.js";
+import { CommandGroupEntry, SubcommandEntry } from "./CommandEntry.js";
+import { ConstructorLike, HookExecutionState } from "../base/BaseEntry.js";
 
 // eslint-disable-next-line @typescript-eslint/no-extraneous-class
 export class CommandRegistry {
-	public static constructors = new Collection<string, CommandConstructor>();
+	public static constructors = new Collection<string, ConstructorLike>();
 	public static instances = new Collection<string, object>();
 
 	/**
 	 * Add a command to the registry.
 	 * @param constructor The command class you want to add.
 	 */
-	public static add(constructor: CommandConstructor) {
+	public static add(constructor: ConstructorLike) {
 		const root = Command.getRoot(constructor);
 
 		if (!root) {
@@ -50,7 +46,7 @@ export class CommandRegistry {
 	 * @returns a REST JSON version of the application command data.
 	 */
 	public static buildSlashCommand(
-		constructor: CommandConstructor,
+		constructor: ConstructorLike,
 	): RESTPostAPIApplicationCommandsJSONBody {
 		const builder = new SlashCommandBuilder();
 
@@ -77,14 +73,14 @@ export class CommandRegistry {
 	 * @param parallel load all matched results in parallel, enabled by default.
 	 * @returns All loaded command constructors.
 	 */
-	public static async load(pattern: string, parallel = true): Promise<CommandConstructor[]> {
+	public static async load(pattern: string, parallel = true): Promise<ConstructorLike[]> {
 		const files = await glob(pattern);
 
 		const loaders = files.map(async (file) => {
 			const fileURL = pathToFileURL(file).toString();
 
 			const { default: constructor } = (await import(fileURL)) as {
-				default: CommandConstructor;
+				default: ConstructorLike;
 			};
 
 			CommandRegistry.add(constructor);
@@ -96,7 +92,7 @@ export class CommandRegistry {
 			return await Promise.all(loaders);
 		}
 
-		const result: CommandConstructor[] = [];
+		const result: ConstructorLike[] = [];
 
 		for (const loader of loaders) {
 			result.push(await loader);
@@ -107,7 +103,7 @@ export class CommandRegistry {
 
 	private static buildSlashCommandOptions(
 		builder: SlashCommandBuilder,
-		constructor: CommandConstructor,
+		constructor: ConstructorLike,
 	) {
 		const root = Command.getRoot(constructor);
 
@@ -115,19 +111,9 @@ export class CommandRegistry {
 			throw new Error(`No root found for "${constructor.name}"`);
 		}
 
-		const hooks = new Collection(
-			BaseCommandEntry.getHooks(constructor)
-				.filter((hook) => hook.state === CommandHookExecutionState.Main)
-				.map((hook) => [hook.entry, hook]),
-		);
+		const rootHook = root.hooks[HookExecutionState.Main];
 
-		const rootHook = hooks.get(root);
-
-		if (!root.children.size && hooks.size) {
-			if (!rootHook) {
-				return;
-			}
-
+		if (!root.children.size && rootHook) {
 			for (const arg of Arg.getMethodArguments(rootHook.method)) {
 				this.buildSlashCommandOption(builder, arg);
 			}
@@ -136,7 +122,7 @@ export class CommandRegistry {
 		}
 
 		for (const child of root.children.values()) {
-			const hook = hooks.get(child);
+			const hook = child.hooks[HookExecutionState.Main];
 
 			const inheritedArgs = [];
 
@@ -158,7 +144,12 @@ export class CommandRegistry {
 					.setDescription(options.description);
 
 				for (const subChild of child.children.values()) {
-					this.buildSubcommand(group, subChild, hooks.get(subChild), inheritedArgs);
+					this.buildSubcommand(
+						group,
+						subChild,
+						subChild.hooks[HookExecutionState.Main],
+						inheritedArgs,
+					);
 				}
 
 				builder.addSubcommandGroup(group);
