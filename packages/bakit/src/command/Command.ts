@@ -1,17 +1,20 @@
+import { ConstructorLike } from "../base/BaseEntry.js";
 import { BaseCommandEntryOptions, CreateCommandOptions, RootCommandEntry } from "./CommandEntry.js";
 
-export type CommandConstructor = new (...args: unknown[]) => object;
+// eslint-disable-next-line @typescript-eslint/no-namespace
+export namespace CommandAPI {
+	const ROOT_KEY = Symbol("root");
 
-const ROOT_KEY = Symbol("root");
+	export function use(command: RootCommandEntry) {
+		return (target: ConstructorLike) => {
+			command.setTarget(target);
+			Reflect.defineMetadata(ROOT_KEY, command, target);
+		};
+	}
 
-function use(command: RootCommandEntry) {
-	return (target: CommandConstructor) => {
-		Reflect.defineMetadata(ROOT_KEY, command, target);
-	};
-}
-
-function getRoot(constructor: CommandConstructor) {
-	return Reflect.getMetadata(ROOT_KEY, constructor) as RootCommandEntry | undefined;
+	export function getRoot(constructor: ConstructorLike) {
+		return Reflect.getMetadata(ROOT_KEY, constructor) as RootCommandEntry | undefined;
+	}
 }
 
 export function CommandFactory(options: CreateCommandOptions<BaseCommandEntryOptions> | string) {
@@ -26,7 +29,4 @@ export function CommandFactory(options: CreateCommandOptions<BaseCommandEntryOpt
 	return new RootCommandEntry(options as BaseCommandEntryOptions);
 }
 
-export const Command = Object.assign(CommandFactory, {
-	use,
-	getRoot,
-});
+export const Command = Object.assign(CommandFactory, CommandAPI);
