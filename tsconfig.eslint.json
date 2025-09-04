@@ -10,6 +10,7 @@
 		"packages/*/example/**/*.ts",
 		"packages/*/tsup.config.ts",
 		"eslint.config.js",
-		"tsup.config.ts"
+		"tsup.config.ts",
+		"scripts"
 	]
 }
