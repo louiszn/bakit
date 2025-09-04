@@ -1,4 +1,4 @@
-name: Node.js Package
+name: Publish NPM Package
 
 on:
   release:
@@ -17,7 +17,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
 
       - name: Setup PNPM
         uses: pnpm/action-setup@v4.1.0
