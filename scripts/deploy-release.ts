@@ -94,6 +94,8 @@ async function pushChanges(paths: string[], version: string) {
 		`https://x-access-token:${installationAuth.token}@github.com/${GITHUB_CONFIG.owner}/${GITHUB_CONFIG.repo}.git`,
 	]);
 
+	console.log(await git.getRemotes(true));
+
 	await git.push();
 	await git.pushTags();
 
