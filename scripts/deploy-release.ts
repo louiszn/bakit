@@ -70,7 +70,7 @@ async function bumpVersion(paths: string[], version: string) {
 async function pushChanges(paths: string[], version: string) {
 	const git = simpleGit();
 
-	await git.addConfig("user.name", `${String(BAKIT_APP_SLUG)}[bot]`);
+	await git.addConfig("user.name", `Bakit Bot`);
 	await git.addConfig(
 		"user.email",
 		`${String(BAKIT_APP_ID)}+${String(BAKIT_APP_SLUG)}[bot]@users.noreply.github.com`,
@@ -95,8 +95,6 @@ async function pushChanges(paths: string[], version: string) {
 		`https://x-access-token:${installationAuth.token}@github.com/${GITHUB_CONFIG.owner}/${GITHUB_CONFIG.repo}.git`,
 	]);
 
-	console.log(await git.getRemotes(true));
-
 	await git.push("origin");
 	await git.pushTags("origin");
 
@@ -113,7 +111,7 @@ async function createRelease(version: string) {
 		prerelease: isPrerelease,
 	});
 
-	console.log(`Created release ${version} at ${result.url}`);
+	console.log(`Created release ${version} at ${result.data.html_url}`);
 }
 
 // ------------------------------
