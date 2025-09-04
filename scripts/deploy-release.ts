@@ -59,7 +59,8 @@ async function bumpVersion(paths: string[], version: string) {
 		const configContent = await readFile(configPath, "utf-8");
 		const config = JSON.parse(configContent) as PackageJson;
 
-		config.version = version;
+		// slice the v prefix
+		config.version = version.slice(1);
 
 		// Save new package.json file
 		// prettier will handle the format on commit stage
