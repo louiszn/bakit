@@ -33,4 +33,4 @@ jobs:
           BAKIT_APP_INSTALLATION_ID: ${{ secrets.BAKIT_APP_INSTALLATION_ID }}
           BAKIT_APP_PRIVATE: ${{ secrets.BAKIT_APP_PRIVATE }}
         run: |
-          tsx scripts/deploy-release.ts --version="${{ github.event.inputs.version }}"
+          pnpm exec tsx scripts/deploy-release.ts --version="${{ github.event.inputs.version }}"
