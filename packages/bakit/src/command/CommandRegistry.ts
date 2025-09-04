@@ -13,7 +13,7 @@ import glob from "tiny-glob";
 import { pathToFileURL } from "node:url";
 
 import { Command } from "./Command.js";
-import { CommandHook } from "./CommandEntry.js";
+import { RootCommandEntry } from "./CommandEntry.js";
 import { Arg, ArgumentOptions, ArgumentType } from "./argument/index.js";
 import { CommandGroupEntry, SubcommandEntry } from "./CommandEntry.js";
 import { ConstructorLike, HookExecutionState } from "../base/BaseEntry.js";
@@ -38,33 +38,6 @@ export class CommandRegistry {
 
 		this.constructors.set(options.name, constructor);
 		this.instances.set(options.name, new constructor());
-	}
-
-	/**
-	 * Build a command into application command data.
-	 * @param constructor The command class you want to build.
-	 * @returns a REST JSON version of the application command data.
-	 */
-	public static buildSlashCommand(
-		constructor: ConstructorLike,
-	): RESTPostAPIApplicationCommandsJSONBody {
-		const builder = new SlashCommandBuilder();
-
-		const root = Command.getRoot(constructor);
-
-		if (!root) {
-			throw new Error(`No root found for "${constructor.name}"`);
-		}
-
-		const { options } = root;
-
-		builder.setName(options.name);
-		builder.setDescription(options.description || "");
-		builder.setNSFW(Boolean(options.nsfw));
-
-		this.buildSlashCommandOptions(builder, constructor);
-
-		return builder.toJSON();
 	}
 
 	/**
@@ -101,88 +74,99 @@ export class CommandRegistry {
 		return result;
 	}
 
-	private static buildSlashCommandOptions(
-		builder: SlashCommandBuilder,
+	/**
+	 * Build a command into application command data.
+	 * @param constructor The command class you want to build.
+	 * @returns a REST JSON version of the application command data.
+	 */
+	public static buildSlashCommand(
 		constructor: ConstructorLike,
-	) {
+	): RESTPostAPIApplicationCommandsJSONBody {
 		const root = Command.getRoot(constructor);
 
 		if (!root) {
 			throw new Error(`No root found for "${constructor.name}"`);
 		}
 
-		const rootHook = root.hooks[HookExecutionState.Main];
+		const { options } = root;
 
-		if (!root.children.size && rootHook) {
-			for (const arg of Arg.getMethodArguments(rootHook.method)) {
-				this.buildSlashCommandOption(builder, arg);
-			}
+		const builder = new SlashCommandBuilder()
+			.setName(options.name)
+			.setDescription(options.description)
+			.setNSFW(Boolean(options.nsfw));
 
-			return;
+		const args = this.getMainHookArguments(root);
+
+		if (root.children.size) {
+			this.buildSlashCommandSubcommands(builder, root, args);
+		} else {
+			this.buildSlashCommandOptions(builder, args);
 		}
 
-		for (const child of root.children.values()) {
-			const hook = child.hooks[HookExecutionState.Main];
+		return builder.toJSON();
+	}
 
-			const inheritedArgs = [];
+	private static getMainHookArguments(
+		entry: RootCommandEntry | CommandGroupEntry | SubcommandEntry,
+	) {
+		const { hooks } = entry;
+		const mainHook = hooks[HookExecutionState.Main];
+		return mainHook ? Arg.getMethodArguments(mainHook.method) : [];
+	}
 
-			if (rootHook) {
-				inheritedArgs.push(...Arg.getMethodArguments(rootHook.method));
-			}
+	private static buildSlashCommandSubcommands(
+		parent: SlashCommandBuilder | SlashCommandSubcommandGroupBuilder,
+		entry: RootCommandEntry | CommandGroupEntry,
+		inheritedArgs: readonly ArgumentOptions[],
+	) {
+		const { children } = entry;
 
-			if (child instanceof SubcommandEntry) {
-				this.buildSubcommand(builder, child, hook, inheritedArgs);
-			} else if (child instanceof CommandGroupEntry) {
-				if (hook) {
-					inheritedArgs.push(...Arg.getMethodArguments(hook.method));
-				}
-
+		for (const child of children.values()) {
+			if (child instanceof CommandGroupEntry && parent instanceof SlashCommandBuilder) {
 				const { options } = child;
 
 				const group = new SlashCommandSubcommandGroupBuilder()
 					.setName(options.name)
 					.setDescription(options.description);
 
-				for (const subChild of child.children.values()) {
-					this.buildSubcommand(
-						group,
-						subChild,
-						subChild.hooks[HookExecutionState.Main],
-						inheritedArgs,
-					);
-				}
+				// Group must have subcommands
+				this.buildSlashCommandSubcommands(group, child, [
+					...inheritedArgs,
+					...this.getMainHookArguments(child),
+				]);
 
-				builder.addSubcommandGroup(group);
+				parent.addSubcommandGroup(group);
+			} else if (child instanceof SubcommandEntry) {
+				const { options } = child;
+
+				const subcommand = new SlashCommandSubcommandBuilder()
+					.setName(options.name)
+					.setDescription(options.description);
+
+				this.buildSlashCommandOptions(subcommand, [
+					...inheritedArgs,
+					...this.getMainHookArguments(child),
+				]);
+
+				parent.addSubcommand(subcommand);
 			}
 		}
 	}
 
-	private static buildSubcommand(
-		parent: SlashCommandBuilder | SlashCommandSubcommandGroupBuilder,
-		entry: SubcommandEntry,
-		hook: CommandHook | undefined,
-		inheritedArgs: ArgumentOptions[],
+	private static buildSlashCommandOptions(
+		builder: SlashCommandBuilder | SlashCommandSubcommandBuilder,
+		args: readonly ArgumentOptions[],
 	) {
-		const { options } = entry;
+		// Required options must be added first
+		const argGroup = Object.groupBy(args, ({ required }) => (required ? "required" : "optional"));
+		const orderedArgs = [...(argGroup.required || []), ...(argGroup.optional || [])];
 
-		const subcommand = new SlashCommandSubcommandBuilder()
-			.setName(options.name)
-			.setDescription(options.description);
-
-		const args = [...inheritedArgs];
-
-		if (hook) {
-			args.push(...Arg.getMethodArguments(hook.method));
+		for (const arg of orderedArgs) {
+			this.attachSlashCommandOption(builder, arg);
 		}
-
-		for (const arg of args) {
-			this.buildSlashCommandOption(subcommand, arg);
-		}
-
-		parent.addSubcommand(subcommand);
 	}
 
-	private static buildSlashCommandOption(
+	private static attachSlashCommandOption(
 		builder: SlashCommandBuilder | SlashCommandOptionsOnlyBuilder | SlashCommandSubcommandBuilder,
 		arg: ArgumentOptions,
 	) {
@@ -195,17 +179,56 @@ export class CommandRegistry {
 
 		switch (arg.type) {
 			case ArgumentType.String: {
-				builder.addStringOption((option) => setupOption(option));
+				builder.addStringOption((data) => {
+					const option = setupOption(data);
+
+					if (arg.maxLength) {
+						option.setMaxLength(arg.maxLength);
+					}
+
+					if (arg.minLength) {
+						option.setMinLength(arg.minLength);
+					}
+
+					return option;
+				});
+
 				break;
 			}
 
 			case ArgumentType.Integer: {
-				builder.addIntegerOption((option) => setupOption(option));
+				builder.addIntegerOption((data) => {
+					const option = setupOption(data);
+
+					if (arg.maxValue) {
+						option.setMaxValue(arg.maxValue);
+					}
+
+					if (arg.minValue) {
+						option.setMinValue(arg.minValue);
+					}
+
+					return option;
+				});
+
 				break;
 			}
 
 			case ArgumentType.Number: {
-				builder.addNumberOption((option) => setupOption(option));
+				builder.addNumberOption((data) => {
+					const option = setupOption(data);
+
+					if (arg.maxValue) {
+						option.setMaxValue(arg.maxValue);
+					}
+
+					if (arg.minValue) {
+						option.setMinValue(arg.minValue);
+					}
+
+					return option;
+				});
+
 				break;
 			}
 
