@@ -88,7 +88,8 @@ async function pushChanges(paths: string[], version: string) {
 
 	await git.addTag(version);
 
-	await git.remote([
+	await git.raw([
+		"remote",
 		"set-url",
 		"origin",
 		`https://x-access-token:${installationAuth.token}@github.com/${GITHUB_CONFIG.owner}/${GITHUB_CONFIG.repo}.git`,
