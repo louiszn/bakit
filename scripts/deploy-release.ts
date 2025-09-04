@@ -96,8 +96,8 @@ async function pushChanges(paths: string[], version: string) {
 
 	console.log(await git.getRemotes(true));
 
-	await git.push();
-	await git.pushTags();
+	await git.push("origin");
+	await git.pushTags("origin");
 
 	console.log("Pushed changes successfully");
 }
