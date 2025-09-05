@@ -77,8 +77,8 @@ export class BaseEntry<
 		target: object,
 		descriptor: TypedPropertyDescriptor<T>,
 	) {
-		if (target.constructor !== this.target) {
-			throw new Error("Hook is used at unknown constructor.");
+		if (this.target && this.target !== target.constructor) {
+			throw new Error("Hook is used at wrong constructor.");
 		}
 
 		const { value: method } = descriptor;
