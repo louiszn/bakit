@@ -3,17 +3,17 @@ import { BaseCommandEntryOptions, CreateCommandOptions, RootCommandEntry } from 
 
 // eslint-disable-next-line @typescript-eslint/no-namespace
 export namespace CommandAPI {
-	const ROOT_KEY = Symbol("root");
+	const rootEntries = new WeakMap<ConstructorLike, RootCommandEntry>();
 
-	export function use(command: RootCommandEntry) {
+	export function use(root: RootCommandEntry) {
 		return (target: ConstructorLike) => {
-			command.setTarget(target);
-			Reflect.defineMetadata(ROOT_KEY, command, target);
+			root.setTarget(target);
+			rootEntries.set(target, root);
 		};
 	}
 
 	export function getRoot(constructor: ConstructorLike) {
-		return Reflect.getMetadata(ROOT_KEY, constructor) as RootCommandEntry | undefined;
+		return rootEntries.get(constructor);
 	}
 }
 
