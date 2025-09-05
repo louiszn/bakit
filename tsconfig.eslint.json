@@ -5,10 +5,8 @@
 	},
 	"extends": "./tsconfig.json",
 	"include": [
-		"packages/*/src/**/*.ts",
-		"packages/*/tests/**/*.ts",
-		"packages/*/example/**/*.ts",
-		"packages/*/tsup.config.ts",
+		"packages/*/**/*.{ts,tsx}",
+		"apps/*/**/*.{ts,tsx}",
 		"eslint.config.js",
 		"tsup.config.ts",
 		"scripts"

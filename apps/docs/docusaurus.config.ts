@@ -1,0 +1,113 @@
+import { themes as prismThemes } from "prism-react-renderer";
+import type { Config } from "@docusaurus/types";
+import type * as Preset from "@docusaurus/preset-classic";
+
+// This runs in Node.js - Don't use client-side code here (browser APIs, JSX...)
+
+const config: Config = {
+	title: "Bakit",
+	tagline: "Make your bot scalable",
+	favicon: "img/favicon.ico",
+
+	future: {
+		v4: true,
+	},
+
+	url: "https://your-docusaurus-site.example.com",
+	baseUrl: "/",
+
+	organizationName: "louiszn",
+	projectName: "bakit",
+
+	onBrokenLinks: "throw",
+	onBrokenMarkdownLinks: "warn",
+
+	i18n: {
+		defaultLocale: "en",
+		locales: ["en"],
+	},
+
+	presets: [
+		[
+			"classic",
+			{
+				docs: {
+					sidebarPath: "./sidebars.ts",
+					editUrl: "https://github.com/louiszn/bakit/apps/docs",
+				},
+				blog: false,
+				theme: {
+					customCss: "./src/css/custom.css",
+				},
+			} satisfies Preset.Options,
+		],
+	],
+
+	themeConfig: {
+		image: "img/docusaurus-social-card.jpg",
+		navbar: {
+			title: "Bakit",
+			logo: {
+				alt: "My Site Logo",
+				src: "img/logo.svg",
+			},
+			items: [
+				{
+					type: "docSidebar",
+					sidebarId: "tutorialSidebar",
+					position: "left",
+					label: "Docs",
+				},
+				{
+					href: "https://github.com/louiszn/bakit",
+					position: "right",
+					className: "header-github-link",
+					"aria-label": "GitHub repository",
+				},
+			],
+		},
+		footer: {
+			style: "dark",
+			links: [
+				{
+					title: "Docs",
+					items: [
+						{
+							label: "Tutorial",
+							to: "/docs/intro",
+						},
+					],
+				},
+				{
+					title: "Community",
+					items: [
+						{
+							label: "Discord",
+							href: "https://discordapp.com/invite/docusaurus",
+						},
+					],
+				},
+			],
+			copyright: `Copyright © ${new Date().getFullYear()} Bakit`,
+		},
+		prism: {
+			theme: prismThemes.github,
+			darkTheme: prismThemes.dracula,
+		},
+		algolia: {
+			appId: "NWXZRCVUW5",
+			apiKey: "cdcc4532fa384be9d050026a313db633",
+			indexName: "bakit",
+			contextualSearch: true,
+			replaceSearchResultPathname: {
+				from: "/docs/",
+				to: "/",
+			},
+			searchParameters: {},
+			searchPagePath: "search",
+			insights: false,
+		},
+	} satisfies Preset.ThemeConfig,
+};
+
+export default config;
