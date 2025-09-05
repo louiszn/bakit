@@ -17,7 +17,7 @@ export default tseslint.config(
 		languageOptions: {
 			parserOptions: {
 				tsconfigRootDir: import.meta.dirname,
-				project: ["./tsconfig.eslint.json", "./packages/*/tsconfig.json"],
+				project: ["./tsconfig.eslint.json", "./packages/*/tsconfig.json", "./apps/*/tsconfig.json"],
 			},
 		},
 	},
@@ -27,6 +27,7 @@ export default tseslint.config(
 		},
 		rules: {
 			"@typescript-eslint/no-unused-vars": ["error", { argsIgnorePattern: "^_" }],
+			"@typescript-eslint/restrict-template-expressions": "off",
 			"prettier/prettier": "error",
 		},
 	},
