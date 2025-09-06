@@ -38,4 +38,4 @@ With just this simple code, you will have both slash and prefix command version 
 - You don't want to use ESM and **prefer CommonJS**.
 - You don't need any fancy scalable APIs for your simple slash command bot.
 
-Next, head over to [Installation](/docs/installation) to setup your first bot.
+Next, head over to [Installation](/docs/category/installation) to setup your first bot.
