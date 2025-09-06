@@ -1,0 +1,92 @@
+import Admonition from "@theme/Admonition";
+
+# Quick start
+
+This section will guide you through creating your first bot.
+If you're new to [discord.js](https://discord.js.org), don't worry, we will cover all important concepts later!
+
+## Setting up client
+
+Bakit provides its own client class, `BakitClient`, which extends the base [`Client`](https://discord.js.org/docs/packages/discord.js/main/Client:class) from discord.js.  
+This means you get all the usual features of `Client` and Bakit's built-in core systems.
+
+Here's a minimal setup:
+
+```ts
+import { BakitClient } from "bakit";
+import { GatewayIntentBits } from "discord.js";
+
+const client = new BakitClient({
+	intents: [GatewayIntentBits.Guilds],
+});
+```
+
+## Configuring Intents
+
+Discord bots must request Gateway Intents to receive specific events (e.g., messages, reactions, or guild updates).
+
+At minimum, `Guilds` is required for a bot to function, but you may need more depending on your features.
+
+<Admonition type="info" title="Learn more">
+	See the [discord.js guide on
+	intents](https://discordjs.guide/popular-topics/intents.html#gateway-intents) for a detailed
+	explanation.
+</Admonition>
+
+If you plan to use prefix commands or any feature that requires receiving messages in real time, you will also need these intents:
+
+- `MessageContent` - allows your bot to read message content.
+- `GuildMessages` - enables receiving messages sent in servers (guilds).
+- `DirectMessages` - enables receiving private messages (DMs).
+
+For example:
+
+```ts
+import { BakitClient } from "bakit";
+import { GatewayIntentBits } from "discord.js";
+
+const client = new BakitClient({
+	intents: [
+		GatewayIntentBits.Guilds,
+		GatewayIntentBits.MessageContent,
+		GatewayIntentBits.GuildMessages,
+	],
+});
+```
+
+## Logging in
+
+Once your client is set up, the final step is to log in using your bot token.
+This will establish a connection to Discord's gateway:
+
+```ts
+await client.login("YOUR_BOT_TOKEN");
+```
+
+<Admonition type="caution" title="Keep your token safe">
+	Never share your bot token publicly or commit it to source control. Store it securely in an
+	environment variable (e.g., `process.env.DISCORD_TOKEN`) or a `.env` file. For more details on
+	using `.env` files, see the [dotenv documentation](https://dotenv.org/docs).
+</Admonition>
+
+## Starting the process
+
+Bakit is a TypeScript-first framework, so TypeScript is required.
+You will need a tsconfig.json in your project.
+
+To start your bot, first compile with the TypeScript compiler (tsc), then run the output. For example:
+
+```bash
+npx tsc
+node dist/index.js
+```
+
+<Admonition type="info" title="Tip">
+	If you prefer skipping manual compilation, you can also use [tsx](https://tsx.is/) to run
+	TypeScript directly:
+	<pre>
+		<code>npx tsx src/index.ts</code>
+	</pre>
+</Admonition>
+
+Your bot should now be online and ready to use!

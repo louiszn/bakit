@@ -33,7 +33,7 @@ const config: Config = {
 			{
 				docs: {
 					sidebarPath: "./sidebars.ts",
-					editUrl: "https://github.com/louiszn/bakit/apps/docs",
+					editUrl: "https://github.com/louiszn/bakit/tree/main/apps/docs",
 				},
 				blog: false,
 				theme: {
@@ -44,6 +44,9 @@ const config: Config = {
 	],
 
 	themeConfig: {
+		colorMode: {
+			defaultMode: "dark",
+		},
 		image: "img/docusaurus-social-card.jpg",
 		navbar: {
 			title: "Bakit",
@@ -67,7 +70,6 @@ const config: Config = {
 			],
 		},
 		footer: {
-			style: "dark",
 			links: [
 				{
 					title: "Resource",
@@ -87,8 +89,15 @@ const config: Config = {
 						},
 					],
 				},
+				{
+					title: "More",
+					items: [
+						{ label: "NPM", href: "https://www.npmjs.com/package/bakit" },
+						{ label: "Github", href: "https://github.com/louiszn/bakit" },
+					],
+				},
 			],
-			copyright: `Copyright © ${new Date().getFullYear()} Bakit`,
+			copyright: `Copyright © ${new Date().getFullYear()} Bakit. Built with Docusaurus.`,
 		},
 		prism: {
 			theme: prismThemes.github,
