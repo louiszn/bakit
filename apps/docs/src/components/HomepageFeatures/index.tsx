@@ -21,7 +21,7 @@ const FeatureList: FeatureItem[] = [
 		),
 	},
 	{
-		title: "Scale your bot larger",
+		title: "Scale up your bot larger",
 		description: <>Bakit helps you scale your bot easily, makes things less complicated.</>,
 	},
 ];
