@@ -1,0 +1,185 @@
+---
+sidebar_position: 2
+---
+
+import Tabs from "@theme/Tabs";
+import TabItem from "@theme/TabItem";
+import Admonition from "@theme/Admonition";
+
+# Adding your first listeners
+
+After being connected to Discord's Gateway, your client will now receive certain events based from specified intents in client options.
+
+For example, if you requested `MessageContent` and `GuildMessages` intents to Discord, Discord will now send you certain events like:
+
+- `MessageCreate` - for newly created messages from guilds.
+- `MessageDelete` - for deleted messages.
+- `MessageUpdate` - for edited messages.
+
+<Admonition type="info" title="Configuring intents">
+	
+See [quick start on configuring intents](/docs/getting-started/quick-start#configuring-intents) for more detailed information.
+
+</Admonition>
+
+To listen to those events, you have to create listeners for each one you need using method `on` or `once` from the emitter, in this case, is the client.
+Here's an example for creating a listener for `ClientReady` event:
+
+<Tabs>
+	<TabItem value="code" label="src/index.ts">
+	
+	```ts
+	import { BakitClient } from "bakit";
+	import { Events } from "discord.js";
+
+    const client = new BakitClient({
+    	intents: [...],
+    });
+
+    client.once(Events.ClientReady, () => {
+    	console.log("Bot is ready!");
+    });
+
+    await client.login(...);
+    ```
+
+    </TabItem>
+
+</Tabs>
+
+`ClientReady` will be emitted when your bot is ready (logged in).
+That means you will receive `Bot is ready!` message every time you run your bot.
+
+In the example code, `once` is used because we only need to receive this event once.
+You can also use `on` to always receive the specified events.
+
+Here's another example for `MessageCreate` event:
+
+<Tabs>
+	<TabItem value="code" label="src/index.ts">
+	
+	```ts
+	import { BakitClient, GatewayIntentBits } from "bakit";
+	import { Events } from "discord.js";
+
+    const client = new BakitClient({
+    	intents: [
+    		GatewayIntentBits.MessageContent,
+    		GatewayIntentBits.GuildMessages
+    		...
+    	],
+    });
+
+    client.once(Events.ClientReady, () => {
+    	console.log("Bot is ready!");
+    });
+
+    client.on(Events.MessageCreate, (message) => {
+    	console.log(message.content);
+    });
+
+    await client.login(...);
+    ```
+
+    </TabItem>
+
+</Tabs>
+
+Now your terminal will log exactly the content from the messages that users send.
+
+## Why is this helpful?
+
+WebSocket events are very helpful when you need real time execution.
+For example:
+
+- Response to users or take actions when certain words are sent in messages.
+- Take track of member joining or leaving the server by welcome and goodbye messages.
+- Update certain information without requesting for the latest data in schedule.
+
+## Adding listeners using Bakit listener manager
+
+In some cases, your listeners will have hundreds or thousands lines of code, which will make your file become large and hard to maintain.
+You might want to split them into multiple files for each listener.
+
+Usually, you would prefer putting your listeners files in a directory named `listeners`. For example, this is your file tree structure:
+
+```
+src/
+├── index.ts
+└── listeners/
+	├── MessageCreateListener.ts
+	└── ReadyListener.ts
+```
+
+Bakit provides an API for adding listeners easily and independently with `ListenerRegistry` and `Listener` API.
+
+To use it, simply use `ListenerRegistry.load()` after client with a [glob pattern](https://www.malikbrowne.com/blog/a-beginners-guide-glob-patterns/) that points to your listeners directory. For example:
+
+<Tabs>
+	<TabItem value="code" label="src/index.ts">
+	
+	```ts
+	import { BakitClient, ListenerRegistry } from "bakit";
+
+    const client = new BakitClient({
+    	intents: [...],
+    });
+
+    await ListenerRegistry.load("src/listeners/**/*.ts");
+
+    await client.login(...);
+    ```
+
+    </TabItem>
+
+</Tabs>
+
+<Admonition type="caution" title="Use a correct path to your source code">
+	
+If you are running your process using TypeScript compiled source (JavaScript), you must use a path that points to the compiled source instead. For example:
+
+```ts
+await ListenerRegistry.load("dist/listeners/**/*.js");
+```
+
+</Admonition>
+
+Now every files in your listeners directory should be loaded.
+
+### Using Listener API
+
+For example, you want to migrate your messageCreate listener into a separated file, you can create a file named `MessageCreateListener.ts` in your listeners directory with the following code:
+
+<Tabs>
+	<TabItem value="code" label="src/listeners/MessageCreateListener.ts">
+	
+	```ts
+	import { Listener } from "bakit";
+	import { type Message, Events } from "discord.js";
+
+    const MessageCreate = Listener(Events.MessageCreate);
+
+    @Listener.use(MessageCreate)
+    export default class MessageCreateListener {
+    	@MessageCreate.main
+    	public execute(message: Message) {
+    		console.log(message.content);
+    		// ...
+    	}
+    }
+    ```
+
+    </TabItem>
+
+</Tabs>
+
+If you want to use `once` for your listeners, e.g, `ClientReady`, you can do it like this:
+
+```ts
+const ClientReady = Listener({
+	name: Events.ClientReady,
+	once: true,
+});
+```
+
+Now you can remove your old listener from your file completely and everything should work perfectly fine.

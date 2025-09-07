@@ -1,3 +1,9 @@
+---
+sidebar_position: 1
+---
+
+import Tabs from "@theme/Tabs";
+import TabItem from "@theme/TabItem";
 import Admonition from "@theme/Admonition";
 
 # Quick start
@@ -12,14 +18,21 @@ This means you get all the usual features of `Client` and Bakit's built-in core 
 
 Here's a minimal setup:
 
-```ts
-import { BakitClient } from "bakit";
-import { GatewayIntentBits } from "discord.js";
+<Tabs>
+	<TabItem value="code" label="src/index.ts">
+	
+	```ts
+	import { BakitClient } from "bakit";
+	import { GatewayIntentBits } from "discord.js";
 
-const client = new BakitClient({
-	intents: [GatewayIntentBits.Guilds],
-});
-```
+    const client = new BakitClient({
+    	intents: [GatewayIntentBits.Guilds],
+    });
+    ```
+
+    </TabItem>
+
+</Tabs>
 
 ## Configuring Intents
 
@@ -28,9 +41,9 @@ Discord bots must request Gateway Intents to receive specific events (e.g., mess
 At minimum, `Guilds` is required for a bot to function, but you may need more depending on your features.
 
 <Admonition type="info" title="Learn more">
-	See the [discord.js guide on
-	intents](https://discordjs.guide/popular-topics/intents.html#gateway-intents) for a detailed
-	explanation.
+	
+See the [discord.js guide on intents](https://discordjs.guide/popular-topics/intents.html#gateway-intents) for a detailed explanation.
+
 </Admonition>
 
 If you plan to use prefix commands or any feature that requires receiving messages in real time, you will also need these intents:
@@ -41,18 +54,25 @@ If you plan to use prefix commands or any feature that requires receiving messag
 
 For example:
 
-```ts
-import { BakitClient } from "bakit";
-import { GatewayIntentBits } from "discord.js";
+<Tabs>
+	<TabItem value="code" label="src/index.ts">
+	
+	```ts
+	import { BakitClient } from "bakit";
+	import { GatewayIntentBits } from "discord.js";
 
-const client = new BakitClient({
-	intents: [
-		GatewayIntentBits.Guilds,
-		GatewayIntentBits.MessageContent,
-		GatewayIntentBits.GuildMessages,
-	],
-});
-```
+    const client = new BakitClient({
+    	intents: [
+    		GatewayIntentBits.Guilds,
+    		GatewayIntentBits.MessageContent,
+    		GatewayIntentBits.GuildMessages,
+    	],
+    });
+    ```
+
+    </TabItem>
+
+</Tabs>
 
 ## Logging in
 
@@ -64,9 +84,10 @@ await client.login("YOUR_BOT_TOKEN");
 ```
 
 <Admonition type="caution" title="Keep your token safe">
-	Never share your bot token publicly or commit it to source control. Store it securely in an
-	environment variable (e.g., `process.env.DISCORD_TOKEN`) or a `.env` file. For more details on
-	using `.env` files, see the [dotenv documentation](https://dotenv.org/docs).
+	
+Never share your bot token publicly or commit it to source control. Store it securely in an environment variable (e.g., `process.env.DISCORD_TOKEN`) or a `.env` file. 
+For more details on using `.env` files, see the [dotenv documentation](https://dotenv.org/docs).
+
 </Admonition>
 
 ## Starting the process
@@ -82,11 +103,13 @@ node dist/index.js
 ```
 
 <Admonition type="info" title="Tip">
-	If you prefer skipping manual compilation, you can also use [tsx](https://tsx.is/) to run
-	TypeScript directly:
-	<pre>
-		<code>npx tsx src/index.ts</code>
-	</pre>
+
+If you prefer skipping manual compilation, you can also use [tsx](https://tsx.is/) to run TypeScript directly:
+
+```bash
+npx tsx src/index.ts
+```
+
 </Admonition>
 
 Your bot should now be online and ready to use!

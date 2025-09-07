@@ -1,0 +1,159 @@
+---
+sidebar_position: 3
+---
+
+import Tabs from "@theme/Tabs";
+import TabItem from "@theme/TabItem";
+import Admonition from "@theme/Admonition";
+
+# Adding your first commands
+
+Command is one of the most common ways to interact with Discord bots. Before Discord introduced application command, most bots relied on prefix command.
+But then Discord implemented their own command system, called application command (e.g, slash command, context menu command).
+Discord also recommends to use slash command over prefix command. Using only prefix command isn't a strong reason to enable the MessageCreate intent.
+
+However, some users still prefer prefix command because they are faster and simpler if your server has many bots,
+usually suitable for moderation. That's why you might want to implement both prefix and slash for your command.
+But doing that yourself from scratch is not simple since `Message` and `Interaction` is completely different interfaces.
+That's the main reason why Bakit exists, to help you write commands easier!
+
+Bakit's command system is a complex system that uses listeners from `MessageCreate` for prefix and `InteractionCreate` for slash command.
+But you don't need to worry about them since Bakit already does that! It also provides a Context API as a bridge to communicate between `Message` and `Interaction` easily.
+
+<Admonition type="info" title="Configuring intents">
+	
+`MessageCreate` requires intents like `MessageContent`, `GuildMessages`, `DirectMessages`. See [Configuring intents](/docs/getting-started/quick-start#configuring-intents).
+
+</Admonition>
+
+## Basic client options
+
+Bakit provides some command-related options:
+
+- `prefixes` - an array of bot prefixes.
+- `enableMentionPrefix` - enable mention prefix (e.g, `@botName ping`)
+
+Here's a minimal setup:
+
+<Tabs>
+	<TabItem value="code" label="src/index.ts">
+	
+	```ts
+	import { BakitClient } from "bakit";
+	import { GatewayIntentBits } from "discord.js";
+
+    const client = new BakitClient({
+    	intents: [
+    		GatewayIntentBits.Guilds,
+    		GatewayIntentBits.MessageContent,
+    		GatewayIntentBits.GuildMessages,
+    	],
+    	prefixes: ["!", "?"],
+    	enableMentionPrefix: true,
+    });
+
+    await client.login(...);
+    ```
+    </TabItem>
+
+</Tabs>
+
+## Adding Ping command
+
+Usually, you might prefer to split all of your commands into files for each one in `commands` directory, your structure might look like this:
+
+```
+src/
+├── index.ts
+├── commands/
+├── ├── PingCommand.ts
+├── ├── AvatarCommand.ts
+└── listeners/
+```
+
+Similar to Listener API, Command API and CommandRegistry also use the same interface to help you build commands easier.
+
+Here's a minimal ping command code in `commands/PingCommand.ts`:
+
+<Tabs>
+	<TabItem value="code" label="src/commands/PingCommand.ts">
+	
+	```ts
+	import { Command, type Context } from "bakit";
+
+    const Ping = Command("ping");
+
+    @Command.use(Ping)
+    export default class PingCommand {
+    	@Ping.main
+    	public async execute(context: Context) {
+    		await context.send(`Pong! ${context.client.ws.ping}ms!`);
+    	}
+    }
+    ```
+
+    </TabItem>
+
+</Tabs>
+
+By default, the description will be `[command.name] command` (e.g, `ping command`). You can specific a description by using `options` object:
+
+```ts
+const Ping = Command({
+	name: "ping",
+	description: "Get bot latency",
+});
+```
+
+## Load your command files
+
+To load your command files automatically, simply use `CommandRegistry.load()` after client with a [glob pattern](https://www.malikbrowne.com/blog/a-beginners-guide-glob-patterns/) that points to your listeners directory. 
+For example:
+
+<Tabs>
+	<TabItem value="code" label="src/index.ts">
+	
+	```ts
+	import { BakitClient, CommandRegistry } from "bakit";
+
+    const client = new BakitClient({
+    	intents: [...],
+    });
+
+    await CommandRegistry.load("src/commands/**/*.ts");
+
+    await client.login(...);
+    ```
+
+    </TabItem>
+
+</Tabs>
+
+<Admonition type="caution" title="Use a correct path to your source code">
+	
+If you are running your process using TypeScript compiled source (JavaScript), you must use a path that points to the compiled source instead. For example:
+
+```ts
+await CommandRegistry.load("dist/commands/**/*.js");
+```
+
+</Admonition>
+
+<Admonition type="info" title="Load handlers in parallel">
+	
+Command system and listener system are unrelated to each other, you can run it in parallel to improve start time:
+
+```ts
+await Promise.all([
+	CommandRegistry.load("src/commands/**/*.ts"),
+	ListenerRegistry.load("src/listeners/**/*.ts"),
+]);
+```
+
+</Admonition>
+
+After running, bakit will register slash commands automatically. If you don't see any changes, try to reload your Discord client (e.g, `Ctrl + R` on desktop).
+
+After all, you should now be able to use your commands in both prefix and slash:
+
+![Ping command example](/img/ping-example.png)
