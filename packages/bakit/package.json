@@ -17,6 +17,14 @@
 	"files": [
 		"dist"
 	],
+	"homepage": "https://github.com/louiszn/bakit#readme",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/louiszn/bakit.git"
+	},
+	"bugs": {
+		"url": "https://github.com/louiszn/bakit/issues"
+	},
 	"keywords": [
 		"discord.js",
 		"discord-bot",
