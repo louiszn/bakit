@@ -59,6 +59,8 @@ jobs:
           name: dist-${{ matrix.package }}
           path: packages/${{ matrix.package }}/dist
 
+      - run: cp README.md packages/${{ matrix.package }}/README.md
+
       - run: pnpm install --frozen-lockfile
       - run: npm publish
         working-directory: packages/${{ matrix.package }}
