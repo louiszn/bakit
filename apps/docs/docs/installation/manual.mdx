@@ -87,28 +87,35 @@ Setting `experimentalDecorators` and `emitDecoratorMetadata` is required in orde
 
 For example:
 
-```json
-// tsconfig.json
-{
-	"compilerOptions": {
-		"target": "es2024",
-		"module": "nodenext",
-		"strict": true,
-		"skipLibCheck": true,
-		"forceConsistentCasingInFileNames": true,
-		"isolatedModules": true,
-		"outDir": "dist",
+<Tabs>
+	<TabItem value="code" label="tsconfig.json">
+	
+	```json
+	{
+		"compilerOptions": {
+			"target": "es2024",
+			"module": "nodenext",
+			"strict": true,
+			"skipLibCheck": true,
+			"forceConsistentCasingInFileNames": true,
+			"isolatedModules": true,
+			"outDir": "dist",
 
-		// important!
-		"experimentalDecorators": true,
-		"emitDecoratorMetadata": true
-	},
-	"exclude": ["node_modules"]
-}
-```
+    		// important!
+    		"experimentalDecorators": true,
+    		"emitDecoratorMetadata": true
+    	},
+    	"exclude": ["node_modules"]
+    }
+    ```
+
+    </TabItem>
+
+</Tabs>
 
 <Admonition type="info" title="NOTE">
-	This example is not always perfect for your use cases. It's recommended to have a look on official [TypeScript documentation](https://www.typescriptlang.org/tsconfig/).
+	This example is not always perfect for your use cases. It's recommended to have a look on official
+	[TypeScript documentation](https://www.typescriptlang.org/tsconfig/).
 </Admonition>
 
 ### Using ESM
@@ -118,14 +125,20 @@ To make your project use ESM, simply add or set `type` field to `module` in your
 
 For example:
 
-```json
-// package.json
-{
-	name: "example-bot",
-	description: "Bakit is amazing!",
-	type: "module",
-	...
-}
-```
+<Tabs>
+	<TabItem value="code" label="package.json">
+	
+	```json
+	{
+		name: "example-bot",
+		description: "Bakit is amazing!",
+		type: "module",
+		...
+	}
+	```
+
+    </TabItem>
+
+</Tabs>
 
 If your project is currently in CommonJS, this [article](https://deno.com/blog/convert-cjs-to-esm) may help you a lot in migrating.
