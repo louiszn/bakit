@@ -9,8 +9,10 @@ import {
 import { Context } from "./Context.js";
 import { SetOptional } from "type-fest";
 
-export type MainCommandHookMethod = BaseMainHookMethod<[context: Context, ...args: unknown[]]>;
-export type ErrorCommandHookMethod = BaseErrorHookMethod<[context: Context, ...args: unknown[]]>;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type MainCommandHookMethod = BaseMainHookMethod<[context: Context, ...args: any[]]>;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type ErrorCommandHookMethod = BaseErrorHookMethod<[context: Context, ...args: any[]]>;
 
 export interface CommandHook extends BaseHook {
 	method: MainCommandHookMethod | ErrorCommandHookMethod;
