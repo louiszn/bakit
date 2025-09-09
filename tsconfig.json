@@ -9,5 +9,6 @@
 		"experimentalDecorators": true,
 		"emitDecoratorMetadata": true
 	},
+	"include": ["eslint.config.js", "tsup.config.ts", "scripts/**/*.ts"],
 	"exclude": ["**/node_modules", "**/dist"]
 }
