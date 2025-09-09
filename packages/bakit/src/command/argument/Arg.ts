@@ -9,9 +9,7 @@ import {
 	UserArgumentOptions,
 } from "./Argument.js";
 
-const ARGS_KEY = Symbol("args");
-
-const cache = new WeakMap<CommandHook["method"], ArgumentOptions[]>();
+const store = new WeakMap<CommandHook["method"], ArgumentOptions[]>();
 
 function getMethodArguments(method: CommandHook["method"]): readonly ArgumentOptions[];
 function getMethodArguments(method: CommandHook["method"], init: true): ArgumentOptions[];
@@ -19,15 +17,13 @@ function getMethodArguments(
 	method: CommandHook["method"],
 	init = false,
 ): ArgumentOptions[] | readonly ArgumentOptions[] {
-	let args =
-		cache.get(method) ?? (Reflect.getMetadata(ARGS_KEY, method) as ArgumentOptions[] | undefined);
+	let args = store.get(method);
 
 	if (!args) {
 		args = [];
 
 		if (init) {
-			Reflect.defineMetadata(ARGS_KEY, args, method);
-			cache.set(method, args);
+			store.set(method, args);
 		}
 	}
 
@@ -102,12 +98,6 @@ function describeArgumentExpectation(arg: ArgumentOptions): string {
 				parts.push(`${String(arg.minValue)} - ${String(arg.maxValue)}`);
 			}
 
-			break;
-		}
-
-		case ArgumentType.User:
-		case ArgumentType.Member: {
-			// No additional info
 			break;
 		}
 	}
