@@ -81,9 +81,8 @@ For using Bakit, you will need these options for your `tsconfig.json`:
 - `target` as `es2024` - includes all features from Node.js v22.
 - `module` as `nodenext` - controls ESM module correctly for Node.js environment.
 - `experimentalDecorators` as `true` - get the latest decorator stage feature.
-- `emitDecoratorMetadata` as `true` - get the metadata feature for decorator.
 
-Setting `experimentalDecorators` and `emitDecoratorMetadata` is required in order to use bakit due to heavily decorator based API.
+Setting `experimentalDecorators` is required in order to use bakit due to heavily decorator based API.
 
 For example:
 
@@ -102,8 +101,7 @@ For example:
 			"outDir": "dist",
 
     		// important!
-    		"experimentalDecorators": true,
-    		"emitDecoratorMetadata": true
+    		"experimentalDecorators": true
     	},
     	"exclude": ["node_modules"]
     }

@@ -12,6 +12,10 @@ export function makeConfig(options?: Options) {
 		splitting: false,
 		outDir: "dist",
 		target: "es2022",
+		treeshake: true,
+		esbuildOptions(options) {
+			options.minifySyntax = true;
+		},
 		...options,
 	});
 }
