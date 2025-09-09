@@ -41,5 +41,8 @@
 		"reflect-metadata": "^0.2.2",
 		"tiny-glob": "^0.2.9",
 		"type-fest": "^4.41.0"
+	},
+	"devDependencies": {
+		"@swc/core": "^1.13.5"
 	}
 }
