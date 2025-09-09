@@ -5,16 +5,16 @@ import { ConstructorLike } from "../base/BaseEntry.js";
 
 // eslint-disable-next-line @typescript-eslint/no-namespace
 export namespace ListenerAPI {
-	export const ENTRY_KEY = Symbol("entry");
+	const entries = new WeakMap<ConstructorLike, ListenerEntry<EventsLike, keyof EventsLike>>();
 
 	export function use<E extends EventsLike, K extends keyof E>(entry: ListenerEntry<E, K>) {
 		return (target: ConstructorLike) => {
-			Reflect.defineMetadata(ENTRY_KEY, entry, target);
+			entries.set(target, entry as ListenerEntry<EventsLike, keyof EventsLike>);
 		};
 	}
 
 	export function getEntry<E extends EventsLike, K extends keyof E>(target: ConstructorLike) {
-		return Reflect.getMetadata(ENTRY_KEY, target) as ListenerEntry<E, K> | undefined;
+		return entries.get(target) as ListenerEntry<E, K> | undefined;
 	}
 }
 
