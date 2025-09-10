@@ -6,32 +6,23 @@ import Tabs from "@theme/Tabs";
 import TabItem from "@theme/TabItem";
 import Admonition from "@theme/Admonition";
 
-# Adding your first commands
+# Adding Commands
 
-Command is one of the most common ways to interact with Discord bots. Before Discord introduced application command, most bots relied on prefix command.
-But then Discord implemented their own command system, called application command (e.g, slash command, context menu command).
-Discord also recommends to use slash command over prefix command. Using only prefix command isn't a strong reason to enable the MessageCreate intent.
-
-However, some users still prefer prefix command because they are faster and simpler if your server has many bots,
-usually suitable for moderation. That's why you might want to implement both prefix and slash for your command.
-But doing that yourself from scratch is not simple since `Message` and `Interaction` is completely different interfaces.
-That's the main reason why Bakit exists, to help you write commands easier!
-
-Bakit's command system is a complex system that uses listeners from `MessageCreate` for prefix and `InteractionCreate` for slash command.
-But you don't need to worry about them since Bakit already does that! It also provides a Context API as a bridge to communicate between `Message` and `Interaction` easily.
-
-<Admonition type="info" title="Configuring intents">
-	
-`MessageCreate` requires intents like `MessageContent`, `GuildMessages`, `DirectMessages`. See [Configuring intents](/docs/getting-started/quick-start#configuring-intents).
-
-</Admonition>
+Commands are one of the most common ways to interact with Discord bots, but adding and handling them is not quite easy.
+Bakit makes it easier to create both **prefix** and **slash** commands without worrying about the underlying Discord APIs.
 
 ## Basic client options
 
-Bakit provides some command-related options:
+When creating client, you can configure some command-related options like:
 
 - `prefixes` - an array of bot prefixes.
 - `enableMentionPrefix` - enable mention prefix (e.g, `@botName ping`)
+
+<Admonition type="info" title="Configuring intents">
+
+Prefix commands rely on the `MessageCreate` event, so you will need to enable related intents. See [Configuring intents](/docs/getting-started/quick-start#configuring-intents).
+
+</Admonition>
 
 Here's a minimal setup:
 
@@ -71,8 +62,6 @@ src/
 └── listeners/
 ```
 
-Similar to Listener API, Command API and CommandRegistry also use the same interface to help you build commands easier.
-
 Here's a minimal ping command code in `commands/PingCommand.ts`:
 
 <Tabs>
@@ -105,9 +94,9 @@ const Ping = Command({
 });
 ```
 
-## Load your command files
+### Automatically loading your commands
 
-To load your command files automatically, simply use `CommandRegistry.load()` after client with a [glob pattern](https://www.malikbrowne.com/blog/a-beginners-guide-glob-patterns/) that points to your listeners directory. 
+To load your command files automatically, simply use `CommandRegistry.load()` after client with a [glob pattern](https://www.malikbrowne.com/blog/a-beginners-guide-glob-patterns/) that points to your commands directory. 
 For example:
 
 <Tabs>
@@ -140,15 +129,6 @@ await CommandRegistry.load("dist/commands/**/*.js");
 </Admonition>
 
 <Admonition type="info" title="Load handlers in parallel">
-	
-Command system and listener system are unrelated to each other, you can run it in parallel to improve start time:
-
-```ts
-await Promise.all([
-	CommandRegistry.load("src/commands/**/*.ts"),
-	ListenerRegistry.load("src/listeners/**/*.ts"),
-]);
-```
 
 </Admonition>
 
