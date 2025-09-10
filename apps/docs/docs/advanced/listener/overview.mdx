@@ -1,0 +1,132 @@
+---
+sidebar_position: 1
+---
+
+import Tabs from "@theme/Tabs";
+import TabItem from "@theme/TabItem";
+import Admonition from "@theme/Admonition";
+
+# Overview
+
+As your bot grows, managing events inline, with `client.on()` or `client.once()`, can become challenging:
+
+- Code becomes cluttered and hard to maintain when everything is in a file.
+- Reusing or splitting logic across files is cumbersome.
+
+That's why Bakit provides a **well-structured, modular, and scalable listener system** that solves these problems.
+
+## Core Concepts
+
+Before diving into implementation, it's important to understand the main concepts:
+
+- **Listener API** - the interface that allows you to define listeners. It can be accessed with `Listener`.
+- **Listener Registry** - the manager that handles registering. It can be accessed with `ListenerRegistry`.
+
+<Tabs>
+<TabItem value="diagram" label="Event Flow">
+
+```
+Emitter (e.g, client)
+		▼
+Listener Registry
+		▼
+Listener Executor (executing hooks)
+```
+
+</TabItem>
+</Tabs>
+
+This illustrates the lifecycle of an event in Bakit's listener system.
+
+## Benefits
+
+Using Bakit's listener system gives you:
+
+- **Modular code** - each listener in its own file.
+- **Scalable architecture** - handle hundreds of events without cluttering `index.ts`.
+- **Maintainable structure** - easy to find and modify a specific event listener.
+- **Flexible emitter** - can be used with other emitters.
+
+## Typical structure
+
+For loading listeners automatically from files, you may want to use a structure like this:
+
+```
+src/
+├── index.ts
+└── listeners/
+	├── MessageCreateListener.ts
+	└── ClientReadyListener.ts
+```
+
+Then after your client's initialization in your main file, you can use `ListenerRegistry.load()`
+with a [glob pattern](https://www.malikbrowne.com/blog/a-beginners-guide-glob-patterns/) that directs to your listener directory. For example:
+
+<Tabs>
+	<TabItem value="code" label="src/index.ts">
+	
+	```ts
+	import { BakitClient, ListenerRegistry } from "bakit";
+
+    const client = new BakitClient({
+    	intents: [...],
+    });
+
+    await ListenerRegistry.load("src/listeners/**/*.ts");
+
+    await client.login(...);
+    ```
+
+    </TabItem>
+
+</Tabs>
+
+<Admonition type="caution" title="Use a correct path to your source code">
+	
+If you are running your process using TypeScript compiled source (JavaScript), you must use a path that directs to the compiled source instead. For example:
+
+```ts
+await ListenerRegistry.load("dist/listeners/**/*.js");
+```
+
+</Admonition>
+
+## Migrating from inline call to Listener API
+
+After setting up a structure for your listeners to stay, you now want to convert your existing inline call listener to Bakit's API.
+It's now much simpler because your listener logic stays the same, the only difference is how you config the listener entry.
+
+Here's a minimal setup for `MessageCreateListener.ts`:
+
+<Tabs>
+	<TabItem value="code" label="src/listeners/MessageCreateListener.ts">
+	
+	```ts
+	import { Listener } from "bakit";
+	import { Events, type Message } from "discord.js";
+
+	const MessageCreate = Listener(Events.MessageCreate);
+
+	@Listener.use(MessageCreate)
+	export default class MessageCreateListener {
+		@MessageCreate.main
+		public execute(message: Message) {
+			// Your logic stays the same here!
+		}
+	}
+    ```
+
+    </TabItem>
+
+</Tabs>
+
+If you want to configure your listener to be fired once, you can use an object for more advanced options. Here's an example for `ClientReady` listener:
+
+```ts
+const ClientReady = Listener({
+	name: Events.ClientReady,
+	once: true,
+});
+```
+
+After the migration, you should be able to delete your old listener safely while the functionalities stay the same!
