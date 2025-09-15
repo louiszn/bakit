@@ -6,7 +6,7 @@ import Tabs from "@theme/Tabs";
 import TabItem from "@theme/TabItem";
 import Admonition from "@theme/Admonition";
 
-# Overview
+# Listener
 
 As your bot grows, managing events inline, with `client.on()` or `client.once()`, can become challenging:
 
@@ -105,15 +105,15 @@ Here's a minimal setup for `MessageCreateListener.ts`:
 	import { Listener } from "bakit";
 	import { Events, type Message } from "discord.js";
 
-	const MessageCreate = Listener(Events.MessageCreate);
+    const MessageCreate = Listener(Events.MessageCreate);
 
-	@Listener.use(MessageCreate)
-	export default class MessageCreateListener {
-		@MessageCreate.main
-		public execute(message: Message) {
-			// Your logic stays the same here!
-		}
-	}
+    @Listener.use(MessageCreate)
+    export default class MessageCreateListener {
+    	@MessageCreate.main
+    	public execute(message: Message) {
+    		// Your logic stays the same here!
+    	}
+    }
     ```
 
     </TabItem>
@@ -127,6 +127,52 @@ const ClientReady = Listener({
 	name: Events.ClientReady,
 	once: true,
 });
+
+@Listener.use(ClientReady)
+export default class ClientReadyListener {
+	@ClientReady.main
+	public execute(client: BakitClient<true>) {
+		console.log("Successfully logged in");
+	}
+}
 ```
 
 After the migration, you should be able to delete your old listener safely while the functionalities stay the same!
+
+## Using with other emitters
+
+Bakit's listener API can also be used with other emitters.
+
+You can specific the emitter you want to use by passing the emitter object directly into `emitter` in `Listener`'s options.
+Here's an example with [ioredis](https://github.com/redis/ioredis):
+
+```ts
+import { Listener } from "bakit";
+import { Redis } from "ioredis";
+
+const redis = new Redis();
+
+type RedisEvents = Record<string, any>;
+
+const Ready = Listener<RedisEvents>({
+	emitter: redis,
+	name: "ready",
+});
+
+@Listener.use(Ready)
+export default class ReadyListener {
+	@Ready.main
+	public execute() {
+		console.log("Redis is ready!");
+	}
+}
+```
+You can start with `Record<string, any>` like the example code above if you don't care about type safety, or define a stricter event map like RedisEvents for better DX. For example:
+
+```ts
+interface RedisEvents {
+	ready: [],
+	error: [error: Error],
+	message: [channel: string, message: string];
+}
+```
