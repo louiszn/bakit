@@ -1,0 +1,148 @@
+---
+sidebar_position: 1
+---
+
+import Tabs from "@theme/Tabs";
+import TabItem from "@theme/TabItem";
+import Admonition from "@theme/Admonition";
+
+# Overview
+
+Command is one of the most common ways to interact with Discord bots.
+That's why Bakit provides you a command system designed to build commands easier in a scalable way.
+
+This guide covers the **core concepts** of how commands work in Bakit and how to use it.
+
+## Core concept
+
+Before diving into implementation, it's important to understand the main concepts:
+
+- **Command API** - the interface that allow you to define command information. It can be accessed via the `Command`.
+- **Command Registry** - the interface that manages commands registration. It can be accessed via `CommandRegistry`.
+- **Context** - the interface that acts as a bridge between Interaction (slash) and Message (prefix) APIs, providing a unified interface so you can write command logic once without worrying about which API triggered it.
+
+<Tabs>
+<TabItem value="diagram" label="Command Flow">
+
+```
+Listeners (MessageCreate, InteractionCreate)
+		▼
+Argument Parser
+		▼
+Command Registry
+		▼
+Command Executor (executing hooks) with Context API
+```
+
+</TabItem>
+</Tabs>
+
+<Admonition type="info" title="Configuring intents">
+
+Prefix commands rely on the `MessageCreate` event, so you will need to enable related intents. See [Configuring intents](/docs/getting-started/quick-start#configuring-intents).
+
+</Admonition>
+
+## Benefits
+
+Using Bakit's command system gives you:
+
+- Modular code - each command in its own file.
+- Scalable architecture - handle hundreds of command logics without cluttering index.ts.
+- Maintainable structure - easy to find and modify a specific command.
+- Automatically registration - register commands automatically for your bot.
+- Syntax handling - handle command syntax usage easily.
+
+## Typical structure
+
+For loading listeners automatically from files, you may want to use a structure like this:
+
+```
+src/
+├── index.ts
+└── commands/
+	├── PingCommand.ts
+	├── AvatarCommand.ts
+	└── moderation/
+		├── KickCommand.ts
+		└── BanCommand.ts
+```
+
+Then after your client's initialization in your main file, you can use `Command.load()`
+with a [glob pattern](https://www.malikbrowne.com/blog/a-beginners-guide-glob-patterns/) that directs to your listener directory. For example:
+
+<Tabs>
+	<TabItem value="code" label="src/index.ts">
+	
+	```ts
+	import { BakitClient, CommandRegistry } from "bakit";
+
+    const client = new BakitClient({
+    	intents: [...],
+    });
+
+    await CommandRegistry.load("src/commands/**/*.ts");
+
+    await client.login(...);
+    ```
+
+    </TabItem>
+
+</Tabs>
+
+<Admonition type="caution" title="Use a correct path to your source code">
+	
+If you are running your process using TypeScript compiled source (JavaScript), you must use a path that directs to the compiled source instead. For example:
+
+```ts
+await CommandRegistry.load("dist/commands/**/*.js");
+```
+
+</Admonition>
+
+## Adding command with Command API
+
+After setting up a structure for your commands to stay, you are now ready to add your commands.
+
+Here's a minimal setup for `PingCommand.ts`:
+
+<Tabs>
+	<TabItem value="code" label="src/commands/PingCommand.ts">
+	
+	```ts
+	import { Command, type Context } from "bakit";
+
+    const Ping = Command("ping"); // "ping" is your command name
+
+    @Command.use(Ping)
+    export default class PingCommand {
+    	@Ping.main
+    	public async execute(context: Context) {
+			// Logic of the command stays here
+    		await context.send(`Pong! ${context.client.ws.ping}ms!`);
+    	}
+    }
+    ```
+
+    </TabItem>
+
+</Tabs>
+
+If you want to specify more information like description, you can use options object:
+
+```ts
+const Ping = Command({
+	name: "ping",
+	description: "Display bot's latency",
+});
+```
+
+Now every time you start your bot, Bakit will register slash commands automatically. You should now be able to use both prefix and slash with your ping command.
+If you can use prefix but don't see any slash commands, try reloading your Discord client (CTRL + R).
+
+## Command register caching (in development)
+
+To prevent hitting rate limited for requesting too many commands registering, Bakit will try to cache old command data and then comparing it before register again.
+This can help a lot if you use hot reloading in development.
+
+If you need to force Bakit to register commands, you can simply remove existing `.bakit/command` file and then try start your bot again.
