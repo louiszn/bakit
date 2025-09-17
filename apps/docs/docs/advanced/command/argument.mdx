@@ -88,3 +88,48 @@ public async execute(
 This can compile, but can break at runtime. Always validate and guard argument values in your handler when appropriate.
 
 </Admonition>
+
+## Using with subcommands
+
+For subcommands, if you put arguments in parent hook, you have to including again in child hook. For example:
+
+```ts
+import { Command, type Context, Arg } from "bakit";
+
+const Giveaway = Command("giveaway");
+
+const Restart = Giveaway.subcommand("restart");
+const Stop = Giveaway.subcommand("stop");
+
+@Command.use(Giveaway)
+export default class Giveaway {
+	@Giveaway.main
+	public async execute(context: Context, @Arg.string("id") giveawayId: string) {
+		console.log("The command is executed");
+	}
+
+	@Restart.main
+	public async executeRestart(context: Context, giveawayId: string) {
+		console.log("Restart subcommand is executed");
+	}
+
+	@Stop.main
+	public async executeStop(context: Context, giveawayId: string, @Arg.string("reason") reason: string) {
+		console.log(`Stop subcommand is executed: ${reason}`);
+	}
+}
+```
+
+For slash command, Bakit will organize required argument first, then optional ones to satisfies Discord API:
+
+```
+/giveaway restart <id>
+/giveaway stop <id> <reason>
+```
+
+For prefix command, arguments is put the exact position that you defined:
+
+```
+!giveaway <id> restart
+!giveaway <id> stop
+```
