@@ -1,0 +1,70 @@
+---
+sidebar_position: 3
+---
+
+import Tabs from "@theme/Tabs";
+import TabItem from "@theme/TabItem";
+import Admonition from "@theme/Admonition";
+
+# Argument
+
+Argument system is another special feature in command system. It helps you defining what can users provide for your bot naturally.
+
+## Supported types
+
+For now, argument system supports the following types:
+
+| Type name | Value    | Description                                    |
+| --------- | -------- | ---------------------------------------------- |
+| string    | `string` | Raw message.                                   |
+| number    | `number` | Accept all kind of number.                     |
+| integer   | `number` | Accept only integer.                           |
+| user      | `User`   | Get user information from user ID and mention. |
+| member    | `Member` | Get member information in a guild.             |
+
+## Basic usage
+
+The basic syntax is `Arg.<type>(<name or options>)`.
+
+Here's an example for `avatar` command:
+
+```ts
+import { type Context, Command, Arg } from "bakit";
+import { type User } from "discord.js";
+
+const Avatar = Command("avatar");
+
+@Command.use(Avatar)
+export default class AvatarCommand {
+	@Avatar.main
+	public async execute(ctx: Context, @Arg.user("user") user: User) {
+		await user.send(user.displayAvatarURL({ size: 4096 }));
+	}
+}
+```
+
+Argument is required by default, if you want to make it optional, you can use options object:
+
+```ts
+public async execute(
+	ctx: Context,
+	@Arg.user({ name: "user", required: false }) user: User | null,
+) {}
+```
+
+If the argument is not provided, it will be passed as `null`.
+
+<Admonition type="caution" title="Use a correct path to your source code">
+	
+Bakit argument is limited at type validating in code due to decorator's limitation. That means you can either do this without getting any complaint:
+
+```ts
+public async execute(
+	ctx: Context,
+	@Arg.user({ name: "user", required: false }) user: string,
+) {}
+```
+
+Always double-check the type of your arguments at runtime, especially when working with nullable values.
+
+</Admonition>
