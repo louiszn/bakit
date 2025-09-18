@@ -102,7 +102,7 @@ const Restart = Giveaway.subcommand("restart");
 const Stop = Giveaway.subcommand("stop");
 
 @Command.use(Giveaway)
-export default class Giveaway {
+export default class GiveawayCommand {
 	@Giveaway.main
 	public async execute(context: Context, @Arg.string("id") giveawayId: string) {
 		console.log("The command is executed");

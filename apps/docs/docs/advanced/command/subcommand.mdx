@@ -42,7 +42,7 @@ const Start = Giveaway.subcommand("start");
 const Stop = Giveaway.subcommand("stop");
 
 @Command.use(Giveaway)
-export default class Giveaway {
+export default class GiveawayCommand {
 	@Giveaway.main
 	public async execute(context: Context) {
 		console.log("The command is executed");
@@ -80,7 +80,7 @@ const EmbedEdit = Embed.subcommand("edit");
 const EmbedDisplay = Embed.subcommand("display");
 
 @Command.use(Giveaway)
-export default class Giveaway {
+export default class GiveawayCommand {
 	@Giveaway.main
 	public async execute(context: Context) {
 		console.log("The command is executed");
