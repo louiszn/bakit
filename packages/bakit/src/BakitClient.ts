@@ -3,14 +3,15 @@ import {
 	ChatInputCommandInteraction,
 	Client,
 	ClientOptions,
-	codeBlock,
 	Events,
 	IntentsBitField,
 	Interaction,
 	Message,
 	MessageCreateOptions,
 } from "discord.js";
+
 import { CommandRegistry } from "./command/CommandRegistry.js";
+
 import {
 	CommandGroupEntry,
 	CommandHook,
@@ -19,6 +20,7 @@ import {
 	RootCommandEntry,
 	SubcommandEntry,
 } from "./command/CommandEntry.js";
+
 import {
 	Arg,
 	ArgumentOptions,
@@ -27,11 +29,18 @@ import {
 	Context,
 	MessageContext,
 } from "./command/index.js";
+
 import { ArgumentResolver } from "./command/argument/ArgumentResolver.js";
+
 import { StateBox } from "./libs/StateBox.js";
-import { CommandSyntaxError } from "./errors/index.js";
+
 import { ListenerRegistry } from "./listener/ListenerRegistry.js";
+
+import { CommandSyntaxError } from "./errors/index.js";
+
 import { ConstructorLike, HookExecutionState } from "./base/BaseEntry.js";
+
+import { defaultGetSyntaxErrorMessage } from "./utils/command.js";
 
 export type GetSyntaxErrorMessageFunction = (
 	command: object,
@@ -52,7 +61,7 @@ export class BakitClient<Ready extends boolean = boolean> extends Client<Ready> 
 
 	public constructor(options: BakitClientOptions) {
 		if (options.getSyntaxErrorMessage === undefined) {
-			options.getSyntaxErrorMessage = BakitClient.getSyntaxErrorMessage;
+			options.getSyntaxErrorMessage = defaultGetSyntaxErrorMessage;
 		}
 
 		super(options);
@@ -67,32 +76,6 @@ export class BakitClient<Ready extends boolean = boolean> extends Client<Ready> 
 		this.on(Events.InteractionCreate, (interaction) => void this.handleInteraction(interaction));
 		this.on(Events.MessageCreate, (message) => void this.handleMessage(message));
 	}
-
-	public static getSyntaxErrorMessage: GetSyntaxErrorMessageFunction = (
-		command,
-		error,
-		context,
-		args,
-		prefix,
-	) => {
-		const requiredSyntax = args.map((x) => Arg.format(x)).join(" ");
-
-		const root = Command.getRoot(command.constructor as ConstructorLike);
-
-		if (!root) {
-			return;
-		}
-
-		const content = [
-			codeBlock(error.message),
-			"Required Syntax:",
-			codeBlock(`${prefix}${root.options.name} ${requiredSyntax}`),
-		].join("\n");
-
-		return {
-			content,
-		};
-	};
 
 	private async registerApplicationCommands(client: BakitClient<true>): Promise<void> {
 		const commands = CommandRegistry.constructors.map((c) => CommandRegistry.buildSlashCommand(c));
