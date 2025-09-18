@@ -3,6 +3,7 @@ import { BakitClient } from "../BakitClient.js";
 import { ErrorListenerHookMethod, MainListenerHookMethod } from "./ListenerEntry.js";
 
 import { ConstructorLike, HookExecutionState } from "../base/BaseEntry.js";
+import { StateBox } from "../libs/StateBox.js";
 
 import glob from "tiny-glob";
 import { pathToFileURL } from "node:url";
@@ -129,7 +130,7 @@ export abstract class ListenerRegistry {
 
 		const { hooks } = entry;
 
-		return async function (...args: unknown[]) {
+		const execute = async (...args: unknown[]) => {
 			const mainHook = hooks[HookExecutionState.Main];
 			const preHook = hooks[HookExecutionState.Pre];
 			const postHook = hooks[HookExecutionState.Post];
@@ -160,6 +161,12 @@ export abstract class ListenerRegistry {
 					throw error;
 				}
 			}
+		};
+
+		return async (...args: unknown[]) => {
+			await StateBox.run(async () => {
+				await execute(...args);
+			});
 		};
 	}
 	/**
