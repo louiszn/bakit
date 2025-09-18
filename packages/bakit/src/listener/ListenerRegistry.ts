@@ -164,9 +164,7 @@ export abstract class ListenerRegistry {
 		};
 
 		return async (...args: unknown[]) => {
-			await StateBox.run(async () => {
-				await execute(...args);
-			});
+			await StateBox.run(() => execute(...args));
 		};
 	}
 	/**
