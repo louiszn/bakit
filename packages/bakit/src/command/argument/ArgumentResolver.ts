@@ -158,7 +158,11 @@ export class ArgumentResolver {
 		return parsedValues;
 	}
 
-	private async matchValue(arg: ArgumentOptions, value: string): Promise<unknown> {
+	private async matchValue(arg: ArgumentOptions, value: string | undefined): Promise<unknown> {
+		if (!value) {
+			return null;
+		}
+
 		switch (arg.type) {
 			case ArgumentType.User:
 				return await this.matchUserValue(arg, value);
