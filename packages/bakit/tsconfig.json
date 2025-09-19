@@ -3,5 +3,5 @@
 	"compilerOptions": {
 		"outDir": "./dist"
 	},
-	"include": ["src/**/*.ts", "tests/**/*.test.ts", "example/**/*.ts", "tsup.config.ts"]
+	"include": ["src/**/*.ts", "tests/**/*.ts", "example/**/*.ts", "tsup.config.ts"]
 }

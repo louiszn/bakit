@@ -75,14 +75,14 @@ export class ArgumentResolver {
 
 		if (args.length) {
 			const values = this.values.slice(at);
+			this._args.push(...args);
 
 			const parsedValues =
-				args.length >= values.length
+				values.length >= args.length
 					? await this.parseExact(args, values)
 					: await this.parseFlexible(args, values);
 
 			nextAt += parsedValues.length;
-			this._args.push(...args);
 			this._parsedValues.push(...parsedValues);
 		}
 
