@@ -98,3 +98,5 @@ export class SubcommandEntry extends BaseCommandEntry {
 		super(options);
 	}
 }
+
+export type CommandEntry = RootCommandEntry | CommandGroupEntry | SubcommandEntry;

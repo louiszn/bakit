@@ -4,6 +4,7 @@ export enum ArgumentType {
 	Number = "number",
 	User = "user",
 	Member = "member",
+	Literal = "literal",
 }
 
 export interface BaseArgumentOptions {
@@ -38,6 +39,11 @@ export interface UserArgumentOptions extends BaseArgumentOptions {
 
 export interface MemberArgumentOptions extends BaseArgumentOptions {
 	type: ArgumentType.Member;
+}
+
+export interface LiteralArgumentOptions extends Omit<BaseArgumentOptions, "name"> {
+	type: ArgumentType.Literal;
+	value: string;
 }
 
 export type ArgumentOptions =

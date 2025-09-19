@@ -1,67 +1,62 @@
 import { ChatInputCommandInteraction, Message } from "discord.js";
 import {
+	Arg,
 	ArgumentOptions,
 	ArgumentType,
+	CommandEntry,
 	IntegerArgumentOptions,
+	LiteralArgumentOptions,
+	MemberArgumentOptions,
 	NumberArgumentOptions,
 	StringArgumentOptions,
 	UserArgumentOptions,
 } from "../index.js";
 import { BakitClient } from "../../BakitClient.js";
+import { HookExecutionState } from "../../base/BaseEntry.js";
 import { extractId } from "../../utils/user.js";
 import { CommandSyntaxError, CommandSyntaxErrorType } from "../../errors/CommandSyntaxError.js";
 
 export interface ArgumentResolverOptions {
 	message: Message;
-	args: ArgumentOptions[];
 	values: string[];
 	prefix: string;
-	startAt: number;
 }
 
 export class ArgumentResolver {
-	public parsedValues: unknown[] = [];
+	private _parsedValues: unknown[] = [];
+	private _args: (ArgumentOptions | LiteralArgumentOptions)[] = [];
 
-	public constructor(public options: ArgumentResolverOptions) {}
+	public constructor(
+		private _values: string[],
+		public prefix: string,
+		public message: Message,
+	) {}
 
-	/**
-	 * Get the first value as the command trigger.
-	 */
-	public get trigger() {
-		return this.options.values[0];
+	public get commandName(): string {
+		return this._values[0];
 	}
 
-	/**
-	 * Get amount of specified argument values.
-	 */
-	public get specifiedAmount() {
-		return this.options.values.length - this.options.startAt;
-	}
-
-	/**
-	 * Get parsed raw values from content.
-	 */
 	public get values(): readonly string[] {
-		return [...this.options.values];
+		return this._values;
 	}
 
-	get client(): BakitClient<true> {
-		return this.options.message.client as BakitClient<true>;
+	public get parsedValues(): readonly unknown[] {
+		return this._parsedValues;
 	}
 
-	public static create(message: Message) {
-		const client = message.client as BakitClient<true>;
+	public get args(): readonly (ArgumentOptions | LiteralArgumentOptions)[] {
+		return this._args;
+	}
 
-		const { enableMentionPrefix } = client.options;
+	public get client(): BakitClient<true> {
+		return this.message.client as BakitClient<true>;
+	}
 
-		const prefixes = [
-			// Custom prefixes specified in options
-			...(client.options.prefixes ?? []),
-			// Use bot mention as prefix if enabled
-			...(enableMentionPrefix ? [client.user.toString()] : []),
-		];
+	public static async initialize(message: Message) {
+		const client = message.client as BakitClient;
 
-		const prefix = prefixes.find((p) => message.content.startsWith(p)) ?? null;
+		const prefixes = await client.dispatchers.command.getPrefixes(message);
+		const prefix = prefixes.find((p) => message.content.startsWith(p));
 
 		if (!prefix) {
 			return;
@@ -69,53 +64,54 @@ export class ArgumentResolver {
 
 		const values = message.content.slice(prefix.length).trim().split(/\s+/);
 
-		return new ArgumentResolver({
-			message,
-			startAt: 1, // Skip the command trigger
-			values,
-			args: [],
-			prefix,
-		});
+		return new ArgumentResolver(values, prefix, message);
 	}
 
-	public async resolve(args: ArgumentOptions[]) {
-		const child = new ArgumentResolver({
-			prefix: this.options.prefix,
-			message: this.options.message,
-			values: this.options.values,
-			args,
-			startAt: this.options.startAt,
+	public async resolve(entry: CommandEntry, at = 1) {
+		const mainHook = entry.hooks[HookExecutionState.Main];
+		const args = mainHook ? [...Arg.getMethodArguments(mainHook.method)] : [];
+
+		let nextAt = at;
+
+		if (args.length) {
+			const values = this.values.slice(at);
+
+			const parsedValues =
+				args.length >= values.length
+					? await this.parseExact(args, values)
+					: await this.parseFlexible(args, values);
+
+			nextAt += parsedValues.length;
+			this._args.push(...args);
+			this._parsedValues.push(...parsedValues);
+		}
+
+		const nextValue = this._values[nextAt];
+
+		if (!nextValue || !("children" in entry)) {
+			return;
+		}
+
+		const childEntry = entry.children.get(nextValue);
+
+		if (!childEntry) {
+			return;
+		}
+
+		this._args.push({
+			type: ArgumentType.Literal,
+			value: nextValue,
 		});
 
-		child.parsedValues = [...this.parsedValues];
-
-		if (!child.options.args.length) {
-			return child;
-		}
-
-		if (this.specifiedAmount >= child.options.args.length) {
-			await child.absoluteParse();
-		} else {
-			await child.dynamicParse();
-		}
-
-		return child;
+		await this.resolve(childEntry, nextAt + 1);
 	}
 
-	private async absoluteParse() {
-		const { args, values, startAt } = this.options;
+	protected async parseExact(args: ArgumentOptions[], values: string[]): Promise<unknown[]> {
+		const parsedValues: unknown[] = [];
 
-		let valueIndex = startAt;
-		let argIndex = 0;
-
-		while (valueIndex < values.length && argIndex < args.length) {
-			const value = values[valueIndex];
-			const arg = args[argIndex];
-
-			if (arg.tuple) {
-				this.parsedValues.push(...(await this.resolveTuple(arg, valueIndex, argIndex)));
-				break; // Tuple must be the last one, so it's safe to break here
-			}
+		for (let i = 0; i < args.length; i++) {
+			const arg = args[i];
+			const value = values[i];
 
 			const matchedValue = await this.matchValue(arg, value);
 
@@ -127,101 +123,47 @@ export class ArgumentResolver {
 				});
 			}
 
-			this.parsedValues.push(matchedValue);
-
-			valueIndex++;
-			argIndex++;
+			parsedValues.push(matchedValue);
 		}
+
+		return parsedValues;
 	}
 
-	private async dynamicParse() {
-		const { args, values } = this.options;
-
+	protected async parseFlexible(args: ArgumentOptions[], values: string[]): Promise<unknown[]> {
 		let argIndex = 0;
-		let valueIndex = this.options.startAt + 1;
+		let valueIndex = 0;
 
-		while (valueIndex < values.length && argIndex < args.length) {
-			const value = values[valueIndex];
+		const parsedValues: unknown[] = [];
+
+		while (argIndex < args.length) {
 			const arg = args[argIndex];
-
-			if (arg.tuple) {
-				this.parsedValues.push(...(await this.resolveTuple(arg, valueIndex, argIndex)));
-				break; // Tuple must be the last one, so it's safe to break here
-			}
+			const value = values[valueIndex];
 
 			const matchedValue = await this.matchValue(arg, value);
 
 			if (matchedValue !== null) {
-				this.parsedValues.push(matchedValue);
+				parsedValues.push(matchedValue);
 				valueIndex++;
 			} else if (arg.required) {
 				throw new CommandSyntaxError({
-					arg,
 					type: CommandSyntaxErrorType.MissingRequireArgument,
 					received: value,
+					arg,
 				});
 			}
 
 			argIndex++;
 		}
 
-		while (argIndex < args.length) {
-			const arg = args[argIndex];
-
-			if (arg.required) {
-				throw new CommandSyntaxError({
-					arg,
-					type: CommandSyntaxErrorType.MissingRequireArgument,
-					received: "nothing",
-				});
-			}
-
-			argIndex++;
-		}
-	}
-
-	private async resolveTuple(
-		arg: ArgumentOptions,
-		startIndex: number,
-		argIndex: number,
-	): Promise<unknown[]> {
-		const { args } = this.options;
-
-		if (argIndex !== args.length - 1) {
-			throw new SyntaxError("Tuple argument must be the last argument");
-		}
-
-		const values: unknown[] = [];
-
-		for (const rest of this.values.slice(startIndex)) {
-			const matchedValue = await this.matchValue(arg, rest);
-
-			if (matchedValue === null) {
-				throw new CommandSyntaxError({
-					arg,
-					type: CommandSyntaxErrorType.InvalidVariadicArgumentValue,
-					received: rest,
-				});
-			}
-
-			values.push(matchedValue);
-		}
-
-		if (values.length === 0 && arg.required) {
-			throw new CommandSyntaxError({
-				arg,
-				type: CommandSyntaxErrorType.MissingRequireArgument,
-				received: "nothing",
-			});
-		}
-
-		return values;
+		return parsedValues;
 	}
 
 	private async matchValue(arg: ArgumentOptions, value: string): Promise<unknown> {
 		switch (arg.type) {
 			case ArgumentType.User:
 				return await this.matchUserValue(arg, value);
+			case ArgumentType.Member:
+				return await this.matchMemberValue(arg, value);
 			case ArgumentType.Integer:
 				return this.matchIntegerValue(arg, value);
 			case ArgumentType.Number:
@@ -240,13 +182,23 @@ export class ArgumentResolver {
 			return null;
 		}
 
-		const user = await this.client.users.fetch(userId).catch(() => null);
+		return await this.client.users.fetch(userId).catch(() => null);
+	}
 
-		if (!user) {
-			return null;
+	private async matchMemberValue(arg: MemberArgumentOptions, value: string) {
+		const userId = extractId(value);
+
+		if (!userId) {
+			return;
 		}
 
-		return user;
+		const { guild } = this.message;
+
+		if (!guild) {
+			return;
+		}
+
+		return await guild.members.fetch(userId).catch(() => null);
 	}
 
 	private matchIntegerValue(arg: IntegerArgumentOptions, value: string) {
@@ -297,7 +249,10 @@ export class ArgumentResolver {
 		return value;
 	}
 
-	public static resolveChatInput(interaction: ChatInputCommandInteraction, arg: ArgumentOptions) {
+	public static resolveChatInputOption(
+		interaction: ChatInputCommandInteraction,
+		arg: ArgumentOptions,
+	) {
 		switch (arg.type) {
 			case ArgumentType.String:
 				return interaction.options.getString(arg.name, arg.required);
