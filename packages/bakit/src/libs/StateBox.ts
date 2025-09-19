@@ -4,8 +4,6 @@ export type States = Record<string | symbol, unknown>;
 
 // eslint-disable-next-line @typescript-eslint/no-extraneous-class
 export class StateBox {
-	private static readonly STATES_KEY = Symbol("states");
-
 	public static storage = new AsyncLocalStorage<States>();
 
 	private static getState(): States {
@@ -34,19 +32,21 @@ export class StateBox {
 
 	public static use<T extends object>(defaultValue?: unknown) {
 		return (target: T, key: keyof T) => {
+			const generalKey = key as string | symbol;
+
 			Object.defineProperty(target, key, {
 				get() {
 					const states = StateBox.getState();
 
 					if (!(key in states)) {
-						states[key as string | symbol] = defaultValue;
+						states[generalKey] = defaultValue;
 					}
 
-					return states[key as string | symbol];
+					return states[generalKey];
 				},
 				set(value) {
 					const states = StateBox.getState();
-					states[key as string | symbol] = value;
+					states[generalKey] = value;
 				},
 				enumerable: true,
 				configurable: true,

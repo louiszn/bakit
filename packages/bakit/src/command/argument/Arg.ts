@@ -3,6 +3,7 @@ import {
 	ArgumentOptions,
 	ArgumentType,
 	IntegerArgumentOptions,
+	LiteralArgumentOptions,
 	MemberArgumentOptions,
 	NumberArgumentOptions,
 	StringArgumentOptions,
@@ -65,7 +66,7 @@ const number = createArgument<NumberArgumentOptions>(ArgumentType.Number);
 const user = createArgument<UserArgumentOptions>(ArgumentType.User);
 const member = createArgument<MemberArgumentOptions>(ArgumentType.Member);
 
-function describeArgumentExpectation(arg: ArgumentOptions): string {
+function describeArgumentExpectation(arg: ArgumentOptions | LiteralArgumentOptions): string {
 	const parts: string[] = [arg.type];
 
 	switch (arg.type) {
@@ -105,8 +106,12 @@ function describeArgumentExpectation(arg: ArgumentOptions): string {
 	return parts.join(", ");
 }
 
-function format(arg: ArgumentOptions) {
-	const { name, required, tuple } = arg;
+function format(arg: ArgumentOptions | LiteralArgumentOptions) {
+	if (arg.type === ArgumentType.Literal) {
+		return arg.value;
+	}
+
+	const { required, tuple, name } = arg;
 
 	const opening = required ? "<" : "[";
 	const closing = required ? ">" : "]";
