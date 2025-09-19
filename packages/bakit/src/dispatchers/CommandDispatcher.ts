@@ -22,6 +22,7 @@ import type {
 	RootCommandEntry,
 	SubcommandEntry,
 } from "../command/index.js";
+import { StateBox } from "../libs/StateBox.js";
 
 export class CommandDispatcher {
 	public constructor(public client: BakitClient) {}
@@ -72,7 +73,7 @@ export class CommandDispatcher {
 
 		const parsedValues = chain.flatMap((entry) => this.resolveChatInputEntry(interaction, entry));
 
-		await this.executeChain(chain, context, instance, parsedValues);
+		await StateBox.run(() => this.executeChain(chain, context, instance, parsedValues));
 	}
 
 	private getChatInputTriggerChain(interaction: ChatInputCommandInteraction) {
@@ -148,7 +149,9 @@ export class CommandDispatcher {
 
 		const entryChain = this.resolveCommandEntryChain(root, literalTriggers);
 
-		await this.executeChain(entryChain, context, instance, resolver.parsedValues as unknown[]);
+		const values = resolver.parsedValues as unknown[];
+
+		await StateBox.run(() => this.executeChain(entryChain, context, instance, values));
 	}
 
 	private resolveCommandEntryChain(root: RootCommandEntry, triggers: string[]): CommandEntry[] {
