@@ -137,6 +137,7 @@ export class CommandDispatcher {
 
 				if (payload) {
 					await context.send(payload);
+					return;
 				}
 			} else {
 				throw error;
