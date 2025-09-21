@@ -120,8 +120,7 @@ const config: Config = {
 			copyright: `Copyright © ${new Date().getFullYear()} Bakit. Built with Docusaurus.`,
 		},
 		prism: {
-			theme: prismThemes.github,
-			darkTheme: prismThemes.dracula,
+			darkTheme: prismThemes.vsDark,
 		},
 		algolia: {
 			appId: "NWXZRCVUW5",
