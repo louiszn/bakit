@@ -1,7 +1,7 @@
-import { ClientEvents } from "discord.js";
 import { EventsLike, ListenerEntry, ListenerEntryOptions } from "./ListenerEntry.js";
 import { SetOptional } from "type-fest";
 import { ConstructorLike } from "../base/BaseEntry.js";
+import { BakitClientEvents } from "../BakitClient.js";
 
 // eslint-disable-next-line @typescript-eslint/no-namespace
 export namespace ListenerAPI {
@@ -18,9 +18,10 @@ export namespace ListenerAPI {
 	}
 }
 
-export function ListenerFactory<E extends EventsLike = ClientEvents, K extends keyof E = keyof E>(
-	options: SetOptional<ListenerEntryOptions<E, K>, "once"> | K,
-) {
+export function ListenerFactory<
+	E extends EventsLike = BakitClientEvents,
+	K extends keyof E = keyof E,
+>(options: SetOptional<ListenerEntryOptions<E, K>, "once"> | K) {
 	const fullOptions: ListenerEntryOptions<E, K> =
 		typeof options !== "object" ? { name: options, once: false } : { once: false, ...options };
 
