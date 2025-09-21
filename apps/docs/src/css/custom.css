@@ -1,10 +1,3 @@
-/**
- * Any CSS included here will be global. The classic template
- * bundles Infima by default. Infima is a CSS framework designed to
- * work well for content-centric websites.
- */
-
-/* You can override the default Infima variables here. */
 :root {
 	--ifm-color-primary: #44c4ff;
 	--ifm-color-primary-dark: #59b8e4;
@@ -13,23 +6,13 @@
 	--ifm-color-primary-light: #5fcafc;
 	--ifm-color-primary-lighter: #7bd3fc;
 	--ifm-color-primary-lightest: #87d8fd;
-	--ifm-code-font-size: 95%;
-	--docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.1);
-}
-
-/* For readability concerns, you should choose a lighter palette in dark mode. */
-[data-theme="dark"] {
-	--ifm-color-primary: #44c4ff;
-	--ifm-color-primary-dark: #59b8e4;
-	--ifm-color-primary-darker: #3da2d1;
-	--ifm-color-primary-darkest: #2584b1;
-	--ifm-color-primary-light: #5fcafc;
-	--ifm-color-primary-lighter: #7bd3fc;
-	--ifm-color-primary-lightest: #87d8fd;
+	--ifm-navbar-background-color: #0f0f0f;
+	--ifm-background-color: #0f0f0f;
 	--ifm-code-font-size: 95%;
 	--docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.3);
 }
 
+/* Header */
 .header-github-link:hover {
 	opacity: 0.6;
 }
@@ -52,4 +35,68 @@ code,
 pre {
 	tab-size: 4;
 	-moz-tab-size: 4;
+}
+
+/* Navbar */
+.navbar {
+	border-bottom: 2px solid rgba(255, 255, 255, 0.1);
+	background-color: rgba(15, 15, 15, 0.6);
+	backdrop-filter: blur(10px);
+	-webkit-backdrop-filter: blur(10px);
+}
+
+.navbar__inner {
+	padding-left: 5rem;
+	padding-right: 5rem;
+}
+
+/* Sidebar */
+.theme-doc-sidebar-container {
+	margin-left: 5rem;
+	border: none;
+}
+
+/* Footer */
+.footer {
+	background-color: var(--ifm-navbar-background-color);
+	border-top: 2px solid rgba(255, 255, 255, 0.1);
+}
+
+.footer__inner {
+	padding-left: 5rem;
+	padding-right: 5rem;
+}
+
+.footer a {
+	color: rgba(255, 255, 255, 0.432);
+	font-weight: 400;
+	text-decoration: none;
+}
+
+.footer a:hover {
+	color: var(--ifm-color-primary-lighter);
+}
+
+/* Sidebar items */
+.menu__list-item .menu__list {
+	margin-left: 0.5rem;
+}
+.menu__list .menu__list {
+	border-left: 1px solid rgba(255, 255, 255, 0.1);
+	margin-left: 0.75rem;
+	padding-left: 0.75rem;
+}
+
+.menu__link {
+	color: rgba(255, 255, 255, 0.432);
+	font-weight: 400;
+}
+
+.menu__link--active {
+	color: var(--ifm-color-primary);
+	font-weight: 600;
+}
+
+.menu__link:hover {
+	color: var(--ifm-color-primary-lighter);
 }

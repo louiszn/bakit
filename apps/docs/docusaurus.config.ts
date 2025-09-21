@@ -6,7 +6,7 @@ import type * as Preset from "@docusaurus/preset-classic";
 
 const config: Config = {
 	title: "Bakit",
-	tagline: "Make your bot scalable",
+	tagline: "The most powerful Discord.js framework",
 	favicon: "img/favicon.ico",
 
 	future: {
@@ -43,21 +43,41 @@ const config: Config = {
 		],
 	],
 
+	plugins: [
+		[
+			"docusaurus-plugin-typedoc",
+			{
+				entryPoints: ["../../packages/bakit/src/index.ts"],
+				exclude: ["**/__tests__/**", "**/node_modules/**"],
+				tsconfig: "../../packages/bakit/tsconfig.json",
+				sidebar: {
+					autoConfiguration: true,
+					pretty: true,
+					typescript: true,
+				},
+				excludePrivate: true,
+				excludeProtected: true,
+				excludeExternals: true,
+			},
+		],
+	],
+
 	themeConfig: {
 		colorMode: {
 			defaultMode: "dark",
+			disableSwitch: true,
 		},
 		image: "img/docusaurus-social-card.jpg",
 		navbar: {
 			title: "Bakit",
-			logo: {
-				alt: "My Site Logo",
-				src: "img/logo.svg",
-			},
+			// logo: {
+			// 	alt: "My Site Logo",
+			// 	src: "img/logo.svg",
+			// },
 			items: [
 				{
 					type: "docSidebar",
-					sidebarId: "tutorialSidebar",
+					sidebarId: "sidebar",
 					position: "left",
 					label: "Docs",
 				},
@@ -100,8 +120,7 @@ const config: Config = {
 			copyright: `Copyright © ${new Date().getFullYear()} Bakit. Built with Docusaurus.`,
 		},
 		prism: {
-			theme: prismThemes.github,
-			darkTheme: prismThemes.dracula,
+			darkTheme: prismThemes.vsDark,
 		},
 		algolia: {
 			appId: "NWXZRCVUW5",
