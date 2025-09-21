@@ -58,7 +58,7 @@ const config: Config = {
 				excludePrivate: true,
 				excludeProtected: true,
 				excludeExternals: true,
-				gitRemote: "https://github.com/louiszn/bakit",
+				gitRemote: "https://github.com/louiszn/bakit.git",
 			},
 		],
 	],
