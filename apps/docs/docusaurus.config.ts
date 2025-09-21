@@ -126,11 +126,7 @@ const config: Config = {
 			appId: "BCOY3YFTLI",
 			apiKey: "20aa7c3de7963170ddc2bfb9a73c12c7",
 			indexName: "bakit",
-			contextualSearch: true,
-			replaceSearchResultPathname: {
-				from: "/docs/",
-				to: "/",
-			},
+			contextualSearch: false,
 			searchParameters: {},
 			searchPagePath: "search",
 			insights: false,
