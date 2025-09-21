@@ -123,8 +123,8 @@ const config: Config = {
 			darkTheme: prismThemes.vsDark,
 		},
 		algolia: {
-			appId: "NWXZRCVUW5",
-			apiKey: "cdcc4532fa384be9d050026a313db633",
+			appId: "BCOY3YFTLI",
+			apiKey: "20aa7c3de7963170ddc2bfb9a73c12c7",
 			indexName: "bakit",
 			contextualSearch: true,
 			replaceSearchResultPathname: {
