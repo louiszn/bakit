@@ -48,12 +48,16 @@ const config: Config = {
 			"docusaurus-plugin-typedoc",
 			{
 				entryPoints: ["../../packages/bakit/src/index.ts"],
+				exclude: ["**/__tests__/**", "**/node_modules/**"],
 				tsconfig: "../../packages/bakit/tsconfig.json",
 				sidebar: {
 					autoConfiguration: true,
 					pretty: true,
 					typescript: true,
 				},
+				excludePrivate: true,
+				excludeProtected: true,
+				excludeExternals: true,
 			},
 		],
 	],
