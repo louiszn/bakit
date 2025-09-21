@@ -38,16 +38,18 @@ pre {
 }
 
 /* Navbar */
-.navbar {
-	border-bottom: 2px solid rgba(255, 255, 255, 0.1);
-	background-color: rgba(15, 15, 15, 0.6);
-	backdrop-filter: blur(10px);
-	-webkit-backdrop-filter: blur(10px);
-}
+@media (min-width: 997px) {
+	.navbar__inner {
+		padding-left: 5rem;
+		padding-right: 5rem;
+	}
 
-.navbar__inner {
-	padding-left: 5rem;
-	padding-right: 5rem;
+	.navbar {
+		border-bottom: 2px solid rgba(255, 255, 255, 0.1);
+		background-color: rgba(15, 15, 15, 0.6);
+		backdrop-filter: blur(10px);
+		-webkit-backdrop-filter: blur(10px);
+	}
 }
 
 /* Sidebar */
