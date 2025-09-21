@@ -11,7 +11,7 @@ export default class AvatarCommand {
 		@Arg.user({ name: "user", required: false }) user: User | null,
 	) {
 		if (!user) {
-			user = context.author;
+			user = context.user;
 		}
 
 		await context.send(user.displayAvatarURL({ size: 4096 }));

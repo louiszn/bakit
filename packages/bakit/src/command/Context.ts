@@ -39,6 +39,10 @@ export abstract class BaseContext<Cached extends boolean, InGuild extends boolea
 		return this.source.guildId;
 	}
 
+	public get member() {
+		return this.source.member;
+	}
+
 	public inGuild(): this is Context<Cached, true> {
 		return Boolean(this.guildId);
 	}
@@ -53,7 +57,7 @@ export abstract class BaseContext<Cached extends boolean, InGuild extends boolea
 		}
 	}
 
-	public get author(): User {
+	public get user(): User {
 		if (this.isChatInput()) {
 			return this.source.user;
 		} else if (this.isMessage()) {
