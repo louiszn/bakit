@@ -6,7 +6,7 @@ import type * as Preset from "@docusaurus/preset-classic";
 
 const config: Config = {
 	title: "Bakit",
-	tagline: "Make your bot scalable",
+	tagline: "The most powerful Discord.js framework",
 	favicon: "img/favicon.ico",
 
 	future: {
@@ -43,21 +43,37 @@ const config: Config = {
 		],
 	],
 
+	plugins: [
+		[
+			"docusaurus-plugin-typedoc",
+			{
+				entryPoints: ["../../packages/bakit/src/index.ts"],
+				tsconfig: "../../packages/bakit/tsconfig.json",
+				sidebar: {
+					autoConfiguration: true,
+					pretty: true,
+					typescript: true,
+				},
+			},
+		],
+	],
+
 	themeConfig: {
 		colorMode: {
 			defaultMode: "dark",
+			disableSwitch: true,
 		},
 		image: "img/docusaurus-social-card.jpg",
 		navbar: {
 			title: "Bakit",
-			logo: {
-				alt: "My Site Logo",
-				src: "img/logo.svg",
-			},
+			// logo: {
+			// 	alt: "My Site Logo",
+			// 	src: "img/logo.svg",
+			// },
 			items: [
 				{
 					type: "docSidebar",
-					sidebarId: "tutorialSidebar",
+					sidebarId: "sidebar",
 					position: "left",
 					label: "Docs",
 				},
