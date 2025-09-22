@@ -18,8 +18,14 @@ It's built on top of [discord.js](https://discord.js.org) and helps you handle t
 
 ## Documentation
 
-Official documentation is now at https://bakit-docs.vercel.app.
+Official documentation is now at https://bakit.louiszn.xyz.
 
 # Contributing
 
 Contributions are always welcome! But before doing that, make sure you have already checked existing issues and pull requests before making a new one.
+
+# Support
+
+If you like Bakit and want to support its development, you can buy me a coffee:
+
+[![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/louiszn)
