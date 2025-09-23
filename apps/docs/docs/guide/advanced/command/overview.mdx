@@ -53,6 +53,16 @@ Using Bakit's command system gives you:
 - Automatically registration - register commands automatically for your bot.
 - Syntax handling - handle command syntax usage easily.
 
+## Configuring client
+
+BakitClient provides some options to configure command system:
+
+| Option                | Type                                                                        | Description                                                         | Default |
+| --------------------- | --------------------------------------------------------------------------- | ------------------------------------------------------------------- | ------- |
+| prefixes              | (string \| [GetPrefixFunction](/docs/api/type-aliases/GetPrefixFunction))[] | The prefix or prefixes to listen for prefix commands.               | -       |
+| allowMentionPrefix    | boolean                                                                     | Allow bot mention as prefix.                                        | `false` |
+| getSyntaxErrorMessage | GetSyntaxErrorMessageFunction                                               | A function that returns a message to send when syntax error occurs. | -       |
+
 ## Typical structure
 
 For loading listeners automatically from files, you may want to use a structure like this:
@@ -118,7 +128,7 @@ Here's a minimal setup for `PingCommand.ts`:
     export default class PingCommand {
     	@Ping.main
     	public async execute(context: Context) {
-			// Logic of the command stays here
+    		// Logic of the command stays here
     		await context.send(`Pong! ${context.client.ws.ping}ms!`);
     	}
     }
