@@ -17,15 +17,18 @@ It's built on top of [discord.js](https://discord.js.org) and helps you handle t
 ### A quick peek
 
 ```ts
-const Ping = Command("ping");
+import { defineCommand } from "bakit";
 
-@Command.use(Ping)
-class PingCommand {
-	@Ping.main
-	public async execute(context: Context) {
-		await context.send(`Pong! ${context.client.ws.ping}ms!`);
-	}
-}
+const Ping = defineCommand({
+	name: "ping",
+	description: "Display bot latency",
+});
+
+Ping.defineMain(async (context) => {
+	await context.send(`Pong! ${context.client.ws.ping}ms`);
+});
+
+export default command;
 ```
 
 With just this simple code, you will have both slash and prefix command version of `ping`! That means users can run it either as `/ping` or as `!ping` (or whatever prefix you set).
@@ -37,5 +40,3 @@ With just this simple code, you will have both slash and prefix command version 
 - You **don't want to use TypeScript**.
 - You don't want to use ESM and **prefer CommonJS**.
 - You don't need any fancy scalable APIs for your simple slash command bot.
-
-Next, head over to [Installation](/docs/category/installation) to setup your first bot.
