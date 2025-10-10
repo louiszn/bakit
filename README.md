@@ -9,6 +9,10 @@ It's built on top of [discord.js](https://discord.js.org) and helps you handle t
 	<a href="https://discord.gg/pGnKbMfXke"><img src="https://img.shields.io/discord/1353321517437681724?logo=discord&logoColor=white" alt="Discord" /></a>
 </div>
 
+> [!CAUTION]
+> This package is currently being rewritten. Many features from beta v1 have not yet been migrated.
+> It is not production-ready, and use in production environments is strongly discouraged.
+
 ## Why Bakit?
 
 - 🧩 **Unified Command System** - write once for both slash and prefix command.
