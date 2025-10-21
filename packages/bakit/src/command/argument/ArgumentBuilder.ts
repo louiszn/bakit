@@ -80,3 +80,15 @@ export class NumberArgumentBuilder extends BaseArgumentBuilder.extend(NumberArgu
 		return this.defineOption("minValue", value);
 	}
 }
+
+export type AnyArgumentBuilder = StringArgumentBuilder | NumberArgumentBuilder;
+
+export type InferArgType<A extends AnyArgumentBuilder> = A extends StringArgumentBuilder
+	? string
+	: A extends NumberArgumentBuilder
+		? number
+		: unknown;
+
+export type InferArgsTuple<Args extends readonly AnyArgumentBuilder[]> = {
+	[K in keyof Args]: Args[K] extends AnyArgumentBuilder ? InferArgType<Args[K]> : never;
+};

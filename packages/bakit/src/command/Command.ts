@@ -1,7 +1,12 @@
 import { Awaitable } from "discord.js";
 import { z } from "zod";
+
 import { Context } from "./Context.js";
-import { BaseArgumentBuilder } from "./argument/ArgumentBuilder.js";
+import {
+	BaseArgumentBuilder,
+	type AnyArgumentBuilder,
+	type InferArgsTuple,
+} from "./argument/index.js";
 
 const CommandOptionsSchema = z
 	.object({
@@ -17,17 +22,25 @@ const CommandOptionsSchema = z
 export type CommandOptionsInput = z.input<typeof CommandOptionsSchema>;
 export type CommandOptions = z.output<typeof CommandOptionsSchema>;
 
-export type MainCommandHookMethod = (context: Context) => Awaitable<void>;
-export type ErrorCommandHookMethod = (error: unknown, context: Context) => Awaitable<void>;
+export type MainCommandHookMethod<Args extends unknown[]> = (
+	context: Context,
+	...args: Args
+) => Awaitable<void>;
 
-export class Command {
+export type ErrorCommandHookMethod<Args extends unknown[]> = (
+	error: unknown,
+	context: Context,
+	...args: Args
+) => Awaitable<void>;
+
+export class Command<Args extends AnyArgumentBuilder[]> {
 	public readonly options: CommandOptions;
 
 	public readonly hooks: {
-		main?: MainCommandHookMethod;
-		pre?: MainCommandHookMethod;
-		post?: MainCommandHookMethod;
-		error?: ErrorCommandHookMethod;
+		main?: MainCommandHookMethod<InferArgsTuple<Args>>;
+		pre?: MainCommandHookMethod<InferArgsTuple<Args>>;
+		post?: MainCommandHookMethod<InferArgsTuple<Args>>;
+		error?: ErrorCommandHookMethod<InferArgsTuple<Args>>;
 	} = {};
 
 	public constructor(options: CommandOptionsInput | CommandOptionsInput["name"]) {
@@ -36,27 +49,29 @@ export class Command {
 		);
 	}
 
-	public setMain(fn: MainCommandHookMethod): this {
+	public setMain(fn: MainCommandHookMethod<InferArgsTuple<Args>>): this {
 		this.hooks.main = fn;
 		return this;
 	}
 
-	public setPre(fn: MainCommandHookMethod): this {
+	public setPre(fn: MainCommandHookMethod<InferArgsTuple<Args>>): this {
 		this.hooks.pre = fn;
 		return this;
 	}
 
-	public setPost(fn: MainCommandHookMethod): this {
+	public setPost(fn: MainCommandHookMethod<InferArgsTuple<Args>>): this {
 		this.hooks.post = fn;
 		return this;
 	}
 
-	public setError(fn: ErrorCommandHookMethod): this {
+	public setError(fn: ErrorCommandHookMethod<InferArgsTuple<Args>>): this {
 		this.hooks.error = fn;
 		return this;
 	}
 }
 
-export function defineCommand(options: CommandOptionsInput | string) {
-	return new Command(options);
+export function defineCommand<const Args extends AnyArgumentBuilder[]>(
+	options: (Omit<CommandOptionsInput, "args"> & { args?: Args }) | string,
+) {
+	return new Command<Args>(options);
 }
