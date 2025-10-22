@@ -1,4 +1,5 @@
 import { Awaitable, Client, ClientEvents, ClientOptions, Message } from "discord.js";
+import { inspect } from "node:util";
 
 export type GetPrefixFunction = (message: Message) => Awaitable<string[] | string>;
 
@@ -53,5 +54,13 @@ export class BakitClient<Ready extends boolean = boolean> extends Client<Ready> 
 		...args: BakitClientEvents[K]
 	): boolean {
 		return super.emit(event as never, ...args);
+	}
+
+	/**
+	 * Override BakitClient output when using logger for security concern.
+	 * @returns `BakitClient {}`
+	 */
+	[inspect.custom]() {
+		return `${this.constructor.name} {}`;
 	}
 }
