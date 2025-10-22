@@ -1,5 +1,6 @@
 import { Awaitable, Client, ClientEvents, ClientOptions, Message } from "discord.js";
 import { inspect } from "node:util";
+import { CommandManager } from "./command/CommandManager.js";
 
 export type GetPrefixFunction = (message: Message) => Awaitable<string[] | string>;
 
@@ -9,10 +10,17 @@ export interface BakitClientEvents extends ClientEvents {
 }
 
 export class BakitClient<Ready extends boolean = boolean> extends Client<Ready> {
+	public commands: CommandManager;
+
 	public constructor(options: ClientOptions) {
 		super(options);
+
+		this.commands = new CommandManager(this);
 	}
 
+	/**
+	 * Check if the client is connected to gateway successfully and finished initialization.
+	 */
 	public override isReady(): this is BakitClient<true> {
 		return super.isReady();
 	}

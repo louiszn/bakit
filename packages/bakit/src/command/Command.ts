@@ -36,7 +36,7 @@ export type ErrorCommandHookMethod<Args extends unknown[]> = (
 /**
  * The command entry, used for registering command.
  */
-export class Command<Args extends AnyArgumentBuilder[]> {
+export class Command<Args extends AnyArgumentBuilder[] = AnyArgumentBuilder[]> {
 	public readonly options: CommandOptions;
 
 	public readonly hooks: {
@@ -93,7 +93,7 @@ export class Command<Args extends AnyArgumentBuilder[]> {
  * export default PingCommand;
  * ```
  */
-export function defineCommand<const Args extends AnyArgumentBuilder[]>(
+export function defineCommand<const Args extends AnyArgumentBuilder[] = []>(
 	options: (Omit<CommandOptionsInput, "args"> & { args?: Args }) | string,
 ) {
 	return new Command<Args>(options);
