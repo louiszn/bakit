@@ -8,7 +8,7 @@ import {
 	type InferArgsTuple,
 } from "./argument/index.js";
 
-const CommandOptionsSchema = z
+export const CommandOptionsSchema = z
 	.object({
 		name: z.string(),
 		description: z.string().optional(),
@@ -33,6 +33,9 @@ export type ErrorCommandHookMethod<Args extends unknown[]> = (
 	...args: Args
 ) => Awaitable<void>;
 
+/**
+ * The command entry, used for registering command.
+ */
 export class Command<Args extends AnyArgumentBuilder[]> {
 	public readonly options: CommandOptions;
 
@@ -70,6 +73,26 @@ export class Command<Args extends AnyArgumentBuilder[]> {
 	}
 }
 
+/**
+ * Define command entry, usually for modules.
+ * @param options The command options.
+ * @returns The entry of the command to deploy or register hooks.
+ * @example
+ * ```ts
+ * import { defineCommand } from "bakit";
+ *
+ * const PingCommand = defineCommand({
+ * 	name: "ping",
+ * 	description: "Displays bot's latency.",
+ * });
+ *
+ * PingCommand.setMain(async (context) => {
+ * 	await context.send(`Pong! ${context.client.ws.ping}ms!`);
+ * });
+ *
+ * export default PingCommand;
+ * ```
+ */
 export function defineCommand<const Args extends AnyArgumentBuilder[]>(
 	options: (Omit<CommandOptionsInput, "args"> & { args?: Args }) | string,
 ) {

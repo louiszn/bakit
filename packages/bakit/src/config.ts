@@ -5,7 +5,7 @@ import { pathToFileURL } from "node:url";
 
 import glob from "tiny-glob";
 
-const ProjectConfigSchema = z.object({
+export const ProjectConfigSchema = z.object({
 	intents: z
 		.union([z.literal("auto"), z.bigint(), z.array(z.enum(GatewayIntentBits))])
 		.default("auto"),
