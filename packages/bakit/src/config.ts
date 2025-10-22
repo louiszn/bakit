@@ -5,11 +5,33 @@ import { pathToFileURL } from "node:url";
 
 import glob from "tiny-glob";
 
-const ProjectConfigSchema = z.object({
+export const ProjectConfigSchema = z.object({
+	/**
+	 * The gateway intents to use for the Discord client.
+	 *
+	 * - `auto` — automatically determine the required intents.
+	 * - bigint — a raw bitfield value representing the combined intents.
+	 * - array — a list of individual intent flags from `GatewayIntentBits`.
+	 *
+	 * @defaultvalue `auto`
+	 */
 	intents: z
 		.union([z.literal("auto"), z.bigint(), z.array(z.enum(GatewayIntentBits))])
 		.default("auto"),
+	/**
+	 * Optional custom client options for Discord.js (excluding `intents`).
+	 *
+	 * These are passed directly to the `Client` constructor when initializing the bot.
+	 *
+	 * @see {@link https://discord.js.org/docs/packages/discord.js/main/ClientOptions:Interface}
+	 */
 	clientOptions: z.custom<Omit<ClientOptions, "intents">>().optional(),
+	/**
+	 * The path to the main project source directory.
+	 *
+	 * @defaultvalue `src`
+	 */
+	entryDir: z.string().default("src"),
 });
 
 export type ProjectConfigInput = z.input<typeof ProjectConfigSchema>;
