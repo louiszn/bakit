@@ -23,18 +23,7 @@ export abstract class BaseParam<
 		this.options = { ...options, required: options.required ?? true } as never;
 	}
 
-	/**
-	 * Sets whether this parameter is required.
-	 *
-	 * **Note:** Changing this value will alter the inferred type of the parameter.
-	 * - `true`: The value is guaranteed to be defined `T`.
-	 * - `false`: The value might be `T | null`.
-	 *
-	 * @param value - `true` for required, `false` for optional.
-	 */
-	public required<V extends boolean>(
-		value: V,
-	): Omit<this, "_type"> & BaseParam<Options, OutputType, V> {
+	public required<V extends boolean>(value: V): BaseParam<Options, OutputType, V> {
 		this.options.required = value as never;
 		return this as never;
 	}
@@ -69,6 +58,10 @@ export class StringParam<Required extends boolean = true> extends BaseParam<
 		super(BaseParam.getOptions(options));
 	}
 
+	public override required<V extends boolean>(value: V): StringParam<V> {
+		return super.required(value) as never;
+	}
+
 	/**
 	 * Sets the minimum allowed length for this string.
 	 * Pass `null` to remove this constraint.
@@ -95,6 +88,10 @@ export class NumberParam<Required extends boolean = true> extends BaseParam<
 		super(BaseParam.getOptions(options));
 	}
 
+	public override required<V extends boolean>(value: V): NumberParam<V> {
+		return super.required(value) as never;
+	}
+
 	/**
 	 * Sets the minimum allowed value for this number.
 	 * Pass `null` to remove this constraint.
@@ -112,9 +109,8 @@ export class NumberParam<Required extends boolean = true> extends BaseParam<
 	}
 }
 
-export type AnyParam<Required extends boolean = true> =
-	| StringParam<Required>
-	| NumberParam<Required>;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type AnyParam<Required extends boolean = true> = BaseParam<any, any, Required>;
 
 /**
  * Helper type to extract the runtime value of a Param instance.
@@ -123,8 +119,11 @@ export type AnyParam<Required extends boolean = true> =
  * const p = new StringParam("name").required(false);
  * type T = InferParamValue<typeof p>; // string | null
  */
-export type InferParamValue<P extends AnyParam> = P["_type"];
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type InferParamValue<P extends AnyParam<any>> = P["_type"];
 
-export type InferParamTuple<T extends ReadonlyArray<AnyParam>> = {
-	[K in keyof T]: T[K] extends AnyParam ? InferParamValue<T[K]> : never;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type InferParamTuple<T extends ReadonlyArray<BaseParam<any, any, any>>> = {
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	[K in keyof T]: T[K] extends AnyParam<any> ? InferParamValue<T[K]> : never;
 };

@@ -23,7 +23,8 @@ export type CommandOptions = z.output<typeof CommandOptionsSchema>;
 /**
  * The command entry, used for registering command.
  */
-export class Command<ParamsList extends ReadonlyArray<AnyParam> = []> extends BaseEntry<
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export class Command<ParamsList extends ReadonlyArray<AnyParam<any>> = []> extends BaseEntry<
 	[context: Context, ...params: InferParamTuple<ParamsList>]
 > {
 	declare public options: CommandOptions;
@@ -59,7 +60,9 @@ export class Command<ParamsList extends ReadonlyArray<AnyParam> = []> extends Ba
  * export default PingCommand;
  * ```
  */
-export function defineCommand<const ParamsList extends ReadonlyArray<AnyParam> = []>(
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function defineCommand<const ParamsList extends ReadonlyArray<AnyParam<any>> = []>(
 	options: (Omit<CommandOptionsInput, "params"> & { params?: ParamsList }) | string,
 ) {
 	return new Command<ParamsList>(options);
@@ -67,7 +70,10 @@ export function defineCommand<const ParamsList extends ReadonlyArray<AnyParam> =
 
 const p = defineCommand({
 	name: "hello",
-	params: [Params.string("name"), Params.number("age")],
+	params: [
+		Params.string("name").required(false).max(100).min(1),
+		Params.number("age").max(100).min(16),
+	],
 });
 
 p.setMain(async (ctx, name, age) => {
