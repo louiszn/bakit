@@ -1,10 +1,6 @@
-import { NumberOptions, StringOptions } from "./ParamSchema.js";
+import { BaseParamOptions, NumberOptions, StringOptions } from "./ParamSchema.js";
 
-export abstract class BaseParam<
-	Options extends { required?: boolean },
-	OutputType,
-	Required extends boolean = true,
-> {
+export abstract class BaseParam<Options extends BaseParamOptions, OutputType, Required extends boolean = true> {
 	public options: Options & { required: Required };
 
 	/**
@@ -23,22 +19,28 @@ export abstract class BaseParam<
 		this.options = { ...options, required: options.required ?? true } as never;
 	}
 
-	public required<V extends boolean>(value: V): BaseParam<Options, OutputType, V> {
-		this.options.required = value as never;
-		return this as never;
-	}
-
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	protected setOption(key: keyof Options, value: any): this {
 		if (value === null) {
-			// eslint-disable-next-line @typescript-eslint/no-dynamic-delete
 			delete this.options[key];
 		} else {
-			// eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any
 			(this.options as any)[key] = value;
 		}
 
 		return this;
+	}
+
+	public name(value: string) {
+		return this.setOption("name", value);
+	}
+
+	public description(value: string) {
+		return this.setOption("description", value);
+	}
+
+	public required<V extends boolean>(value: V): BaseParam<Options, OutputType, V> {
+		return this.setOption("required", value) as never;
 	}
 
 	/**
@@ -49,11 +51,7 @@ export abstract class BaseParam<
 	}
 }
 
-export class StringParam<Required extends boolean = true> extends BaseParam<
-	StringOptions,
-	string,
-	Required
-> {
+export class StringParam<Required extends boolean = true> extends BaseParam<StringOptions, string, Required> {
 	public constructor(options: string | StringOptions) {
 		super(BaseParam.getOptions(options));
 	}
@@ -79,11 +77,7 @@ export class StringParam<Required extends boolean = true> extends BaseParam<
 	}
 }
 
-export class NumberParam<Required extends boolean = true> extends BaseParam<
-	NumberOptions,
-	number,
-	Required
-> {
+export class NumberParam<Required extends boolean = true> extends BaseParam<NumberOptions, number, Required> {
 	public constructor(options: string | NumberOptions) {
 		super(BaseParam.getOptions(options));
 	}
@@ -123,7 +117,7 @@ export type AnyParam<Required extends boolean = true> = BaseParam<any, any, Requ
 export type InferParamValue<P extends AnyParam<any>> = P["_type"];
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type InferParamTuple<T extends ReadonlyArray<BaseParam<any, any, any>>> = {
+export type InferParamTuple<T extends readonly BaseParam<any, any, any>[]> = {
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	[K in keyof T]: T[K] extends AnyParam<any> ? InferParamValue<T[K]> : never;
 };

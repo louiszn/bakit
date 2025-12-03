@@ -7,17 +7,18 @@ import {
 	User,
 } from "discord.js";
 import { BakitClient } from "../BakitClient.js";
+import { Context } from "../base/lifecycle/Context.js";
 
 export type ChatInputContextSendOptions = string | InteractionReplyOptions;
 export type MessageContextSendOptions = string | MessageCreateOptions;
 export type ContextSendOptions = ChatInputContextSendOptions | MessageContextSendOptions;
 
-export abstract class BaseContext<Cached extends boolean, InGuild extends boolean> {
+export abstract class BaseCommandContext<Cached extends boolean, InGuild extends boolean> extends Context {
 	public constructor(
-		public source:
-			| ChatInputCommandInteraction<Cached extends true ? "cached" : CacheType>
-			| Message<InGuild>,
-	) {}
+		public source: ChatInputCommandInteraction<Cached extends true ? "cached" : CacheType> | Message<InGuild>,
+	) {
+		super();
+	}
 
 	public get client(): BakitClient<true> {
 		return this.source.client as BakitClient<true>;
@@ -43,11 +44,11 @@ export abstract class BaseContext<Cached extends boolean, InGuild extends boolea
 		return this.source.member;
 	}
 
-	public inGuild(): this is Context<Cached, true> {
+	public inGuild(): this is CommandContext<Cached, true> {
 		return Boolean(this.guildId);
 	}
 
-	public inCachedGuild(): this is Context<true, true> {
+	public inCachedGuild(): this is CommandContext<true, true> {
 		if (this.isChatInput()) {
 			return this.source.inCachedGuild();
 		} else if (this.isMessage()) {
@@ -81,7 +82,7 @@ export abstract class BaseContext<Cached extends boolean, InGuild extends boolea
 export class ChatInputContext<
 	Cached extends boolean = boolean,
 	InGuild extends boolean = boolean,
-> extends BaseContext<Cached, InGuild> {
+> extends BaseCommandContext<Cached, InGuild> {
 	declare public source: ChatInputCommandInteraction<Cached extends true ? "cached" : CacheType>;
 
 	public override async send(options: ContextSendOptions): Promise<Message<InGuild>> {
@@ -107,7 +108,7 @@ export class ChatInputContext<
 export class MessageContext<
 	Cached extends boolean = boolean,
 	InGuild extends boolean = boolean,
-> extends BaseContext<Cached, InGuild> {
+> extends BaseCommandContext<Cached, InGuild> {
 	declare public source: Message<InGuild>;
 
 	public override async send(options: string | MessageCreateOptions): Promise<Message<InGuild>> {
@@ -121,6 +122,6 @@ export class MessageContext<
 	}
 }
 
-export type Context<Cached extends boolean = boolean, InGuild extends boolean = boolean> =
+export type CommandContext<Cached extends boolean = boolean, InGuild extends boolean = boolean> =
 	| ChatInputContext<Cached, InGuild>
 	| MessageContext<Cached, InGuild>;

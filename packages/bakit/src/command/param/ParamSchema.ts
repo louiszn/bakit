@@ -22,5 +22,6 @@ export const NumberParamSchema = BaseParamSchema.extend({
 	minValue: z.number().optional(),
 });
 
+export type BaseParamOptions = z.input<typeof BaseParamSchema>;
 export type StringOptions = z.input<typeof StringParamSchema>;
 export type NumberOptions = z.input<typeof NumberParamSchema>;

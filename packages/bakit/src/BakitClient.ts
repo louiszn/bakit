@@ -57,10 +57,7 @@ export class BakitClient<Ready extends boolean = boolean> extends Client<Ready> 
 		return super.removeListener(event as never, listener);
 	}
 
-	public override emit<K extends keyof BakitClientEvents>(
-		event: K,
-		...args: BakitClientEvents[K]
-	): boolean {
+	public override emit<K extends keyof BakitClientEvents>(event: K, ...args: BakitClientEvents[K]): boolean {
 		return super.emit(event as never, ...args);
 	}
 
