@@ -34,10 +34,10 @@ describe("CommandManager", () => {
 		const command = defineCommand("dup");
 		manager.add(command);
 
-		const spy = vi.spyOn(console, "warn").mockImplementation(() => {});
+		const spy = vi.spyOn(console, "warn").mockImplementation(() => null);
 		manager.add(command);
 
-		expect(spy).toHaveBeenCalledWith(expect.stringContaining("exists"));
+		expect(spy).toHaveBeenCalledWith(expect.stringContaining("Duplicate"));
 		spy.mockRestore();
 	});
 
