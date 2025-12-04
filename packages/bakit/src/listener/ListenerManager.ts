@@ -1,5 +1,3 @@
-import { Collection } from "discord.js";
-
 import { posix } from "path";
 import { pathToFileURL } from "url";
 import glob from "tiny-glob";
@@ -7,9 +5,12 @@ import glob from "tiny-glob";
 import { Listener } from "./Listener.js";
 import { BaseClientManager } from "../base/index.js";
 import { getConfig } from "../config.js";
+import { Context } from "../base/lifecycle/Context.js";
 
 export class ListenerManager extends BaseClientManager {
-	public listeners = new Collection<string, Listener>();
+	public listeners: Listener[] = [];
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	private executors = new WeakMap<Listener, (...args: any[]) => void>();
 
 	public async loadModules(): Promise<Listener[]> {
 		const entryDir = posix.resolve(getConfig().entryDir);
@@ -55,32 +56,49 @@ export class ListenerManager extends BaseClientManager {
 	public add(listener: Listener): void {
 		if (!(listener instanceof Listener)) {
 			throw new Error("Invalid listener provided");
-			return;
 		}
 
-		const { name } = listener.options;
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		const execute = (...args: any[]) => {
+			void listener.execute(new Context(), ...(args as never));
+		};
 
-		if (this.listeners.has(name)) {
-			console.warn(`[Loader] Duplicate listener registered: '${name}'`);
-			return;
-		}
+		this.listeners.push(listener);
+		this.executors.set(listener, execute);
 
-		this.listeners.set(name, listener);
+		const { once, name } = listener.options;
+
+		this.client[once ? "once" : "on"](name, execute);
 	}
 
-	public remove(target: string | Listener): Listener | undefined {
-		const name = typeof target === "string" ? target : target.options.name;
-		const existing = this.listeners.get(name);
+	public remove(target: string | Listener): Listener[] {
+		const isMatched = (listener: Listener) => {
+			if (typeof target === "string") {
+				return listener.options.name === target;
+			}
 
-		if (existing) {
-			this.listeners.delete(name);
-			return existing;
-		}
+			return listener === target;
+		};
 
-		return;
-	}
+		const removed: Listener[] = [];
 
-	public get(name: string) {
-		return this.listeners.get(name);
+		this.listeners = this.listeners.filter((listener) => {
+			if (!isMatched(listener)) {
+				return true;
+			}
+
+			removed.push(listener);
+
+			const execute = this.executors.get(listener);
+
+			if (execute) {
+				this.client.removeListener(listener.options.name, execute);
+				this.executors.delete(listener);
+			}
+
+			return false;
+		});
+
+		return removed;
 	}
 }
