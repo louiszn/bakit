@@ -7,8 +7,8 @@ import prettierPlugin from "eslint-plugin-prettier";
 
 export default tseslint.config(
 	eslint.configs.recommended,
-	tseslint.configs.strictTypeChecked,
-	tseslint.configs.recommendedTypeChecked,
+	tseslint.configs.recommended,
+	tseslint.configs.stylisticTypeChecked,
 	prettier,
 	{
 		ignores: ["**/dist/**", "**/node_modules/**"],

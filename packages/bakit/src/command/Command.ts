@@ -1,18 +1,15 @@
-import { Awaitable } from "discord.js";
 import { z } from "zod";
 
-import { Context } from "./Context.js";
-import {
-	BaseArgumentBuilder,
-	type AnyArgumentBuilder,
-	type InferArgsTuple,
-} from "./argument/index.js";
+import { type CommandContext } from "./CommandContext.js";
+
+import { LifecycleManager } from "../base/lifecycle/LifecycleManager.js";
+import { type AnyParam, BaseParam, type InferParamTuple } from "./param/Param.js";
 
 export const CommandOptionsSchema = z
 	.object({
 		name: z.string(),
-		description: z.string().optional(),
-		args: z.array(z.instanceof(BaseArgumentBuilder)).default([]),
+		description: z.string().min(1).max(100).optional(),
+		params: z.array(z.instanceof(BaseParam)).default([]),
 	})
 	.transform((data) => ({
 		...data,
@@ -22,54 +19,21 @@ export const CommandOptionsSchema = z
 export type CommandOptionsInput = z.input<typeof CommandOptionsSchema>;
 export type CommandOptions = z.output<typeof CommandOptionsSchema>;
 
-export type MainCommandHookMethod<Args extends unknown[]> = (
-	context: Context,
-	...args: Args
-) => Awaitable<void>;
-
-export type ErrorCommandHookMethod<Args extends unknown[]> = (
-	error: unknown,
-	context: Context,
-	...args: Args
-) => Awaitable<void>;
-
 /**
  * The command entry, used for registering command.
  */
-export class Command<Args extends AnyArgumentBuilder[] = AnyArgumentBuilder[]> {
-	public readonly options: CommandOptions;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export class Command<ParamsList extends readonly AnyParam<any>[] = []> extends LifecycleManager<
+	CommandContext,
+	[...args: InferParamTuple<ParamsList>]
+> {
+	declare public options: CommandOptions;
 
-	public readonly hooks: {
-		main?: MainCommandHookMethod<InferArgsTuple<Args>>;
-		pre?: MainCommandHookMethod<InferArgsTuple<Args>>;
-		post?: MainCommandHookMethod<InferArgsTuple<Args>>;
-		error?: ErrorCommandHookMethod<InferArgsTuple<Args>>;
-	} = {};
+	public constructor(options: (Omit<CommandOptionsInput, "params"> & { params?: ParamsList }) | string) {
+		const _options = CommandOptionsSchema.parse(typeof options === "string" ? { name: options } : options);
 
-	public constructor(options: CommandOptionsInput | CommandOptionsInput["name"]) {
-		this.options = CommandOptionsSchema.parse(
-			typeof options === "string" ? { name: options } : options,
-		);
-	}
-
-	public setMain(fn: MainCommandHookMethod<InferArgsTuple<Args>>): this {
-		this.hooks.main = fn;
-		return this;
-	}
-
-	public setPre(fn: MainCommandHookMethod<InferArgsTuple<Args>>): this {
-		this.hooks.pre = fn;
-		return this;
-	}
-
-	public setPost(fn: MainCommandHookMethod<InferArgsTuple<Args>>): this {
-		this.hooks.post = fn;
-		return this;
-	}
-
-	public setError(fn: ErrorCommandHookMethod<InferArgsTuple<Args>>): this {
-		this.hooks.error = fn;
-		return this;
+		super(`command:${_options.name}`);
+		this.options = _options;
 	}
 }
 
@@ -81,20 +45,22 @@ export class Command<Args extends AnyArgumentBuilder[] = AnyArgumentBuilder[]> {
  * ```ts
  * import { defineCommand } from "bakit";
  *
- * const PingCommand = defineCommand({
+ * const command = defineCommand({
  * 	name: "ping",
  * 	description: "Displays bot's latency.",
  * });
  *
- * PingCommand.setMain(async (context) => {
+ * command.main(async (context) => {
  * 	await context.send(`Pong! ${context.client.ws.ping}ms!`);
  * });
  *
- * export default PingCommand;
+ * export default command;
  * ```
  */
-export function defineCommand<const Args extends AnyArgumentBuilder[] = []>(
-	options: (Omit<CommandOptionsInput, "args"> & { args?: Args }) | string,
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function defineCommand<const ParamsList extends readonly AnyParam<any>[] = []>(
+	options: (Omit<CommandOptionsInput, "params"> & { params?: ParamsList }) | string,
 ) {
-	return new Command<Args>(options);
+	return new Command<ParamsList>(options);
 }

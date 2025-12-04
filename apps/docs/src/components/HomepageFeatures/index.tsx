@@ -3,11 +3,11 @@ import clsx from "clsx";
 import Heading from "@theme/Heading";
 import styles from "./styles.module.css";
 
-type FeatureItem = {
+interface FeatureItem {
 	title: string;
 	Svg?: React.ComponentType<React.ComponentProps<"svg">>;
 	description: ReactNode;
-};
+}
 
 const FeatureList: FeatureItem[] = [
 	{
@@ -16,9 +16,7 @@ const FeatureList: FeatureItem[] = [
 	},
 	{
 		title: "Focus on What Matters",
-		description: (
-			<>Bakit gives you the basic needs for your bot development, let you focus on your features.</>
-		),
+		description: <>Bakit gives you the basic needs for your bot development, let you focus on your features.</>,
 	},
 	{
 		title: "Scale up your bot larger",
@@ -29,9 +27,7 @@ const FeatureList: FeatureItem[] = [
 function Feature({ title, Svg, description }: FeatureItem) {
 	return (
 		<div className={clsx("col col--4")}>
-			<div className="text--center">
-				{Svg ? <Svg className={styles.featureSvg} role="img" /> : undefined}
-			</div>
+			<div className="text--center">{Svg ? <Svg className={styles.featureSvg} role="img" /> : undefined}</div>
 			<div className="text--center padding-horiz--md">
 				<Heading as="h3">{title}</Heading>
 				<p>{description}</p>

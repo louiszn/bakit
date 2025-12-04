@@ -34,10 +34,7 @@ function HomepageHeader() {
 						Getting Started
 					</Link>
 
-					<Link
-						className={clsx("button button--lg", styles.buttonSecondary)}
-						to="https://discord.gg/pGnKbMfXke"
-					>
+					<Link className={clsx("button button--lg", styles.buttonSecondary)} to="https://discord.gg/pGnKbMfXke">
 						Discord
 					</Link>
 				</div>

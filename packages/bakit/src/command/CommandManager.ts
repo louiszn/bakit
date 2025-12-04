@@ -27,16 +27,22 @@ export class CommandManager extends BaseClientManager {
 				};
 
 				if (!command) {
-					console.warn(`Found command file without default export: ${file}`);
+					console.warn(`[Loader] File has no default export: ${file}`);
+					return;
+				}
+
+				if (!(command instanceof Command)) {
+					console.warn(`[Loader] Default export is not a Command: ${file}`);
 					return;
 				}
 
 				this.add(command);
-
 				return command;
 			} catch (error: unknown) {
 				console.error(`An error occurred while trying to add command for '${file}':`, error);
 			}
+
+			return;
 		});
 
 		const loaded = (await Promise.all(loads)).filter((x) => x !== undefined);
@@ -49,12 +55,13 @@ export class CommandManager extends BaseClientManager {
 	public add(command: Command): void {
 		if (!(command instanceof Command)) {
 			throw new Error("Invalid command provided");
+			return;
 		}
 
 		const { name } = command.options;
 
 		if (this.commands.has(name)) {
-			console.warn(`Command '${name}' already exists`);
+			console.warn(`[Loader] Duplicate command registered: '${name}'`);
 			return;
 		}
 
@@ -69,6 +76,8 @@ export class CommandManager extends BaseClientManager {
 			this.commands.delete(name);
 			return existing;
 		}
+
+		return;
 	}
 
 	public get(name: string) {

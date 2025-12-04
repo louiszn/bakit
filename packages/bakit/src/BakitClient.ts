@@ -1,6 +1,7 @@
-import { Awaitable, Client, ClientEvents, ClientOptions, Message } from "discord.js";
+import { type Awaitable, Client, type ClientEvents, type ClientOptions, Message } from "discord.js";
 import { inspect } from "node:util";
 import { CommandManager } from "./command/CommandManager.js";
+import { ListenerManager } from "./listener/ListenerManager.js";
 
 export type GetPrefixFunction = (message: Message) => Awaitable<string[] | string>;
 
@@ -10,12 +11,26 @@ export interface BakitClientEvents extends ClientEvents {
 }
 
 export class BakitClient<Ready extends boolean = boolean> extends Client<Ready> {
-	public commands: CommandManager;
+	public managers: {
+		commands: CommandManager;
+		listeners: ListenerManager;
+	};
 
 	public constructor(options: ClientOptions) {
 		super(options);
 
-		this.commands = new CommandManager(this);
+		this.managers = {
+			commands: new CommandManager(this),
+			listeners: new ListenerManager(this),
+		};
+	}
+
+	public async start(token?: string) {
+		const { commands, listeners } = this.managers;
+
+		await Promise.all([commands.loadModules(), listeners.loadModules()]);
+
+		return await this.login(token);
 	}
 
 	/**
@@ -57,10 +72,7 @@ export class BakitClient<Ready extends boolean = boolean> extends Client<Ready> 
 		return super.removeListener(event as never, listener);
 	}
 
-	public override emit<K extends keyof BakitClientEvents>(
-		event: K,
-		...args: BakitClientEvents[K]
-	): boolean {
+	public override emit<K extends keyof BakitClientEvents>(event: K, ...args: BakitClientEvents[K]): boolean {
 		return super.emit(event as never, ...args);
 	}
 

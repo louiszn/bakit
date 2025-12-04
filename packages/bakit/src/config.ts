@@ -1,4 +1,4 @@
-import { ClientOptions, GatewayIntentBits } from "discord.js";
+import { type ClientOptions, GatewayIntentBits } from "discord.js";
 import { z } from "zod";
 
 import { pathToFileURL } from "node:url";
@@ -15,9 +15,7 @@ export const ProjectConfigSchema = z.object({
 	 *
 	 * @defaultvalue `auto`
 	 */
-	intents: z
-		.union([z.literal("auto"), z.bigint(), z.array(z.enum(GatewayIntentBits))])
-		.default("auto"),
+	intents: z.union([z.literal("auto"), z.bigint(), z.array(z.enum(GatewayIntentBits))]).default("auto"),
 	/**
 	 * Optional custom client options for Discord.js (excluding `intents`).
 	 *

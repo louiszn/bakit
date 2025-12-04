@@ -72,10 +72,7 @@ async function pushChanges(paths: string[], version: string) {
 	const git = simpleGit();
 
 	await git.addConfig("user.name", `Bakit Bot`);
-	await git.addConfig(
-		"user.email",
-		`${String(BAKIT_APP_ID)}+${String(BAKIT_APP_SLUG)}[bot]@users.noreply.github.com`,
-	);
+	await git.addConfig("user.email", `${String(BAKIT_APP_ID)}+${String(BAKIT_APP_SLUG)}[bot]@users.noreply.github.com`);
 
 	const tags = await git.tags();
 
