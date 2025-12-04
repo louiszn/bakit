@@ -8,7 +8,7 @@ describe("CommandManager", () => {
 
 	beforeEach(() => {
 		const client = new BakitClient({ intents: [] });
-		manager = client.commands;
+		manager = client.managers.commands;
 	});
 
 	it("adds, retrieves, and removes manager correctly", () => {
