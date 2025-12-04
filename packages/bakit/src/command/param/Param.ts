@@ -1,4 +1,4 @@
-import { BaseParamOptions, NumberOptions, StringOptions } from "./ParamSchema.js";
+import type { BaseParamOptions, NumberOptions, StringOptions } from "./ParamSchema.js";
 
 export abstract class BaseParam<Options extends BaseParamOptions, OutputType, Required extends boolean = true> {
 	public options: Options & { required: Required };

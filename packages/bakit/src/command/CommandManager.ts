@@ -41,6 +41,8 @@ export class CommandManager extends BaseClientManager {
 			} catch (error: unknown) {
 				console.error(`An error occurred while trying to add command for '${file}':`, error);
 			}
+
+			return;
 		});
 
 		const loaded = (await Promise.all(loads)).filter((x) => x !== undefined);
@@ -74,6 +76,8 @@ export class CommandManager extends BaseClientManager {
 			this.commands.delete(name);
 			return existing;
 		}
+
+		return;
 	}
 
 	public get(name: string) {

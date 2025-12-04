@@ -1,4 +1,4 @@
-import { Awaitable, Collection } from "discord.js";
+import { type Awaitable, Collection } from "discord.js";
 import { Context } from "./Context.js";
 
 export enum HookState {

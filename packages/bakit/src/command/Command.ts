@@ -1,9 +1,9 @@
 import { z } from "zod";
 
-import { CommandContext } from "./CommandContext.js";
+import { type CommandContext } from "./CommandContext.js";
 
 import { LifecycleManager } from "../base/lifecycle/LifecycleManager.js";
-import { AnyParam, BaseParam, InferParamTuple } from "./param/Param.js";
+import { type AnyParam, BaseParam, type InferParamTuple } from "./param/Param.js";
 
 export const CommandOptionsSchema = z
 	.object({

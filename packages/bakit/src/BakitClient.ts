@@ -1,4 +1,4 @@
-import { Awaitable, Client, ClientEvents, ClientOptions, Message } from "discord.js";
+import { type Awaitable, Client, type ClientEvents, type ClientOptions, Message } from "discord.js";
 import { inspect } from "node:util";
 import { CommandManager } from "./command/CommandManager.js";
 

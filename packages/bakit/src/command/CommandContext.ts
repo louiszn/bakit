@@ -1,9 +1,9 @@
 import {
-	CacheType,
+	type CacheType,
 	ChatInputCommandInteraction,
-	InteractionReplyOptions,
+	type InteractionReplyOptions,
 	Message,
-	MessageCreateOptions,
+	type MessageCreateOptions,
 	User,
 } from "discord.js";
 import { BakitClient } from "../BakitClient.js";

@@ -1,4 +1,4 @@
-import { ClientOptions, GatewayIntentBits } from "discord.js";
+import { type ClientOptions, GatewayIntentBits } from "discord.js";
 import { z } from "zod";
 
 import { pathToFileURL } from "node:url";
