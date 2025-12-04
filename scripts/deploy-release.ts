@@ -1,11 +1,11 @@
 import { simpleGit } from "simple-git";
 import { Octokit } from "@octokit/rest";
-import { createAppAuth, InstallationAccessTokenAuthentication } from "@octokit/auth-app";
+import { createAppAuth, type InstallationAccessTokenAuthentication } from "@octokit/auth-app";
 
 import { readFile, writeFile } from "fs/promises";
 import glob from "tiny-glob";
 import minimist from "minimist";
-import { PackageJson } from "type-fest";
+import type { PackageJson } from "type-fest";
 
 // ------------------------------
 // General configuration
@@ -104,7 +104,7 @@ async function createRelease(version: string) {
 		owner: GITHUB_CONFIG.owner,
 		repo: GITHUB_CONFIG.repo,
 		tag_name: version,
-		name: args.version,
+		name: version,
 		generate_release_notes: true,
 		prerelease: isPrerelease,
 	});
