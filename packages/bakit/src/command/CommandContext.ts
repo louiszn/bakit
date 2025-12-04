@@ -1,10 +1,10 @@
 import {
-	type CacheType,
 	ChatInputCommandInteraction,
-	type InteractionReplyOptions,
 	Message,
-	type MessageCreateOptions,
 	User,
+	type CacheType,
+	type InteractionReplyOptions,
+	type MessageCreateOptions,
 } from "discord.js";
 import { BakitClient } from "../BakitClient.js";
 import { Context } from "../base/lifecycle/Context.js";
