@@ -22,7 +22,7 @@ export class Listener<K extends EventKey = EventKey> extends LifecycleManager<Co
 
 		super(`listener:${_options.name}`);
 
-		this.options = options as never;
+		this.options = _options as never;
 	}
 }
 
