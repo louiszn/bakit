@@ -30,6 +30,7 @@ export const ProjectConfigSchema = z.object({
 	 * @defaultvalue `src`
 	 */
 	entryDir: z.string().default("src"),
+	prefixes: z.array(z.string()).default([]),
 });
 
 export type ProjectConfigInput = z.input<typeof ProjectConfigSchema>;
