@@ -34,11 +34,9 @@
 		"discord.js": "^14.0.0"
 	},
 	"dependencies": {
+		"dotenv": "^17.2.1",
 		"tiny-glob": "^0.2.9",
 		"type-fest": "^4.41.0",
 		"zod": "^4.1.12"
-	},
-	"devDependencies": {
-		"@swc/core": "^1.13.5"
 	}
 }
