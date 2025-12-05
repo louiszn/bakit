@@ -6,6 +6,8 @@ import { Listener } from "./Listener.js";
 import { BaseClientManager } from "../base/index.js";
 import { getConfig } from "../config.js";
 import { Context } from "../base/lifecycle/Context.js";
+import { GatewayIntentBits, IntentsBitField } from "discord.js";
+import { EVENT_INTENT_MAPPING } from "../utils/EventIntents.js";
 
 export class ListenerManager extends BaseClientManager {
 	public listeners: Listener[] = [];
@@ -100,5 +102,24 @@ export class ListenerManager extends BaseClientManager {
 		});
 
 		return removed;
+	}
+
+	public getBaseIntents() {
+		return new IntentsBitField([GatewayIntentBits.Guilds]);
+	}
+
+	public getNeededIntents() {
+		const result = this.getBaseIntents();
+
+		for (const listener of this.listeners) {
+			const eventName = listener.options.name;
+			const requiredIntents = EVENT_INTENT_MAPPING[eventName];
+
+			if (requiredIntents) {
+				result.add(requiredIntents);
+			}
+		}
+
+		return result;
 	}
 }
