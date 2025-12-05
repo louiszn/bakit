@@ -1,4 +1,11 @@
+import type { Awaitable } from "discord.js";
+import type { ChatInputContext, CommandContext, MessageContext } from "../CommandContext.js";
 import type { BaseParamOptions, NumberOptions, StringOptions } from "./ParamSchema.js";
+import { ArgumentError } from "../../errors/ArgumentError.js";
+
+export type ParamResolvedOutputType<OutputType, Required extends boolean = true> = Required extends true
+	? OutputType
+	: OutputType | null;
 
 export abstract class BaseParam<Options extends BaseParamOptions, OutputType, Required extends boolean = true> {
 	public options: Options & { required: Required };
@@ -43,6 +50,25 @@ export abstract class BaseParam<Options extends BaseParamOptions, OutputType, Re
 		return this.setOption("required", value) as never;
 	}
 
+	public async resolve(
+		context: CommandContext,
+		value?: string,
+	): Promise<ParamResolvedOutputType<OutputType, Required>> {
+		if (context.isChatInput()) {
+			return await this.resolveChatInput(context);
+		} else if (context.isMessage()) {
+			return await this.resolveMessage(context, value);
+		}
+
+		throw new Error("Invalid context type provided");
+	}
+
+	public abstract resolveMessage(
+		context: MessageContext,
+		value: string | undefined,
+	): Awaitable<ParamResolvedOutputType<OutputType, Required>>;
+	public abstract resolveChatInput(context: ChatInputContext): Awaitable<ParamResolvedOutputType<OutputType, Required>>;
+
 	/**
 	 * Helper to normalize string inputs into an options object.
 	 */
@@ -58,6 +84,35 @@ export class StringParam<Required extends boolean = true> extends BaseParam<Stri
 
 	public override required<V extends boolean>(value: V): StringParam<V> {
 		return super.required(value) as never;
+	}
+
+	public override resolveMessage(
+		_context: CommandContext,
+		value: string | undefined,
+	): ParamResolvedOutputType<string, Required> {
+		const { required, minLength, maxLength, name } = this.options;
+
+		if (value === undefined) {
+			if (required) {
+				throw new ArgumentError(name, "is required");
+			}
+
+			return null as never;
+		}
+
+		if (minLength && value.length < minLength) {
+			throw new ArgumentError(name, `must be at least ${minLength} chars long`);
+		}
+		if (maxLength && value.length > maxLength) {
+			throw new ArgumentError(name, `must be at most ${maxLength} chars long`);
+		}
+
+		return value;
+	}
+
+	public override resolveChatInput(context: ChatInputContext): ParamResolvedOutputType<string, Required> {
+		const { name, required } = this.options;
+		return context.source.options.getString(name, required) as never;
 	}
 
 	/**
@@ -84,6 +139,41 @@ export class NumberParam<Required extends boolean = true> extends BaseParam<Numb
 
 	public override required<V extends boolean>(value: V): NumberParam<V> {
 		return super.required(value) as never;
+	}
+
+	public override resolveMessage(
+		ctx: CommandContext,
+		value: string | undefined,
+	): ParamResolvedOutputType<number, Required> {
+		const { required, minValue, maxValue, name } = this.options;
+
+		if (value === undefined) {
+			if (required) {
+				throw new ArgumentError(name, "is required");
+			}
+
+			return null as never;
+		}
+
+		const num = Number(value);
+
+		if (isNaN(num)) {
+			throw new ArgumentError(name, "must be a number");
+		}
+
+		if (minValue !== undefined && num < minValue) {
+			throw new ArgumentError(name, `must be greater than ${minValue}`);
+		}
+		if (maxValue !== undefined && num > maxValue) {
+			throw new ArgumentError(name, `must be less than ${minValue}`);
+		}
+
+		return num;
+	}
+
+	public override resolveChatInput(context: ChatInputContext): ParamResolvedOutputType<number, Required> {
+		const { name, required } = this.options;
+		return context.source.options.getString(name, required) as never;
 	}
 
 	/**

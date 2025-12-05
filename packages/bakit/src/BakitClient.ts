@@ -25,14 +25,6 @@ export class BakitClient<Ready extends boolean = boolean> extends Client<Ready> 
 		};
 	}
 
-	public async start(token?: string) {
-		const { commands, listeners } = this.managers;
-
-		await Promise.all([commands.loadModules(), listeners.loadModules()]);
-
-		return await this.login(token);
-	}
-
 	/**
 	 * Check if the client is connected to gateway successfully and finished initialization.
 	 */
