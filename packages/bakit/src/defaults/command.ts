@@ -2,13 +2,13 @@ import { Events } from "discord.js";
 import { defineListener } from "../listener/Listener.js";
 import { getConfig } from "../config.js";
 import type { BakitClient } from "../BakitClient.js";
-import { ChatInputContext, MessageContext } from "./CommandContext.js";
 import { tokenize } from "../utils/string.js";
+import { ChatInputContext, MessageContext } from "../command/index.js";
 
-export const messageCommandListener = defineListener(Events.MessageCreate);
-export const interactionCommandListener = defineListener(Events.InteractionCreate);
+export const messageCommandHandler = defineListener(Events.MessageCreate);
+export const chatInputCommandHandler = defineListener(Events.InteractionCreate);
 
-messageCommandListener.main(async (_, message) => {
+messageCommandHandler.main(async (_, message) => {
 	const config = getConfig();
 
 	if (message.author.bot) {
@@ -59,7 +59,7 @@ messageCommandListener.main(async (_, message) => {
 	await command.execute(context, ...resolvedArgs);
 });
 
-interactionCommandListener.main(async (_, interaction) => {
+chatInputCommandHandler.main(async (_, interaction) => {
 	if (!interaction.isChatInputCommand()) {
 		return;
 	}
