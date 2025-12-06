@@ -33,6 +33,7 @@
 		"@octokit/auth-app": "^8.1.0",
 		"@octokit/rest": "^22.0.0",
 		"dotenv": "^17.2.1",
+		"globals": "^16.5.0",
 		"minimist": "^1.2.8",
 		"simple-git": "^3.28.0",
 		"tiny-glob": "^0.2.9",

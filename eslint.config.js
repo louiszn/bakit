@@ -4,6 +4,7 @@ import eslint from "@eslint/js";
 import tseslint from "typescript-eslint";
 import prettier from "eslint-config-prettier";
 import prettierPlugin from "eslint-plugin-prettier";
+import globals from "globals";
 
 export default tseslint.config(
 	eslint.configs.recommended,
@@ -15,6 +16,10 @@ export default tseslint.config(
 	},
 	{
 		languageOptions: {
+			globals: {
+				...globals.node,
+				...globals.browser,
+			},
 			parserOptions: {
 				tsconfigRootDir: import.meta.dirname,
 				project: ["tsconfig.json", "./packages/*/tsconfig.json", "./apps/*/tsconfig.json"],

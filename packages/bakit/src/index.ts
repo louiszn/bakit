@@ -1,5 +1,3 @@
-import "dotenv/config";
-
 export * from "./config.js";
 export * from "./BakitClient.js";
 export * from "./Instance.js";
