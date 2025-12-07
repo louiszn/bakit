@@ -3,13 +3,14 @@ import { z } from "zod";
 import { type CommandContext } from "./CommandContext.js";
 
 import { HookState, LifecycleManager } from "../lifecycle/LifecycleManager.js";
-import { type AnyParam, BaseParam, type InferParamTuple, NumberParam, StringParam } from "./param/Param.js";
+import { type AnyParam, BaseParam, type InferParamTuple, NumberParam, StringParam, UserParam } from "./param/Param.js";
 import { BakitError } from "../../errors/BakitError.js";
 import {
 	ApplicationCommandOptionBase,
 	SlashCommandBuilder,
 	SlashCommandNumberOption,
 	SlashCommandStringOption,
+	SlashCommandUserOption,
 } from "discord.js";
 import type { BaseParamSchema } from "./param/ParamSchema.js";
 
@@ -106,37 +107,35 @@ export class Command<ParamsList extends readonly AnyParam<any>[] = any[]> extend
 
 		if (param instanceof StringParam) {
 			const { maxLength, minLength } = param.options;
-
 			const option = initOption(new SlashCommandStringOption());
 
 			if (maxLength) {
 				option.setMaxLength(maxLength);
 			}
-
 			if (minLength) {
 				option.setMinLength(minLength);
 			}
 
 			builder.addStringOption(option);
-
 			return;
 		}
-
 		if (param instanceof NumberParam) {
 			const { maxValue, minValue } = param.options;
-
 			const option = initOption(new SlashCommandNumberOption());
 
 			if (maxValue) {
 				option.setMaxValue(maxValue);
 			}
-
 			if (minValue) {
 				option.setMinValue(minValue);
 			}
 
 			builder.addNumberOption(option);
-
+			return;
+		}
+		if (param instanceof UserParam) {
+			const option = initOption(new SlashCommandUserOption());
+			builder.addUserOption(option);
 			return;
 		}
 	}

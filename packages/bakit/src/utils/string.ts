@@ -49,3 +49,24 @@ export function tokenize(content: string): string[] {
 
 	return args;
 }
+
+/**
+ * Extracts a valid Discord Snowflake (User ID, Channel ID, etc.) from a string.
+ * @param input The raw string to parse
+ * @returns The extracted ID string, or null if invalid
+ */
+export function extractSnowflakeId(input: string): string | null {
+	if (!input) return null;
+
+	const mentionMatch = /^<@!?(\d{17,20})>$/.exec(input);
+	if (mentionMatch?.[1]) {
+		return mentionMatch[1];
+	}
+
+	const idMatch = /^(\d{17,20})$/.exec(input);
+	if (idMatch?.[1]) {
+		return idMatch[1];
+	}
+
+	return null;
+}
