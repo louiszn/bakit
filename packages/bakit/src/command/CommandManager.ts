@@ -1,19 +1,18 @@
 import { Collection } from "discord.js";
 
 import { posix } from "path";
-import { pathToFileURL } from "url";
 import glob from "tiny-glob";
 
 import { Command } from "./Command.js";
 import { BaseClientManager } from "../base/index.js";
 import { getConfig } from "../config.js";
+import { $jiti } from "../utils/index.js";
 
 export class CommandManager extends BaseClientManager {
 	public commands = new Collection<string, Command>();
 
 	public async loadModules(): Promise<Command[]> {
 		const entryDir = posix.resolve(getConfig().entryDir);
-
 		const pattern = posix.join(entryDir, "commands", "**/*.{ts,js}");
 
 		const files = await glob(pattern, {
@@ -22,9 +21,7 @@ export class CommandManager extends BaseClientManager {
 
 		const loads = files.map(async (file) => {
 			try {
-				const { default: command } = (await import(pathToFileURL(file).toString())) as {
-					default?: Command;
-				};
+				const command = await $jiti.import<Command | undefined>(file, { default: true });
 
 				if (!command) {
 					console.warn(`[Loader] File has no default export: ${file}`);

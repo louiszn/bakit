@@ -3,20 +3,48 @@ import { z } from "zod";
 import { type CommandContext } from "./CommandContext.js";
 
 import { HookState, LifecycleManager } from "../base/lifecycle/LifecycleManager.js";
-import { type AnyParam, BaseParam, type InferParamTuple } from "./param/Param.js";
+import { type AnyParam, BaseParam, type InferParamTuple, NumberParam, StringParam } from "./param/Param.js";
 import { BakitError } from "../errors/BakitError.js";
+import {
+	ApplicationCommandOptionBase,
+	SlashCommandBuilder,
+	SlashCommandNumberOption,
+	SlashCommandStringOption,
+} from "discord.js";
+import type { BaseParamSchema } from "./param/ParamSchema.js";
+
+export function validateParamsOrder(params: readonly AnyParam<boolean>[]): boolean {
+	let seenOptional = false;
+
+	for (const param of params) {
+		if (param.options.required) {
+			if (seenOptional) {
+				return false;
+			}
+		} else {
+			seenOptional = true;
+		}
+	}
+
+	return true;
+}
 
 export const CommandOptionsSchema = z
 	.object({
-		name: z.string(),
-		description: z.string().min(1).max(100).optional(),
-		params: z.array(z.instanceof(BaseParam)).default([]),
-		quotes: z.boolean().default(true),
+		name: z.string().readonly(),
+		description: z.string().min(1).max(100).optional().readonly(),
+		nsfw: z.boolean().default(false).readonly(),
+		params: z.array(z.instanceof(BaseParam)).default([]).readonly(),
+		quotes: z.boolean().default(true).readonly(),
 	})
 	.transform((data) => ({
 		...data,
 		description: data.description ?? `Command ${data.name}`,
-	}));
+	}))
+	.refine(({ params }) => validateParamsOrder(params), {
+		path: ["params"],
+		error: "Required params must be placed before optional params",
+	});
 
 export type CommandOptionsInput = z.input<typeof CommandOptionsSchema>;
 export type CommandOptions = z.output<typeof CommandOptionsSchema>;
@@ -48,6 +76,69 @@ export class Command<ParamsList extends readonly AnyParam<any>[] = any[]> extend
 		}
 
 		await context.send(error.message);
+	}
+
+	public toSlashCommandJSON() {
+		const { name, description, nsfw, params } = this.options;
+
+		const builder = new SlashCommandBuilder().setName(name).setDescription(description).setNSFW(nsfw);
+
+		this.initSlashCommandOptions(builder, params);
+
+		return builder.toJSON();
+	}
+
+	private initSlashCommandOptions(builder: SlashCommandBuilder, params: readonly AnyParam<boolean>[]) {
+		for (const param of params) {
+			this.initSlashCommandOption(builder, param);
+		}
+	}
+
+	private initSlashCommandOption(builder: SlashCommandBuilder, param: AnyParam<boolean>) {
+		const initOption = <T extends ApplicationCommandOptionBase>(builder: T) => {
+			const { name, description, required } = param.options as z.output<typeof BaseParamSchema>;
+
+			return builder
+				.setName(name)
+				.setDescription(description as never)
+				.setRequired(required);
+		};
+
+		if (param instanceof StringParam) {
+			const { maxLength, minLength } = param.options;
+
+			const option = initOption(new SlashCommandStringOption());
+
+			if (maxLength) {
+				option.setMaxLength(maxLength);
+			}
+
+			if (minLength) {
+				option.setMinLength(minLength);
+			}
+
+			builder.addStringOption(option);
+
+			return;
+		}
+
+		if (param instanceof NumberParam) {
+			const { maxValue, minValue } = param.options;
+
+			const option = initOption(new SlashCommandNumberOption());
+
+			if (maxValue) {
+				option.setMaxValue(maxValue);
+			}
+
+			if (minValue) {
+				option.setMinValue(minValue);
+			}
+
+			builder.addNumberOption(option);
+
+			return;
+		}
 	}
 }
 

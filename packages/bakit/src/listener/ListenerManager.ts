@@ -1,5 +1,4 @@
 import { posix } from "path";
-import { pathToFileURL } from "url";
 import glob from "tiny-glob";
 
 import { Listener } from "./Listener.js";
@@ -8,6 +7,7 @@ import { getConfig } from "../config.js";
 import { Context } from "../base/lifecycle/Context.js";
 import { GatewayIntentBits, IntentsBitField } from "discord.js";
 import { EVENT_INTENT_MAPPING } from "../utils/EventIntents.js";
+import { $jiti } from "../utils/index.js";
 
 export class ListenerManager extends BaseClientManager {
 	public listeners: Listener[] = [];
@@ -16,7 +16,6 @@ export class ListenerManager extends BaseClientManager {
 
 	public async loadModules(): Promise<Listener[]> {
 		const entryDir = posix.resolve(getConfig().entryDir);
-
 		const pattern = posix.join(entryDir, "listeners", "**/*.{ts,js}");
 
 		const files = await glob(pattern, {
@@ -25,9 +24,7 @@ export class ListenerManager extends BaseClientManager {
 
 		const loads = files.map(async (file) => {
 			try {
-				const { default: listener } = (await import(pathToFileURL(file).toString())) as {
-					default?: Listener;
-				};
+				const listener = await $jiti.import<Listener | undefined>(file, { default: true });
 
 				if (!listener) {
 					console.warn(`[Loader] File has no default export: ${file}`);
