@@ -2,12 +2,12 @@ import { posix } from "path";
 import glob from "tiny-glob";
 
 import { Listener } from "./Listener.js";
-import { BaseClientManager } from "../base/index.js";
-import { getConfig } from "../config.js";
-import { Context } from "../base/lifecycle/Context.js";
+import { BaseClientManager } from "../BaseClientManager.js";
+import { getConfig } from "../../config.js";
+import { Context } from "../lifecycle/Context.js";
 import { GatewayIntentBits, IntentsBitField } from "discord.js";
-import { EVENT_INTENT_MAPPING } from "../utils/EventIntents.js";
-import { $jiti } from "../utils/index.js";
+import { EVENT_INTENT_MAPPING } from "../../utils/EventIntents.js";
+import { $jiti } from "../../utils/index.js";
 
 export class ListenerManager extends BaseClientManager {
 	public listeners: Listener[] = [];

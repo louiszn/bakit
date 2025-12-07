@@ -2,9 +2,9 @@ import { z } from "zod";
 
 import { type CommandContext } from "./CommandContext.js";
 
-import { HookState, LifecycleManager } from "../base/lifecycle/LifecycleManager.js";
+import { HookState, LifecycleManager } from "../lifecycle/LifecycleManager.js";
 import { type AnyParam, BaseParam, type InferParamTuple, NumberParam, StringParam } from "./param/Param.js";
-import { BakitError } from "../errors/BakitError.js";
+import { BakitError } from "../../errors/BakitError.js";
 import {
 	ApplicationCommandOptionBase,
 	SlashCommandBuilder,

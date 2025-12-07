@@ -1,7 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { BakitClient } from "../src/BakitClient.js";
-import { CommandManager, defineCommand } from "../src/index.js";
+import { CommandManager, defineCommand, BakitClient } from "../src/index.js";
 
 describe("CommandManager", () => {
 	let manager: CommandManager;

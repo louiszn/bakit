@@ -1,8 +1,8 @@
 import { IntentsBitField } from "discord.js";
 import { BakitClient } from "./BakitClient.js";
-import { getConfig, loadConfig } from "./config.js";
+import { getConfig, loadConfig } from "../config.js";
 
-import { chatInputCommandHandler, messageCommandHandler, registerCommandsHandler } from "./defaults/index.js";
+import { chatInputCommandHandler, messageCommandHandler, registerCommandsHandler } from "../defaults/index.js";
 
 export class Instance {
 	public client!: BakitClient;

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { inspect } from "util";
 
-import { BakitClient } from "../src/BakitClient.js";
+import { BakitClient } from "../src/index.js";
 
 describe("BakitClient behavior test", () => {
 	it("hides BakitClient data when inspected", () => {
