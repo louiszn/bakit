@@ -20,6 +20,7 @@ export class ListenerManager extends BaseClientManager {
 
 		const files = await glob(pattern, {
 			cwd: process.cwd(),
+			absolute: true,
 		});
 
 		const loads = files.map(async (file) => {

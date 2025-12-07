@@ -31,10 +31,6 @@ program.command("dev").action(async () => {
 		console.log("Bakit detected changes! Restarting...");
 	});
 
-	nodemon.on("exit", () => {
-		console.log("Proccess exited! Did you start bakit correctly?");
-	});
-
 	nodemon.on("quit", () => {
 		process.exit();
 	});
