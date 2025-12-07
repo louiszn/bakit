@@ -6,7 +6,7 @@ describe("CommandManager", () => {
 	let manager: CommandManager;
 
 	beforeEach(() => {
-		const client = new BakitClient({ intents: [] });
+		const client = new BakitClient({ intents: [] }, {} as never);
 		manager = client.managers.commands;
 	});
 

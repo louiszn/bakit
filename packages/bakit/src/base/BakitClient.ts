@@ -2,6 +2,7 @@ import { type Awaitable, Client, type ClientEvents, type ClientOptions, Message 
 import { inspect } from "node:util";
 import { CommandManager } from "./command/CommandManager.js";
 import { ListenerManager } from "./listener/ListenerManager.js";
+import type { Instance } from "./Instance.js";
 
 export type GetPrefixFunction = (message: Message) => Awaitable<string[] | string>;
 
@@ -16,7 +17,10 @@ export class BakitClient<Ready extends boolean = boolean> extends Client<Ready> 
 		listeners: ListenerManager;
 	};
 
-	public constructor(options: ClientOptions) {
+	public constructor(
+		options: ClientOptions,
+		public instance: Instance,
+	) {
 		super(options);
 
 		this.managers = {

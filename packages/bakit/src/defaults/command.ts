@@ -1,9 +1,9 @@
 import { Events } from "discord.js";
+import type { BakitClient } from "../base/BakitClient.js";
+import { ChatInputContext, MessageContext } from "../base/command/index.js";
 import { defineListener } from "../base/listener/Listener.js";
 import { getConfig } from "../config.js";
-import type { BakitClient } from "../base/BakitClient.js";
 import { tokenize } from "../utils/string.js";
-import { ChatInputContext, MessageContext } from "../base/command/index.js";
 
 export const messageCommandHandler = defineListener(Events.MessageCreate);
 export const chatInputCommandHandler = defineListener(Events.InteractionCreate);
@@ -13,13 +13,41 @@ export const registerCommandsHandler = defineListener({
 });
 
 registerCommandsHandler.main(async (_, client) => {
-	const { commands } = client.managers;
+	const { managers, instance } = client;
+	const { commands } = managers;
+	const { cache } = instance;
 
-	const data = commands.commands.map((cmd) => cmd.toSlashCommandJSON());
+	const payload = commands.commands.map((cmd) => cmd.toSlashCommandJSON()).sort((a, b) => a.name.localeCompare(b.name));
 
-	const result = await client.application.commands.set(data);
+	const currentHash = cache.getHash(payload);
 
-	console.log(`Registered ${result.size} application command(s)`);
+	const CACHE_KEY = "commands/meta.json";
+	const cachedMeta = await cache.read<{ hash: string; timestamp: number; count: number }>(CACHE_KEY);
+
+	if (cachedMeta && cachedMeta.hash === currentHash) {
+		const { timestamp, count } = cachedMeta;
+		const time = new Date(timestamp).toLocaleString();
+
+		console.log(`${count} command(s) are up to date (Last sync: ${time}). Skipping registration.`);
+
+		return;
+	}
+
+	try {
+		const result = await client.application.commands.set(payload);
+
+		cache.write(CACHE_KEY, {
+			hash: currentHash,
+			timestamp: Date.now(),
+			count: result.size,
+		});
+
+		cache.write("commands/debug_dump.json", payload);
+
+		console.log(`Registered ${result.size} application command(s).`);
+	} catch (error) {
+		console.error("Failed to register commands:", error);
+	}
 });
 
 messageCommandHandler.main(async (_, message) => {

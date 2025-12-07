@@ -3,17 +3,28 @@ import { BakitClient } from "./BakitClient.js";
 import { getConfig, loadConfig } from "../config.js";
 
 import { chatInputCommandHandler, messageCommandHandler, registerCommandsHandler } from "../defaults/index.js";
+import { ProjectCacheManager } from "./ProjectCacheManager.js";
 
 export class Instance {
 	public client!: BakitClient;
+
+	public cache: ProjectCacheManager;
+
+	public constructor() {
+		this.cache = new ProjectCacheManager();
+	}
 
 	public async start() {
 		await loadConfig();
 		const config = getConfig();
 
-		this.client = new BakitClient({
-			intents: [],
-		});
+		this.client = new BakitClient(
+			{
+				intents: [],
+				...config.clientOptions,
+			},
+			this,
+		);
 
 		await this.loadModules();
 		this.initIntents();
