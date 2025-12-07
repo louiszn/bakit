@@ -81,19 +81,19 @@ export abstract class BaseParam<Options extends BaseParamOptions, OutputType, Re
 		context: CommandContext,
 		value?: string,
 	): Promise<ParamResolvedOutputType<OutputType, Required>> {
-		const { required, name } = this.options;
-
-		if (value === undefined) {
-			if (required) {
-				throw new ArgumentError(name, "is required");
-			}
-
-			return null as never;
-		}
-
 		if (context.isChatInput()) {
 			return await this.resolveChatInput(context);
 		} else if (context.isMessage()) {
+			const { required, name } = this.options;
+
+			if (value === undefined) {
+				if (required) {
+					throw new ArgumentError(name, "is required");
+				}
+
+				return null as never;
+			}
+
 			return await this.resolveMessage(context, value);
 		}
 
