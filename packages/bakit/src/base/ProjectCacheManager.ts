@@ -27,7 +27,7 @@ export class ProjectCacheManager {
 
 		await mkdir(dir, { recursive: true });
 
-		const content = typeof data === "string" ? data : JSON.stringify(data, null, 2);
+		const content = typeof data === "string" ? data : JSON.stringify(data);
 		await writeFile(fullPath, content, "utf-8");
 	}
 
