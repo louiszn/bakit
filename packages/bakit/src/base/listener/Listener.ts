@@ -1,6 +1,6 @@
 import { Events } from "discord.js";
-import { Context } from "../base/lifecycle/Context.js";
-import { LifecycleManager } from "../base/lifecycle/LifecycleManager.js";
+import { Context } from "../lifecycle/Context.js";
+import { LifecycleManager } from "../lifecycle/LifecycleManager.js";
 import z from "zod";
 import type { BakitClientEvents } from "../BakitClient.js";
 

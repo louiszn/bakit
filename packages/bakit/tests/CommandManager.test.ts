@@ -1,13 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { BakitClient } from "../src/BakitClient.js";
-import { CommandManager, defineCommand } from "../src/index.js";
+import { CommandManager, defineCommand, BakitClient } from "../src/index.js";
 
 describe("CommandManager", () => {
 	let manager: CommandManager;
 
 	beforeEach(() => {
-		const client = new BakitClient({ intents: [] });
+		const client = new BakitClient({ intents: [] }, {} as never);
 		manager = client.managers.commands;
 	});
 

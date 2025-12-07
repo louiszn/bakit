@@ -4,9 +4,9 @@ import { posix } from "path";
 import glob from "tiny-glob";
 
 import { Command } from "./Command.js";
-import { BaseClientManager } from "../base/index.js";
-import { getConfig } from "../config.js";
-import { $jiti } from "../utils/index.js";
+import { BaseClientManager } from "../BaseClientManager.js";
+import { getConfig } from "../../config.js";
+import { $jiti } from "../../utils/index.js";
 
 export class CommandManager extends BaseClientManager {
 	public commands = new Collection<string, Command>();

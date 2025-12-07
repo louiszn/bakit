@@ -1,7 +1,7 @@
 import type { Awaitable } from "discord.js";
 import type { ChatInputContext, CommandContext, MessageContext } from "../CommandContext.js";
 import type { BaseParamOptions, NumberOptions, StringOptions } from "./ParamSchema.js";
-import { ArgumentError } from "../../errors/ArgumentError.js";
+import { ArgumentError } from "../../../errors/ArgumentError.js";
 
 export type ParamResolvedOutputType<OutputType, Required extends boolean = true> = Required extends true
 	? OutputType
