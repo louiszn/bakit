@@ -7,6 +7,20 @@ import { ChatInputContext, MessageContext } from "../command/index.js";
 
 export const messageCommandHandler = defineListener(Events.MessageCreate);
 export const chatInputCommandHandler = defineListener(Events.InteractionCreate);
+export const registerCommandsHandler = defineListener({
+	name: Events.ClientReady,
+	once: true,
+});
+
+registerCommandsHandler.main(async (_, client) => {
+	const { commands } = client.managers;
+
+	const data = commands.commands.map((cmd) => cmd.toSlashCommandJSON());
+
+	const result = await client.application.commands.set(data);
+
+	console.log(`Registered ${result.size} application command(s)`);
+});
 
 messageCommandHandler.main(async (_, message) => {
 	const config = getConfig();

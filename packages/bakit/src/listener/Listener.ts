@@ -1,7 +1,8 @@
-import { type ClientEvents, Events } from "discord.js";
+import { Events } from "discord.js";
 import { Context } from "../base/lifecycle/Context.js";
 import { LifecycleManager } from "../base/lifecycle/LifecycleManager.js";
 import z from "zod";
+import type { BakitClientEvents } from "../BakitClient.js";
 
 export const ListenerOptionsSchema = z.object({
 	name: z.enum(Events),
@@ -12,9 +13,12 @@ export type ListenerOptions<K extends EventKey = EventKey> = Omit<z.input<typeof
 	name: K;
 };
 
-type EventKey = keyof ClientEvents;
+type EventKey = keyof BakitClientEvents;
 
-export class Listener<K extends EventKey = EventKey> extends LifecycleManager<Context, [...args: ClientEvents[K]]> {
+export class Listener<K extends EventKey = EventKey> extends LifecycleManager<
+	Context,
+	[...args: BakitClientEvents[K]]
+> {
 	public options: ListenerOptions<K>;
 
 	public constructor(options: K | ListenerOptions<K>) {
