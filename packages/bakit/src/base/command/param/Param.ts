@@ -1,14 +1,17 @@
-import type { Awaitable } from "discord.js";
+import type { Awaitable, User } from "discord.js";
 import type { ChatInputContext, CommandContext, MessageContext } from "../CommandContext.js";
 import {
 	NumberParamSchema,
 	StringParamSchema,
+	UserParamSchema,
 	type BaseParamOptions,
 	type NumberOptions,
 	type StringOptions,
+	type UserOptions,
 } from "./ParamSchema.js";
 import { ArgumentError } from "../../../errors/ArgumentError.js";
 import type z from "zod";
+import { extractSnowflakeId } from "../../../utils/string.js";
 
 export type ParamResolvedOutputType<OutputType, Required extends boolean = true> = Required extends true
 	? OutputType
@@ -78,6 +81,16 @@ export abstract class BaseParam<Options extends BaseParamOptions, OutputType, Re
 		context: CommandContext,
 		value?: string,
 	): Promise<ParamResolvedOutputType<OutputType, Required>> {
+		const { required, name } = this.options;
+
+		if (value === undefined) {
+			if (required) {
+				throw new ArgumentError(name, "is required");
+			}
+
+			return null as never;
+		}
+
 		if (context.isChatInput()) {
 			return await this.resolveChatInput(context);
 		} else if (context.isMessage()) {
@@ -89,7 +102,7 @@ export abstract class BaseParam<Options extends BaseParamOptions, OutputType, Re
 
 	public abstract resolveMessage(
 		context: MessageContext,
-		value: string | undefined,
+		value: string,
 	): Awaitable<ParamResolvedOutputType<OutputType, Required>>;
 	public abstract resolveChatInput(context: ChatInputContext): Awaitable<ParamResolvedOutputType<OutputType, Required>>;
 
@@ -110,19 +123,8 @@ export class StringParam<Required extends boolean = true> extends BaseParam<Stri
 		return super.required(value) as never;
 	}
 
-	public override resolveMessage(
-		_context: CommandContext,
-		value: string | undefined,
-	): ParamResolvedOutputType<string, Required> {
-		const { required, minLength, maxLength, name } = this.options;
-
-		if (value === undefined) {
-			if (required) {
-				throw new ArgumentError(name, "is required");
-			}
-
-			return null as never;
-		}
+	public override resolveMessage(_context: CommandContext, value: string): ParamResolvedOutputType<string, Required> {
+		const { minLength, maxLength, name } = this.options;
 
 		if (minLength && value.length < minLength) {
 			throw new ArgumentError(name, `must be at least ${minLength} chars long`);
@@ -165,19 +167,8 @@ export class NumberParam<Required extends boolean = true> extends BaseParam<Numb
 		return super.required(value) as never;
 	}
 
-	public override resolveMessage(
-		ctx: CommandContext,
-		value: string | undefined,
-	): ParamResolvedOutputType<number, Required> {
-		const { required, minValue, maxValue, name } = this.options;
-
-		if (value === undefined) {
-			if (required) {
-				throw new ArgumentError(name, "is required");
-			}
-
-			return null as never;
-		}
+	public override resolveMessage(_context: CommandContext, value: string): ParamResolvedOutputType<number, Required> {
+		const { minValue, maxValue, name } = this.options;
 
 		const num = Number(value);
 
@@ -214,6 +205,38 @@ export class NumberParam<Required extends boolean = true> extends BaseParam<Numb
 	 */
 	public max(value: number | null) {
 		return this.setOption("maxValue", value);
+	}
+}
+
+export class UserParam<Required extends boolean = true> extends BaseParam<UserOptions, User, Required> {
+	public constructor(options: string | UserOptions) {
+		super(BaseParam.getOptions(options), UserParamSchema);
+	}
+
+	public override required<V extends boolean>(value: V): UserParam<V> {
+		return super.required(value) as never;
+	}
+
+	public override async resolveMessage(
+		context: CommandContext,
+		value: string,
+	): Promise<ParamResolvedOutputType<User, Required>> {
+		const id = extractSnowflakeId(value);
+
+		if (!id) {
+			return null as never;
+		}
+
+		const { users } = context.client;
+
+		const user = await users.fetch(id).catch(() => null);
+
+		return user as never;
+	}
+
+	public override resolveChatInput(context: ChatInputContext): ParamResolvedOutputType<User, Required> {
+		const { name, required } = this.options;
+		return context.source.options.getUser(name, required) as never;
 	}
 }
 
