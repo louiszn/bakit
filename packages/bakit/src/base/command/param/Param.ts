@@ -1,7 +1,14 @@
 import type { Awaitable } from "discord.js";
 import type { ChatInputContext, CommandContext, MessageContext } from "../CommandContext.js";
-import type { BaseParamOptions, NumberOptions, StringOptions } from "./ParamSchema.js";
+import {
+	NumberParamSchema,
+	StringParamSchema,
+	type BaseParamOptions,
+	type NumberOptions,
+	type StringOptions,
+} from "./ParamSchema.js";
 import { ArgumentError } from "../../../errors/ArgumentError.js";
+import type z from "zod";
 
 export type ParamResolvedOutputType<OutputType, Required extends boolean = true> = Required extends true
 	? OutputType
@@ -20,20 +27,37 @@ export abstract class BaseParam<Options extends BaseParamOptions, OutputType, Re
 	 */
 	declare public readonly _type: Required extends true ? OutputType : OutputType | null;
 
-	public constructor(options: Options) {
-		// We cast to `never` to suppress strict type checks on this initial assignment
-		// because we are manually forcing the generic constraint.
-		this.options = { ...options, required: options.required ?? true } as never;
+	public constructor(
+		options: Options,
+		private schema: z.ZodObject,
+	) {
+		const parsed = schema.parse({
+			...options,
+			description: options.description ?? options.name,
+		});
+
+		this.options = parsed as Options & { required: Required };
 	}
 
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	protected setOption(key: keyof Options, value: any): this {
 		if (value === null) {
 			delete this.options[key];
-		} else {
+			return this;
+		}
+
+		const fieldValidator = this.schema.shape[key as string];
+
+		if (!fieldValidator) {
 			// eslint-disable-next-line @typescript-eslint/no-explicit-any
 			(this.options as any)[key] = value;
+			return this;
 		}
+
+		const parsedValue = fieldValidator.parse(value);
+
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		(this.options as any)[key] = parsedValue;
 
 		return this;
 	}
@@ -79,7 +103,7 @@ export abstract class BaseParam<Options extends BaseParamOptions, OutputType, Re
 
 export class StringParam<Required extends boolean = true> extends BaseParam<StringOptions, string, Required> {
 	public constructor(options: string | StringOptions) {
-		super(BaseParam.getOptions(options));
+		super(BaseParam.getOptions(options), StringParamSchema);
 	}
 
 	public override required<V extends boolean>(value: V): StringParam<V> {
@@ -134,7 +158,7 @@ export class StringParam<Required extends boolean = true> extends BaseParam<Stri
 
 export class NumberParam<Required extends boolean = true> extends BaseParam<NumberOptions, number, Required> {
 	public constructor(options: string | NumberOptions) {
-		super(BaseParam.getOptions(options));
+		super(BaseParam.getOptions(options), NumberParamSchema);
 	}
 
 	public override required<V extends boolean>(value: V): NumberParam<V> {
