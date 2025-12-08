@@ -1,9 +1,10 @@
 import { IntentsBitField } from "discord.js";
-import { BakitClient } from "./BakitClient.js";
-import { getConfig, loadConfig } from "../config.js";
+import { BakitClient } from "../client/BakitClient.js";
+import { getConfig, loadConfig } from "../../config.js";
 
-import { chatInputCommandHandler, messageCommandHandler, registerCommandsHandler } from "../defaults/index.js";
+import { chatInputCommandHandler, messageCommandHandler, registerCommandsHandler } from "../../defaults/index.js";
 import { ProjectCacheManager } from "./ProjectCacheManager.js";
+import { Module } from "../../utils/module.js";
 
 export class Instance {
 	public client!: BakitClient;
@@ -30,6 +31,12 @@ export class Instance {
 		this.initIntents();
 
 		await this.client.login(config.token);
+
+		this.initProcess();
+	}
+
+	private initProcess() {
+		process.on("message", (msg) => this.onProcessMessage(msg));
 	}
 
 	private loadModules() {
@@ -40,7 +47,7 @@ export class Instance {
 		listeners.add(messageCommandHandler);
 		listeners.add(registerCommandsHandler);
 
-		return Promise.all([commands.loadModules(), listeners.loadModules()]);
+		return Promise.all([commands.loadModules("src"), listeners.loadModules("src")]);
 	}
 
 	private initIntents() {
@@ -64,6 +71,30 @@ export class Instance {
 		}
 
 		options.intents = intents;
+	}
+
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	private async onProcessMessage(message: any) {
+		const { type, file } = message;
+
+		if (type !== "hmr:fileChanged") {
+			return;
+		}
+
+		const topLevel = Module.getTopLevel(message.path, "src");
+
+		const { listeners, commands } = this.client.managers;
+
+		switch (topLevel) {
+			case "listeners":
+				listeners.unload(file);
+				await listeners.load(file);
+				break;
+			case "commands":
+				commands.unload(file);
+				await listeners.load(file);
+				break;
+		}
 	}
 }
 

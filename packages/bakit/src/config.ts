@@ -2,8 +2,7 @@ import { type ClientOptions, GatewayIntentBits } from "discord.js";
 import { z } from "zod";
 
 import glob from "tiny-glob";
-
-import { $jiti } from "./utils/index.js";
+import { Module } from "./utils/index.js";
 
 export const ProjectConfigSchema = z.object({
 	/**
@@ -24,12 +23,6 @@ export const ProjectConfigSchema = z.object({
 	 * @see {@link https://discord.js.org/docs/packages/discord.js/main/ClientOptions:Interface}
 	 */
 	clientOptions: z.custom<Omit<ClientOptions, "intents">>().optional(),
-	/**
-	 * The path to the main project source directory.
-	 *
-	 * @defaultvalue `src`
-	 */
-	entryDir: z.string().default("src"),
 	prefixes: z.array(z.string()).default([]),
 	token: z.string(),
 });
@@ -77,11 +70,9 @@ export async function loadConfig(cwd = process.cwd()): Promise<ProjectConfig> {
 		console.warn(`Multiple config files found in ${cwd}. Using ${configPath}.`);
 	}
 
-	const config = await $jiti.import<ProjectConfig>(configPath, { default: true });
+	const config = await Module.import<ProjectConfig>(configPath, true);
 
-	_config = Object.freeze(await ProjectConfigSchema.parseAsync(config));
-
-	return _config;
+	return Object.freeze(await ProjectConfigSchema.parseAsync(config));
 }
 
 /**

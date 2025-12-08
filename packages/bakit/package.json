@@ -11,7 +11,7 @@
 		"test": "vitest run --pass-with-no-tests"
 	},
 	"bin": {
-		"bakit": "./bin/bakit.js"
+		"bakit": "./dist/bin/bakit.js"
 	},
 	"files": [
 		"dist"
@@ -37,6 +37,7 @@
 		"discord.js": "^14.0.0"
 	},
 	"dependencies": {
+		"chokidar": "^5.0.0",
 		"commander": "^14.0.2",
 		"dotenv": "^17.2.1",
 		"jiti": "^2.6.1",

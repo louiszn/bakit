@@ -6,7 +6,7 @@ import {
 	type InteractionReplyOptions,
 	type MessageCreateOptions,
 } from "discord.js";
-import { BakitClient } from "../BakitClient.js";
+import { BakitClient } from "../client/BakitClient.js";
 import { Context } from "../lifecycle/Context.js";
 
 export type ChatInputContextSendOptions = string | InteractionReplyOptions;
