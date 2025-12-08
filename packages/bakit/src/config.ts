@@ -71,8 +71,9 @@ export async function loadConfig(cwd = process.cwd()): Promise<ProjectConfig> {
 	}
 
 	const config = await Module.import<ProjectConfig>(configPath, true);
+	_config = Object.freeze(await ProjectConfigSchema.parseAsync(config));
 
-	return Object.freeze(await ProjectConfigSchema.parseAsync(config));
+	return _config;
 }
 
 /**

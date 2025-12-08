@@ -13,11 +13,7 @@ export class CommandManager extends BaseClientManager {
 
 	public async loadModules(entryDir: string): Promise<Command[]> {
 		const pattern = posix.join(posix.resolve(entryDir), "commands", "**/*.{ts,js}");
-
-		const files = await glob(pattern, {
-			cwd: process.cwd(),
-			absolute: true,
-		});
+		const files = await glob(pattern, { cwd: process.cwd() });
 
 		const results = await Promise.all(files.map((file) => this.load(file)));
 		const filtered = results.filter((c): c is Command => !!c);
