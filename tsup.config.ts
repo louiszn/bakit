@@ -1,9 +1,9 @@
 import { defineConfig, type Options } from "tsup";
 
-export function makeConfig(options?: Options) {
+export function makeConfig(...options: Partial<Options>[]) {
 	const isProduction = process.env.NODE_ENV === "production";
 
-	return defineConfig({
+	const makeDefault = (opts: Partial<Options>): Options => ({
 		format: "esm",
 		sourcemap: !isProduction,
 		dts: true,
@@ -14,6 +14,8 @@ export function makeConfig(options?: Options) {
 		target: "es2022",
 		treeshake: true,
 		minifySyntax: true,
-		...options,
+		...opts,
 	});
+
+	return defineConfig(options.map(makeDefault));
 }
