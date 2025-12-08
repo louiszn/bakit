@@ -4,56 +4,84 @@ import { posix } from "path";
 import glob from "tiny-glob";
 
 import { Command } from "./Command.js";
-import { BaseClientManager } from "../BaseClientManager.js";
-import { getConfig } from "../../config.js";
-import { $jiti } from "../../utils/index.js";
+import { BaseClientManager } from "../client/BaseClientManager.js";
+import { Module } from "../../utils/index.js";
 
 export class CommandManager extends BaseClientManager {
 	public commands = new Collection<string, Command>();
+	public entries = new Collection<string, Command>();
 
-	public async loadModules(): Promise<Command[]> {
-		const entryDir = posix.resolve(getConfig().entryDir);
-		const pattern = posix.join(entryDir, "commands", "**/*.{ts,js}");
+	public async loadModules(entryDir: string): Promise<Command[]> {
+		const pattern = posix.join(posix.resolve(entryDir), "commands", "**/*.{ts,js}");
 
 		const files = await glob(pattern, {
 			cwd: process.cwd(),
 			absolute: true,
 		});
 
-		const loads = files.map(async (file) => {
-			try {
-				const command = await $jiti.import<Command | undefined>(file, { default: true });
+		const results = await Promise.all(files.map((file) => this.load(file)));
+		const filtered = results.filter((c): c is Command => !!c);
 
-				if (!command) {
-					console.warn(`[Loader] File has no default export: ${file}`);
-					return;
-				}
+		console.log(`[Loader] Loaded ${filtered.length}/${files.length}`);
 
-				if (!(command instanceof Command)) {
-					console.warn(`[Loader] Default export is not a Command: ${file}`);
-					return;
-				}
-
-				this.add(command);
-				return command;
-			} catch (error: unknown) {
-				console.error(`An error occurred while trying to add command for '${file}':`, error);
-			}
-
-			return;
-		});
-
-		const loaded = (await Promise.all(loads)).filter((x) => x !== undefined);
-
-		console.log(`Loaded ${loaded.length} command(s).`);
-
-		return loaded;
+		return filtered;
 	}
 
+	/**
+	 * Load the file and add the command to the registry.
+	 * @param path The path to the command file.
+	 * @returns The command object if added successfully.
+	 */
+	public async load(path: string): Promise<Command | undefined> {
+		const command = await Module.import<Command>(path, true);
+
+		if (!command) {
+			console.warn(`[Loader] File has no default export: ${path}`);
+			return;
+		}
+
+		if (!(command instanceof Command)) {
+			console.warn(`[Loader] Default export is not a Command: ${path}`);
+			return;
+		}
+
+		this.add(command);
+		this.entries.set(path, command);
+
+		return command;
+	}
+
+	/**
+	 * Unload the file and remove the command from the registry.
+	 * @param path The path to the command file.
+	 * @returns The command object if unloaded successfully.
+	 */
+	public async unload(path: string): Promise<Command | undefined> {
+		let command: Command | undefined | null = this.entries.get(path);
+
+		if (Module.isLoaded(path)) {
+			// In case we lost the entry, we will try to get it from the loaded file in jiti's cache
+			// This makes sure the old command object is completely deleted
+			command ??= await Module.import<Command>(path, true);
+			Module.unload(path);
+		}
+
+		this.entries.delete(path);
+
+		if (!command) {
+			return;
+		}
+
+		return this.remove(command);
+	}
+
+	/**
+	 * Add a command to the registry.
+	 * @param command Command to add.
+	 */
 	public add(command: Command): void {
 		if (!(command instanceof Command)) {
 			throw new Error("Invalid command provided");
-			return;
 		}
 
 		const { name } = command.options;
@@ -66,7 +94,16 @@ export class CommandManager extends BaseClientManager {
 		this.commands.set(name, command);
 	}
 
+	/**
+	 * Remove a command from the registry.
+	 * @param target Command name or object to remove.
+	 * @returns The command object if removed successfully.
+	 */
 	public remove(target: string | Command): Command | undefined {
+		if (typeof target !== "string" && !(target instanceof Command)) {
+			return;
+		}
+
 		const name = typeof target === "string" ? target : target.options.name;
 		const existing = this.commands.get(name);
 
@@ -78,6 +115,11 @@ export class CommandManager extends BaseClientManager {
 		return;
 	}
 
+	/**
+	 * Get a command using its name.
+	 * @param name The command to get.
+	 * @returns The command object.
+	 */
 	public get(name: string) {
 		return this.commands.get(name);
 	}

@@ -2,75 +2,105 @@ import { posix } from "path";
 import glob from "tiny-glob";
 
 import { Listener } from "./Listener.js";
-import { BaseClientManager } from "../BaseClientManager.js";
-import { getConfig } from "../../config.js";
+import { BaseClientManager } from "../client/BaseClientManager.js";
 import { Context } from "../lifecycle/Context.js";
-import { GatewayIntentBits, IntentsBitField } from "discord.js";
+import { Collection, GatewayIntentBits, IntentsBitField } from "discord.js";
 import { EVENT_INTENT_MAPPING } from "../../utils/EventIntents.js";
-import { $jiti } from "../../utils/index.js";
+import { Module } from "../../utils/module.js";
 
 export class ListenerManager extends BaseClientManager {
 	public listeners: Listener[] = [];
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	private executors = new WeakMap<Listener, (...args: any[]) => void>();
+	public entries = new Collection<string, Listener>();
+	private executors = new WeakMap<Listener, (...args: unknown[]) => void>();
 
-	public async loadModules(): Promise<Listener[]> {
-		const entryDir = posix.resolve(getConfig().entryDir);
-		const pattern = posix.join(entryDir, "listeners", "**/*.{ts,js}");
+	public async loadModules(entryDir: string): Promise<Listener[]> {
+		const pattern = posix.join(posix.resolve(entryDir), "listeners", "**/*.{ts,js}");
 
 		const files = await glob(pattern, {
 			cwd: process.cwd(),
 			absolute: true,
 		});
 
-		const loads = files.map(async (file) => {
-			try {
-				const listener = await $jiti.import<Listener | undefined>(file, { default: true });
+		const results = await Promise.all(files.map((file) => this.load(file)));
+		const filtered = results.filter((l): l is Listener => !!l);
 
-				if (!listener) {
-					console.warn(`[Loader] File has no default export: ${file}`);
-					return;
-				}
+		console.log(`[Loader] Loaded ${filtered.length}/${files.length}`);
 
-				if (!(listener instanceof Listener)) {
-					console.warn(`[Loader] Default export is not a Listener: ${file}`);
-					return;
-				}
-
-				this.add(listener);
-				return listener;
-			} catch (error: unknown) {
-				console.error(`An error occurred while trying to add listener for '${file}':`, error);
-			}
-
-			return;
-		});
-
-		const loaded = (await Promise.all(loads)).filter((x) => x !== undefined);
-
-		console.log(`Loaded ${loaded.length} listener(s).`);
-
-		return loaded;
+		return filtered;
 	}
 
+	/**
+	 * Load the file and add the listener to the registry.
+	 * @param path The path to the listener file.
+	 * @returns The listener object if added successfully.
+	 */
+	public async load(path: string): Promise<Listener | undefined> {
+		const listener = await Module.import<Listener>(path, true);
+
+		if (!listener) {
+			console.warn(`[Loader] File has no default export: ${path}`);
+			return;
+		}
+
+		if (!(listener instanceof Listener)) {
+			console.warn(`[Loader] Default export is not a Listener: ${path}`);
+			return;
+		}
+
+		this.add(listener);
+		this.entries.set(path, listener);
+
+		return listener;
+	}
+
+	/**
+	 * Unload the file and remove the listener from the registry.
+	 * @param path The path to the listener file.
+	 * @returns The listener object if unloaded successfully.
+	 */
+	public async unload(path: string): Promise<Listener | undefined> {
+		let listener: Listener | undefined | null = this.entries.get(path);
+
+		if (Module.isLoaded(path)) {
+			// In case we lost the entry, we will try to get it from the loaded file in jiti's cache
+			// This makes sure the old listener object is completely deleted
+			listener ??= await Module.import<Listener>(path, true);
+			Module.unload(path);
+		}
+
+		this.entries.delete(path);
+
+		if (!listener) {
+			return;
+		}
+
+		return this.remove(listener)?.[0];
+	}
+
+	/**
+	 * Add a listener to the registry and create a listener for client.
+	 * @param listener Listener to add.
+	 */
 	public add(listener: Listener): void {
 		if (!(listener instanceof Listener)) {
 			throw new Error("Invalid listener provided");
 		}
 
-		// eslint-disable-next-line @typescript-eslint/no-explicit-any
-		const execute = (...args: any[]) => {
+		const { once, name } = listener.options;
+		const execute = (...args: unknown[]) => {
 			void listener.execute(new Context(), ...(args as never));
 		};
 
 		this.listeners.push(listener);
 		this.executors.set(listener, execute);
-
-		const { once, name } = listener.options;
-
 		this.client[once ? "once" : "on"](name, execute);
 	}
 
+	/**
+	 * Remove a listener from the registry and client.
+	 * @param target Listener name or object to remove.
+	 * @returns The list of listener objects if removed successfully.
+	 */
 	public remove(target: string | Listener): Listener[] {
 		const isMatched = (listener: Listener) => {
 			if (typeof target === "string") {
@@ -102,10 +132,18 @@ export class ListenerManager extends BaseClientManager {
 		return removed;
 	}
 
+	/**
+	 * Get a list of required intents for Bakit to run correctly.
+	 * @returns Used intents.
+	 */
 	public getBaseIntents() {
 		return new IntentsBitField([GatewayIntentBits.Guilds]);
 	}
 
+	/**
+	 * Get a list of needed intents based on registered listeners to receive needed events.
+	 * @returns Used intents.
+	 */
 	public getNeededIntents() {
 		const result = this.getBaseIntents();
 

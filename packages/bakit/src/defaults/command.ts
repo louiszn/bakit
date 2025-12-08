@@ -1,5 +1,5 @@
 import { Events } from "discord.js";
-import type { BakitClient } from "../base/BakitClient.js";
+import type { BakitClient } from "../base/client/BakitClient.js";
 import { ChatInputContext, MessageContext } from "../base/command/index.js";
 import { defineListener } from "../base/listener/Listener.js";
 import { getConfig } from "../config.js";

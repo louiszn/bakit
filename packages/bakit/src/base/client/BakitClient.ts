@@ -1,8 +1,8 @@
 import { type Awaitable, Client, type ClientEvents, type ClientOptions, Message } from "discord.js";
 import { inspect } from "node:util";
-import { CommandManager } from "./command/CommandManager.js";
-import { ListenerManager } from "./listener/ListenerManager.js";
-import type { Instance } from "./Instance.js";
+import { CommandManager } from "../command/CommandManager.js";
+import { ListenerManager } from "../listener/ListenerManager.js";
+import type { Instance } from "../process/Instance.js";
 
 export type GetPrefixFunction = (message: Message) => Awaitable<string[] | string>;
 
