@@ -15,11 +15,7 @@ export class ListenerManager extends BaseClientManager {
 
 	public async loadModules(entryDir: string): Promise<Listener[]> {
 		const pattern = posix.join(posix.resolve(entryDir), "listeners", "**/*.{ts,js}");
-
-		const files = await glob(pattern, {
-			cwd: process.cwd(),
-			absolute: true,
-		});
+		const files = await glob(pattern, { cwd: process.cwd() });
 
 		const results = await Promise.all(files.map((file) => this.load(file)));
 		const filtered = results.filter((l): l is Listener => !!l);
