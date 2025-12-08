@@ -85,12 +85,10 @@ export class Instance {
 
 		switch (target) {
 			case "listeners":
-				listeners.unload(file);
-				await listeners.load(file);
+				await listeners.reload(file);
 				break;
 			case "commands":
-				commands.unload(file);
-				await listeners.load(file);
+				await commands.reload(file);
 				break;
 		}
 	}

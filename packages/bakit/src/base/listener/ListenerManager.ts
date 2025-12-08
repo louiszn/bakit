@@ -20,7 +20,7 @@ export class ListenerManager extends BaseClientManager {
 		const results = await Promise.all(files.map((file) => this.load(file)));
 		const filtered = results.filter((l): l is Listener => !!l);
 
-		console.log(`[Loader] Loaded ${filtered.length}/${files.length}`);
+		console.log(`[Loader] Loaded ${filtered.length}/${files.length} listener(s)`);
 
 		return filtered;
 	}
@@ -71,6 +71,19 @@ export class ListenerManager extends BaseClientManager {
 		}
 
 		return this.remove(listener)?.[0];
+	}
+
+	public async reload(path: string) {
+		await this.unload(path);
+		const listener = await this.load(path);
+
+		if (!listener) {
+			return;
+		}
+
+		console.log(`[Loader] Reloaded listener '${listener.options.name}' at '${path}'`);
+
+		return listener;
 	}
 
 	/**

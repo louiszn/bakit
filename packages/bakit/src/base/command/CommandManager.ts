@@ -18,7 +18,7 @@ export class CommandManager extends BaseClientManager {
 		const results = await Promise.all(files.map((file) => this.load(file)));
 		const filtered = results.filter((c): c is Command => !!c);
 
-		console.log(`[Loader] Loaded ${filtered.length}/${files.length}`);
+		console.log(`[Loader] Loaded ${filtered.length}/${files.length} command(s)`);
 
 		return filtered;
 	}
@@ -69,6 +69,19 @@ export class CommandManager extends BaseClientManager {
 		}
 
 		return this.remove(command);
+	}
+
+	public async reload(path: string) {
+		await this.unload(path);
+		const command = await this.load(path);
+
+		if (!command) {
+			return;
+		}
+
+		console.log(`[Loader] Reloaded command'${command.options.name}' at '${path}'`);
+
+		return command;
 	}
 
 	/**
