@@ -4,7 +4,6 @@ import { getConfig, loadConfig } from "../../config.js";
 
 import { chatInputCommandHandler, messageCommandHandler, registerCommandsHandler } from "../../defaults/index.js";
 import { ProjectCacheManager } from "./ProjectCacheManager.js";
-import { Module } from "../../utils/module.js";
 
 export class Instance {
 	public client!: BakitClient;
@@ -77,15 +76,14 @@ export class Instance {
 	private async onProcessMessage(message: any) {
 		const { type, file } = message;
 
-		if (type !== "hmr:fileChanged") {
+		if (!type.startsWith("hmr:")) {
 			return;
 		}
 
-		const topLevel = Module.getTopLevel(message.path, "src");
-
+		const target = type.split(":")[1];
 		const { listeners, commands } = this.client.managers;
 
-		switch (topLevel) {
+		switch (target) {
 			case "listeners":
 				listeners.unload(file);
 				await listeners.load(file);
