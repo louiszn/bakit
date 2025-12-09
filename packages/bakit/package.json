@@ -11,7 +11,7 @@
 		"test": "vitest run --pass-with-no-tests"
 	},
 	"bin": {
-		"bakit": "./dist/bin/bakit.js"
+		"bakit": "./dist/cli.js"
 	},
 	"files": [
 		"dist"
