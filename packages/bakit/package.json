@@ -11,7 +11,7 @@
 		"test": "vitest run --pass-with-no-tests"
 	},
 	"bin": {
-		"bakit": "./dist/bin/bakit.js"
+		"bakit": "./dist/cli.js"
 	},
 	"files": [
 		"dist"
@@ -41,7 +41,6 @@
 		"commander": "^14.0.2",
 		"dotenv": "^17.2.1",
 		"jiti": "^2.6.1",
-		"nodemon": "^3.1.11",
 		"tiny-glob": "^0.2.9",
 		"type-fest": "^4.41.0",
 		"zod": "^4.1.12"

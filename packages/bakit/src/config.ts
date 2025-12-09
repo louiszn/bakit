@@ -1,8 +1,9 @@
 import { type ClientOptions, GatewayIntentBits } from "discord.js";
-import { z } from "zod";
+import z from "zod";
 
 import glob from "tiny-glob";
-import { Module } from "./utils/index.js";
+
+import { importModule } from "./lib/index.js";
 
 export const ProjectConfigSchema = z.object({
 	/**
@@ -70,7 +71,7 @@ export async function loadConfig(cwd = process.cwd()): Promise<ProjectConfig> {
 		console.warn(`Multiple config files found in ${cwd}. Using ${configPath}.`);
 	}
 
-	const config = await Module.import<ProjectConfig>(configPath, true);
+	const config = await importModule<ProjectConfig>(configPath, true);
 	_config = Object.freeze(await ProjectConfigSchema.parseAsync(config));
 
 	return _config;
