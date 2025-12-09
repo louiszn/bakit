@@ -1,9 +1,11 @@
 import { Events } from "discord.js";
-import type { BakitClient } from "../base/client/BakitClient.js";
-import { ChatInputContext, MessageContext } from "../base/command/index.js";
-import { defineListener } from "../base/listener/Listener.js";
+
+import type { BakitClient } from "../core/client/BakitClient.js";
+import { ChatInputContext, MessageContext } from "../core/context/CommandContext.js";
+import { defineListener } from "../core/structures/Listener.js";
+
 import { getConfig } from "../config.js";
-import { tokenize } from "../utils/string.js";
+import { tokenize } from "../lib/utils/string.js";
 
 export const messageCommandHandler = defineListener(Events.MessageCreate);
 export const chatInputCommandHandler = defineListener(Events.InteractionCreate);

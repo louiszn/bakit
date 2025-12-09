@@ -33,6 +33,8 @@ export default tseslint.config(
 		rules: {
 			"@typescript-eslint/no-unused-vars": ["error", { argsIgnorePattern: "^_" }],
 			"@typescript-eslint/restrict-template-expressions": "off",
+			"@typescript-eslint/dot-notation": "off",
+			"@typescript-eslint/consistent-type-imports": "error",
 			"prettier/prettier": "error",
 		},
 	},
