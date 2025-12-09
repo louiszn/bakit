@@ -79,7 +79,7 @@ export class CommandManager extends BaseClientManager {
 			return;
 		}
 
-		console.log(`[Loader] Reloaded command'${command.options.name}' at '${path}'`);
+		console.log(`[Loader] Reloaded command '${command.options.name}' at '${path}'`);
 
 		return command;
 	}
