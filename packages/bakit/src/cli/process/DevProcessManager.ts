@@ -2,6 +2,7 @@ import { fork, type ChildProcess } from "node:child_process";
 import chokidar from "chokidar";
 import path from "node:path";
 import { getTopLevelDirectory } from "../../lib/utils/module.js";
+import { pathToFileURL } from "node:url";
 
 interface DevManagerOptions {
 	rootDir: string;
@@ -67,7 +68,9 @@ export class DevProcessManager {
 			},
 		});
 
-		watcher.on("change", (file) => this.onFileChanged(file));
+		watcher.on("change", (file) => {
+			this.onFileChanged(pathToFileURL(file).href);
+		});
 	}
 
 	private onFileChanged(file: string) {
