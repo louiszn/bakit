@@ -3,8 +3,6 @@ import z from "zod";
 
 import glob from "tiny-glob";
 
-import { importModule } from "./lib/index.js";
-
 export const ProjectConfigSchema = z.object({
 	/**
 	 * The gateway intents to use for the Discord client.
@@ -71,7 +69,7 @@ export async function loadConfig(cwd = process.cwd()): Promise<ProjectConfig> {
 		console.warn(`Multiple config files found in ${cwd}. Using ${configPath}.`);
 	}
 
-	const config = await importModule<ProjectConfig>(configPath, true);
+	const config = (await import(configPath)).default;
 	_config = Object.freeze(await ProjectConfigSchema.parseAsync(config));
 
 	return _config;

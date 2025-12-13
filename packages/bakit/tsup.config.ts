@@ -9,4 +9,9 @@ export default makeConfig(
 		outDir: "dist",
 		dts: false,
 	},
+	{
+		entry: ["src/loader/**/*.ts"],
+		outDir: "dist/loader",
+		dts: false,
+	},
 );

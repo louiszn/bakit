@@ -3,8 +3,13 @@
 	"version": "1.0.0-beta.17",
 	"description": "A framework for discord.js",
 	"type": "module",
-	"types": "./dist/index.d.ts",
-	"exports": "./dist/index.js",
+	"exports": {
+		".": {
+			"import": "./dist/index.js",
+			"types": "./dist/index.d.ts"
+		},
+		"./loader/*": "./dist/loader/*.js"
+	},
 	"scripts": {
 		"build": "tsup",
 		"type-check": "tsc --noEmit",
@@ -36,11 +41,13 @@
 	"peerDependencies": {
 		"discord.js": "^14.0.0"
 	},
+	"optionalDependencies": {
+		"esbuild": "^0.27.0"
+	},
 	"dependencies": {
 		"chokidar": "^5.0.0",
 		"commander": "^14.0.2",
 		"dotenv": "^17.2.1",
-		"jiti": "^2.6.1",
 		"tiny-glob": "^0.2.9",
 		"type-fest": "^4.41.0",
 		"zod": "^4.1.12"
