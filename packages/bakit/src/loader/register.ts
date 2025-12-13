@@ -12,9 +12,6 @@ register(hookPath, import.meta.url, {
 	transferList: [port1],
 });
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-process.on("message", (message: any) => {
-	if (message.type === "unload") {
-		port2.postMessage({ type: "unload", target: message.target });
-	}
-});
+export function unload(module: string) {
+	port2.postMessage({ type: "unload", target: module });
+}

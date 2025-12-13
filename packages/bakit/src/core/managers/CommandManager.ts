@@ -53,8 +53,10 @@ export class CommandManager extends BaseClientManager {
 	 */
 	public async unload(path: string): Promise<Command | undefined> {
 		const command = this.entries.get(path);
-
 		this.entries.delete(path);
+
+		const loader = await import("bakit/loader/register");
+		loader.unload(path);
 
 		if (!command) {
 			return;

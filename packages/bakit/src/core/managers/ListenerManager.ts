@@ -57,8 +57,10 @@ export class ListenerManager extends BaseClientManager {
 	 */
 	public async unload(path: string): Promise<Listener | undefined> {
 		const listener = this.entries.get(path);
-
 		this.entries.delete(path);
+
+		const loader = await import("bakit/loader/register");
+		loader.unload(path);
 
 		if (!listener) {
 			return;
