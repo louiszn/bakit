@@ -12,6 +12,7 @@ export default makeConfig(
 	{
 		entry: ["src/loader/**/*.ts"],
 		outDir: "dist/loader",
+		external: ["esbuild"],
 		dts: false,
 	},
 );
