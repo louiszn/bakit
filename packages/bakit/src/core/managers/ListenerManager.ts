@@ -8,7 +8,6 @@ import { BaseClientManager } from "./BaseClientManager.js";
 import { Context } from "../context/Context.js";
 
 import { EVENT_INTENT_MAPPING } from "../../lib/discord/EventIntents.js";
-import { importModule, isModuleLoaded, unloadModule } from "../../lib/index.js";
 
 export class ListenerManager extends BaseClientManager {
 	public listeners: Listener[] = [];
@@ -33,7 +32,7 @@ export class ListenerManager extends BaseClientManager {
 	 * @returns The listener object if added successfully.
 	 */
 	public async load(path: string): Promise<Listener | undefined> {
-		const listener = await importModule<Listener>(path, true);
+		const listener = (await import(path)).default as Listener;
 
 		if (!listener) {
 			console.warn(`[Loader] File has no default export: ${path}`);
@@ -57,16 +56,11 @@ export class ListenerManager extends BaseClientManager {
 	 * @returns The listener object if unloaded successfully.
 	 */
 	public async unload(path: string): Promise<Listener | undefined> {
-		let listener: Listener | undefined | null = this.entries.get(path);
-
-		if (isModuleLoaded(path)) {
-			// In case we lost the entry, we will try to get it from the loaded file in jiti's cache
-			// This makes sure the old listener object is completely deleted
-			listener ??= await importModule<Listener>(path, true);
-			unloadModule(path);
-		}
-
+		const listener = this.entries.get(path);
 		this.entries.delete(path);
+
+		const loader = await import("bakit/loader/register");
+		loader.unload(path);
 
 		if (!listener) {
 			return;

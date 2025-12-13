@@ -1,3 +1,5 @@
+// This file will be built into dist/cli.js
+
 import { config as useEnv } from "dotenv";
 import { program } from "commander";
 import { DevProcessManager } from "./process/DevProcessManager.js";

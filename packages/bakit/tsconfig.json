@@ -1,4 +1,9 @@
 {
 	"extends": "../../tsconfig.json",
+	"compilerOptions": {
+		"paths": {
+			"bakit/loader/register": ["./src/loader/register.ts"]
+		}
+	},
 	"include": ["src/**/*.ts", "tests/**/*.ts", "example/**/*.ts", "tsup.config.ts"]
 }

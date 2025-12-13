@@ -5,7 +5,6 @@ import glob from "tiny-glob";
 
 import { Command } from "../structures/Command.js";
 import { BaseClientManager } from "./BaseClientManager.js";
-import { importModule, isModuleLoaded, unloadModule } from "../../lib/index.js";
 
 export class CommandManager extends BaseClientManager {
 	public commands = new Collection<string, Command>();
@@ -29,7 +28,7 @@ export class CommandManager extends BaseClientManager {
 	 * @returns The command object if added successfully.
 	 */
 	public async load(path: string): Promise<Command | undefined> {
-		const command = await importModule<Command>(path, true);
+		const command = (await import(path)).default as Command;
 
 		if (!command) {
 			console.warn(`[Loader] File has no default export: ${path}`);
@@ -53,16 +52,11 @@ export class CommandManager extends BaseClientManager {
 	 * @returns The command object if unloaded successfully.
 	 */
 	public async unload(path: string): Promise<Command | undefined> {
-		let command: Command | undefined | null = this.entries.get(path);
-
-		if (isModuleLoaded(path)) {
-			// In case we lost the entry, we will try to get it from the loaded file in jiti's cache
-			// This makes sure the old command object is completely deleted
-			command ??= await importModule<Command>(path, true);
-			unloadModule(path);
-		}
-
+		const command = this.entries.get(path);
 		this.entries.delete(path);
+
+		const loader = await import("bakit/loader/register");
+		loader.unload(path);
 
 		if (!command) {
 			return;
