@@ -148,12 +148,6 @@ importers:
       dotenv:
         specifier: ^17.2.1
         version: 17.2.1
-      esbuild:
-        specifier: ^0.27.1
-        version: 0.27.1
-      jiti:
-        specifier: ^2.6.1
-        version: 2.6.1
       tiny-glob:
         specifier: ^0.2.9
         version: 0.2.9
@@ -163,6 +157,10 @@ importers:
       zod:
         specifier: ^4.1.12
         version: 4.1.12
+    optionalDependencies:
+      esbuild:
+        specifier: ^0.27.0
+        version: 0.27.1
 
 packages:
 
@@ -10609,6 +10607,7 @@ snapshots:
       '@esbuild/win32-arm64': 0.27.1
       '@esbuild/win32-ia32': 0.27.1
       '@esbuild/win32-x64': 0.27.1
+    optional: true
 
   escalade@3.2.0: {}
 
@@ -11478,7 +11477,8 @@ snapshots:
 
   jiti@1.21.7: {}
 
-  jiti@2.6.1: {}
+  jiti@2.6.1:
+    optional: true
 
   joi@17.13.3:
     dependencies:
