@@ -68,21 +68,21 @@ export class DevProcessManager {
 			},
 		});
 
-		watcher.on("change", (file) => {
-			this.onFileChanged(pathToFileURL(file).href);
+		watcher.on("change", (path) => {
+			this.onFileChanged(path);
 		});
 	}
 
-	private onFileChanged(file: string) {
+	private onFileChanged(path: string) {
 		if (!this.child) {
 			return;
 		}
 
-		const top = getTopLevelDirectory(file, this.options.rootDir);
+		const top = getTopLevelDirectory(path, this.options.rootDir);
 
 		if (top && this.options.hotDirs.includes(top)) {
 			if (this.child.connected) {
-				this.child.send({ type: `hmr:${top}`, file });
+				this.child.send({ type: `hmr:${top}`, url: pathToFileURL(path).href });
 			}
 			return;
 		}
