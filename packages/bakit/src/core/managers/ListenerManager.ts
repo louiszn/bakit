@@ -10,6 +10,8 @@ import { Context } from "../context/Context.js";
 import { EVENT_INTENT_MAPPING } from "../../lib/discord/EventIntents.js";
 import { pathToFileURL } from "url";
 
+import { $unloadFile } from "../../lib/loader/loader.js";
+
 export class ListenerManager extends BaseClientManager {
 	public listeners: Listener[] = [];
 	public entries = new Collection<string, Listener>();
@@ -61,8 +63,7 @@ export class ListenerManager extends BaseClientManager {
 		const listener = this.entries.get(path);
 		this.entries.delete(path);
 
-		const loader = await import("bakit/loader/register");
-		loader.unload(path);
+		await $unloadFile(path);
 
 		if (!listener) {
 			return;

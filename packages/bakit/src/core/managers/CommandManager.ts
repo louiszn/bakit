@@ -6,6 +6,7 @@ import glob from "tiny-glob";
 import { Command } from "../structures/Command.js";
 import { BaseClientManager } from "./BaseClientManager.js";
 import { pathToFileURL } from "url";
+import { $unloadFile } from "../../lib/loader/loader.js";
 
 export class CommandManager extends BaseClientManager {
 	public commands = new Collection<string, Command>();
@@ -57,8 +58,7 @@ export class CommandManager extends BaseClientManager {
 		const command = this.entries.get(path);
 		this.entries.delete(path);
 
-		const loader = await import("bakit/loader/register");
-		loader.unload(path);
+		await $unloadFile(path);
 
 		if (!command) {
 			return;

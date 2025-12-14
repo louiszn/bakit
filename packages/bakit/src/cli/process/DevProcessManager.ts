@@ -29,7 +29,7 @@ export class DevProcessManager {
 		const entry = path.resolve(this.options.entry);
 
 		this.child = fork(entry, {
-			execArgv: ["--import", "bakit/loader/register"],
+			execArgv: ["--import", "bakit/register"],
 			stdio: "inherit",
 			env: {
 				...process.env,
