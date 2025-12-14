@@ -115,7 +115,7 @@ function createVersion(filename: string) {
 }
 
 function shouldSkip(specifier: string) {
-	if (Module.isBuiltin(specifier)) {
+	if (Module.isBuiltin(specifier) || specifier.includes("/node_modules/")) {
 		return true;
 	}
 
