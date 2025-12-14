@@ -74,7 +74,7 @@ export class Instance {
 
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	private async onProcessMessage(message: any) {
-		const { type, file } = message;
+		const { type, url } = message;
 
 		if (!type.startsWith("hmr:")) {
 			return;
@@ -85,10 +85,10 @@ export class Instance {
 
 		switch (target) {
 			case "listeners":
-				await listeners.reload(file);
+				await listeners.reload(url);
 				break;
 			case "commands":
-				await commands.reload(file);
+				await commands.reload(url);
 				break;
 		}
 	}
