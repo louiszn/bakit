@@ -8,7 +8,7 @@
 			"import": "./dist/index.js",
 			"types": "./dist/index.d.ts"
 		},
-		"./loader/*": "./dist/loader/*.js"
+		"./register": "./dist/register.js"
 	},
 	"scripts": {
 		"build": "tsup",

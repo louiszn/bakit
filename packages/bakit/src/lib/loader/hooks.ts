@@ -5,7 +5,9 @@ import { basename, dirname, resolve as resolvePath } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 import type { MessagePort } from "node:worker_threads";
-import type { InitializeData, LoadContext, NextLoad, NextResolve, ResolveContext } from "../types/loaderHooks.js";
+import type { InitializeData, LoadContext, NextLoad, NextResolve, ResolveContext } from "../../types/loaderHooks.js";
+
+import type { PostMessage, ResponseMessage } from "./loader.js";
 
 const EXTENSIONS = [".js", ".ts"];
 
@@ -79,25 +81,29 @@ export async function load(url: string, context: LoadContext, nextLoad: NextLoad
 		return nextLoad(url, context);
 	}
 
-	const cleanURL = url.split("?")[0];
-	const filePath = fileURLToPath(cleanURL ?? "");
+	try {
+		const cleanURL = url.split("?")[0];
+		const filePath = fileURLToPath(cleanURL ?? "");
 
-	if (filePath.endsWith(".ts") && esbuild) {
-		const raw = await readFile(filePath, "utf8");
-		const transformed = await esbuild.transform(raw, {
-			platform: "node",
-			sourcefile: filePath,
-			sourcemap: "inline",
-			loader: "ts",
-		});
+		if (filePath.endsWith(".ts") && esbuild) {
+			const raw = await readFile(filePath, "utf8");
+			const transformed = await esbuild.transform(raw, {
+				platform: "node",
+				sourcefile: filePath,
+				sourcemap: "inline",
+				loader: "ts",
+			});
 
-		const source = transformed.code;
+			const source = transformed.code;
 
-		return {
-			source,
-			format: "module",
-			shortCircuit: true,
-		};
+			return {
+				source,
+				format: "module",
+				shortCircuit: true,
+			};
+		}
+	} catch {
+		/* empty */
 	}
 
 	return nextLoad(url, context);
@@ -128,10 +134,22 @@ function shouldSkip(specifier: string) {
 	return true;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function onMessage(message: any) {
-	if (message.type !== "unload") {
+function onMessage(message: PostMessage<string>) {
+	const { type, data, id } = message;
+
+	if (type !== "unload") {
+		parentPort?.postMessage({
+			id,
+			data: false,
+		} satisfies ResponseMessage<boolean>);
+
 		return;
 	}
-	versions?.delete(fileURLToPath(message.target));
+
+	versions?.delete(data);
+
+	parentPort?.postMessage({
+		id,
+		data: true,
+	} satisfies ResponseMessage<boolean>);
 }
