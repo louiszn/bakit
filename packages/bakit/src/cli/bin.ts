@@ -1,5 +1,5 @@
-// This file will be built into dist/cli.js
-
+// Main cli for bakit, use bakit -h for the list of commands
+// JS version locates at dist/cli.js by tsup
 import { config as useEnv } from "dotenv";
 import { program } from "commander";
 import { DevProcessManager } from "./process/DevProcessManager.js";

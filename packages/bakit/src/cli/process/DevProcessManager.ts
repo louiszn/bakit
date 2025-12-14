@@ -1,8 +1,9 @@
 import { fork, type ChildProcess } from "node:child_process";
+import path, { resolve } from "node:path";
+
 import chokidar from "chokidar";
-import path from "node:path";
+
 import { getTopLevelDirectory } from "../../lib/utils/module.js";
-import { pathToFileURL } from "node:url";
 
 interface DevManagerOptions {
 	rootDir: string;
@@ -81,8 +82,9 @@ export class DevProcessManager {
 		const top = getTopLevelDirectory(path, this.options.rootDir);
 
 		if (top && this.options.hotDirs.includes(top)) {
+			// Let child process handle hot reloading
 			if (this.child.connected) {
-				this.child.send({ type: `hmr:${top}`, url: pathToFileURL(path).href });
+				this.child.send({ type: `hmr:${top}`, path: resolve(path) });
 			}
 			return;
 		}

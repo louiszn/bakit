@@ -1,6 +1,6 @@
 import { Collection } from "discord.js";
 
-import { posix } from "path";
+import { posix, resolve } from "path";
 import glob from "tiny-glob";
 
 import { Command } from "../structures/Command.js";
@@ -30,6 +30,8 @@ export class CommandManager extends BaseClientManager {
 	 * @returns The command object if added successfully.
 	 */
 	public async load(path: string): Promise<Command | undefined> {
+		path = resolve(path);
+
 		const fileURL = pathToFileURL(path).href;
 		const command = (await import(fileURL)).default as Command;
 
@@ -55,6 +57,8 @@ export class CommandManager extends BaseClientManager {
 	 * @returns The command object if unloaded successfully.
 	 */
 	public async unload(path: string): Promise<Command | undefined> {
+		path = resolve(path);
+
 		const command = this.entries.get(path);
 		this.entries.delete(path);
 
@@ -68,6 +72,8 @@ export class CommandManager extends BaseClientManager {
 	}
 
 	public async reload(path: string) {
+		path = resolve(path);
+
 		await this.unload(path);
 		const command = await this.load(path);
 
