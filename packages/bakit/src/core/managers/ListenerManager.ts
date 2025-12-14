@@ -1,6 +1,6 @@
 import { Collection, GatewayIntentBits, IntentsBitField } from "discord.js";
 
-import { posix } from "path";
+import { posix, resolve } from "path";
 import glob from "tiny-glob";
 
 import { Listener } from "../structures/Listener.js";
@@ -35,6 +35,8 @@ export class ListenerManager extends BaseClientManager {
 	 * @returns The listener object if added successfully.
 	 */
 	public async load(path: string): Promise<Listener | undefined> {
+		path = resolve(path);
+
 		const fileURL = pathToFileURL(path).href;
 		const listener = (await import(fileURL)).default as Listener;
 
@@ -60,6 +62,8 @@ export class ListenerManager extends BaseClientManager {
 	 * @returns The listener object if unloaded successfully.
 	 */
 	public async unload(path: string): Promise<Listener | undefined> {
+		path = resolve(path);
+
 		const listener = this.entries.get(path);
 		this.entries.delete(path);
 
@@ -73,6 +77,8 @@ export class ListenerManager extends BaseClientManager {
 	}
 
 	public async reload(path: string) {
+		path = resolve(path);
+
 		await this.unload(path);
 		const listener = await this.load(path);
 

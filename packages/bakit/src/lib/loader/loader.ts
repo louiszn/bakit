@@ -35,6 +35,8 @@ export function $initLoader() {
 	port1 = channel.port1;
 	port2 = channel.port2;
 
+	// This is the only file in loader/ that will be included in index.js
+	// hooks.js will also in the same dist directory so this is fine to use
 	const hookPath = new URL("./hooks.js", import.meta.url).href;
 
 	register(hookPath, import.meta.url, {

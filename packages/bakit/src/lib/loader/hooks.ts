@@ -1,3 +1,5 @@
+// Handle import and file version for HMR
+// JS version locates at dist/hooks.js by tsup
 import { existsSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import { Module } from "node:module";
@@ -11,16 +13,17 @@ import type { PostMessage, ResponseMessage } from "./loader.js";
 
 const EXTENSIONS = [".js", ".ts"];
 
-let inDev = false;
 let parentPort: MessagePort | undefined;
 let versions: Map<string, string> | undefined;
 // eslint-disable-next-line @typescript-eslint/consistent-type-imports
 let esbuild: typeof import("esbuild") | undefined;
 
-export async function initialize({ port }: InitializeData) {
-	inDev = process.env["NODE_ENV"] === "development";
+function isDevelopment() {
+	return process.env["NODE_ENV"] === "development";
+}
 
-	if (inDev) {
+export async function initialize({ port }: InitializeData) {
+	if (isDevelopment()) {
 		parentPort = port;
 		parentPort!.on("message", onMessage);
 		versions = new Map();
@@ -54,7 +57,7 @@ export async function resolve(specifier: string, context: ResolveContext, nextRe
 
 	const urlObj = new URL(url);
 
-	if (inDev) {
+	if (isDevelopment()) {
 		const filePath = fileURLToPath(urlObj);
 
 		const version = createVersion(filePath);
