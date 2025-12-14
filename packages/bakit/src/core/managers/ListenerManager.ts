@@ -8,6 +8,7 @@ import { BaseClientManager } from "./BaseClientManager.js";
 import { Context } from "../context/Context.js";
 
 import { EVENT_INTENT_MAPPING } from "../../lib/discord/EventIntents.js";
+import { pathToFileURL } from "url";
 
 export class ListenerManager extends BaseClientManager {
 	public listeners: Listener[] = [];
@@ -16,7 +17,7 @@ export class ListenerManager extends BaseClientManager {
 
 	public async loadModules(entryDir: string): Promise<Listener[]> {
 		const pattern = posix.join(posix.resolve(entryDir), "listeners", "**/*.{ts,js}");
-		const files = await glob(pattern, { cwd: process.cwd() });
+		const files = await glob(pattern, { cwd: process.cwd(), absolute: true });
 
 		const results = await Promise.all(files.map((file) => this.load(file)));
 		const filtered = results.filter((l): l is Listener => !!l);
@@ -32,7 +33,8 @@ export class ListenerManager extends BaseClientManager {
 	 * @returns The listener object if added successfully.
 	 */
 	public async load(path: string): Promise<Listener | undefined> {
-		const listener = (await import(path)).default as Listener;
+		const fileURL = pathToFileURL(path).href;
+		const listener = (await import(fileURL)).default as Listener;
 
 		if (!listener) {
 			console.warn(`[Loader] File has no default export: ${path}`);

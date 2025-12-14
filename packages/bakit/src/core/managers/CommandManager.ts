@@ -5,6 +5,7 @@ import glob from "tiny-glob";
 
 import { Command } from "../structures/Command.js";
 import { BaseClientManager } from "./BaseClientManager.js";
+import { pathToFileURL } from "url";
 
 export class CommandManager extends BaseClientManager {
 	public commands = new Collection<string, Command>();
@@ -12,7 +13,7 @@ export class CommandManager extends BaseClientManager {
 
 	public async loadModules(entryDir: string): Promise<Command[]> {
 		const pattern = posix.join(posix.resolve(entryDir), "commands", "**/*.{ts,js}");
-		const files = await glob(pattern, { cwd: process.cwd() });
+		const files = await glob(pattern, { cwd: process.cwd(), absolute: true });
 
 		const results = await Promise.all(files.map((file) => this.load(file)));
 		const filtered = results.filter((c): c is Command => !!c);
@@ -28,7 +29,8 @@ export class CommandManager extends BaseClientManager {
 	 * @returns The command object if added successfully.
 	 */
 	public async load(path: string): Promise<Command | undefined> {
-		const command = (await import(path)).default as Command;
+		const fileURL = pathToFileURL(path).href;
+		const command = (await import(fileURL)).default as Command;
 
 		if (!command) {
 			console.warn(`[Loader] File has no default export: ${path}`);
