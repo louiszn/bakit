@@ -8,11 +8,12 @@ import { ProjectCacheManager } from "./ProjectCacheManager.js";
 import { chatInputCommandHandler, messageCommandHandler, registerCommandsHandler } from "@/defaults/index.js";
 
 import { RPC } from "@/lib/RPC.js";
-import { isImported, isImportedBy } from "@/lib/loader/loader.js";
+import { $unloadFile, getDependencyChain, isImported } from "@/lib/loader/loader.js";
 import { getTopLevelDirectory } from "@/lib/index.js";
 
 const HOT_DIRECTORIES = ["listeners", "commands"] as const;
 const SOURCE_ROOT = resolve(process.cwd(), "src");
+const APP_ENTRY_POINTS = new Set([resolve(SOURCE_ROOT, "index.ts"), resolve(SOURCE_ROOT, "index.js")]);
 
 export class Instance {
 	public client!: BakitClient;
@@ -99,24 +100,6 @@ export class Instance {
 		return !!topLevelDir && HOT_DIRECTORIES.includes(topLevelDir as never);
 	}
 
-	private isFileHotReloadable(path: string): boolean {
-		path = resolve(path);
-
-		if (!this.isInHotDirectory(path)) {
-			return false;
-		}
-
-		const isLeaked = isImportedBy(path, (parentPath) => {
-			return !this.isInHotDirectory(parentPath);
-		});
-
-		if (isLeaked) {
-			return false;
-		}
-
-		return true;
-	}
-
 	private restart() {
 		this.rpc.send("restart", {});
 	}
@@ -125,8 +108,15 @@ export class Instance {
 		if (this.client) {
 			await this.client.destroy().catch(() => null);
 		}
-
 		process.exit(0);
+	}
+
+	private containsEntryPoint(chain: string[]) {
+		return chain.some((x) => APP_ENTRY_POINTS.has(x));
+	}
+
+	private containsHotModule(chain: string[]) {
+		return chain.some((x) => this.isInHotDirectory(x));
 	}
 
 	private async onFileRemove(path: string) {
@@ -134,21 +124,19 @@ export class Instance {
 			return;
 		}
 
-		if (!this.isFileHotReloadable(path)) {
+		const chain = getDependencyChain(path);
+
+		if (this.containsEntryPoint(chain)) {
 			this.restart();
 			return;
 		}
 
-		const topLevelDir = getTopLevelDirectory(path, SOURCE_ROOT);
-		const { listeners, commands } = this.client.managers;
+		if (!this.containsHotModule(chain)) {
+			return;
+		}
 
-		switch (topLevelDir) {
-			case "listeners":
-				await listeners.unload(path);
-				break;
-			case "commands":
-				await commands.unload(path);
-				break;
+		for (const path of chain.reverse()) {
+			await this.unloadModule(path);
 		}
 	}
 
@@ -157,20 +145,36 @@ export class Instance {
 			return;
 		}
 
-		if (!this.isFileHotReloadable(path)) {
+		const chain = getDependencyChain(path);
+
+		if (this.containsEntryPoint(chain)) {
 			this.restart();
 			return;
 		}
 
-		const topLevelDir = getTopLevelDirectory(path, SOURCE_ROOT);
+		if (!this.containsHotModule(chain)) {
+			return;
+		}
+
+		for (const path of chain.reverse()) {
+			await this.unloadModule(path, true);
+		}
+	}
+
+	private async unloadModule(path: string, reload = false) {
 		const { listeners, commands } = this.client.managers;
 
-		switch (topLevelDir) {
+		const topLevel = getTopLevelDirectory(path, SOURCE_ROOT);
+
+		switch (topLevel) {
 			case "listeners":
-				await listeners.reload(path);
+				await listeners[reload ? "reload" : "unload"](path);
 				break;
 			case "commands":
-				await commands.reload(path);
+				await commands[reload ? "reload" : "unload"](path);
+				break;
+			default:
+				await $unloadFile(path);
 				break;
 		}
 	}
