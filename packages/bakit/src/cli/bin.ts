@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 // Main cli for bakit, use bakit -h for the list of commands
 // JS version locates at dist/cli.js by tsup
 import { config as useEnv } from "dotenv";
