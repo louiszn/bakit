@@ -33,7 +33,7 @@ export async function initialize({ port }: InitializeData) {
 	rpc = new RPC(port);
 	versions = new Map();
 
-	rpc.on("message", onUnload);
+	rpc.on("unload", onUnload);
 
 	if (isDevelopment()) {
 		esbuild = await import("esbuild");
