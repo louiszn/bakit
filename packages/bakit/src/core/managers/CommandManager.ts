@@ -1,12 +1,13 @@
 import { Collection } from "discord.js";
 
-import { posix, resolve } from "path";
+import { pathToFileURL } from "node:url";
+import { posix, resolve } from "node:path";
 import glob from "tiny-glob";
 
 import { Command } from "../structures/Command.js";
 import { BaseClientManager } from "./BaseClientManager.js";
-import { pathToFileURL } from "url";
-import { $unloadFile } from "../../lib/loader/loader.js";
+
+import { $unloadFile } from "@/lib/loader/loader.js";
 
 export class CommandManager extends BaseClientManager {
 	public commands = new Collection<string, Command>();

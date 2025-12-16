@@ -4,6 +4,8 @@ import z from "zod";
 import glob from "tiny-glob";
 import { pathToFileURL } from "url";
 
+const CONFIG_EXTENSIONS = ["ts", "js"] as const;
+
 export const ProjectConfigSchema = z.object({
 	/**
 	 * The gateway intents to use for the Discord client.
@@ -23,7 +25,13 @@ export const ProjectConfigSchema = z.object({
 	 * @see {@link https://discord.js.org/docs/packages/discord.js/main/ClientOptions:Interface}
 	 */
 	clientOptions: z.custom<Omit<ClientOptions, "intents">>().optional(),
+	/**
+	 * Your bot prefixes to trigger the commands.
+	 */
 	prefixes: z.array(z.string()).default([]),
+	/**
+	 * Your Discord bot token.
+	 */
 	token: z.string(),
 });
 
@@ -54,8 +62,7 @@ export async function loadConfig(cwd = process.cwd()): Promise<ProjectConfig> {
 
 	// Support multiple config file extensions
 	// The order of getting config is from left to right
-	const extensions = ["ts", "js"];
-	const globPattern = `bakit.config.{${extensions.join(",")}}`;
+	const globPattern = `bakit.config.{${CONFIG_EXTENSIONS.join(",")}}`;
 
 	const [configPath, other] = await glob(globPattern, {
 		cwd: cwd.replace(/\\/g, "/"), // ensure the path uses `/` instead of `\` on Windows
@@ -72,6 +79,8 @@ export async function loadConfig(cwd = process.cwd()): Promise<ProjectConfig> {
 
 	const fileURL = pathToFileURL(configPath).href;
 	const config = (await import(fileURL)).default;
+
+	// Save the frozen config internally, can be accessed with getConfig()
 	_config = Object.freeze(await ProjectConfigSchema.parseAsync(config));
 
 	return _config;

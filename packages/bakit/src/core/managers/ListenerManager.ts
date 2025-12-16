@@ -1,16 +1,15 @@
 import { Collection, GatewayIntentBits, IntentsBitField } from "discord.js";
 
-import { posix, resolve } from "path";
+import { pathToFileURL } from "node:url";
+import { posix, resolve } from "node:path";
 import glob from "tiny-glob";
 
 import { Listener } from "../structures/Listener.js";
 import { BaseClientManager } from "./BaseClientManager.js";
 import { Context } from "../context/Context.js";
 
-import { EVENT_INTENT_MAPPING } from "../../lib/discord/EventIntents.js";
-import { pathToFileURL } from "url";
-
-import { $unloadFile } from "../../lib/loader/loader.js";
+import { EVENT_INTENT_MAPPING } from "@/lib/discord/EventIntents.js";
+import { $unloadFile } from "@/lib/loader/loader.js";
 
 export class ListenerManager extends BaseClientManager {
 	public listeners: Listener[] = [];
