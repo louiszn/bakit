@@ -120,6 +120,11 @@ export class Instance {
 	}
 
 	private async onFileRemove(path: string) {
+		if (APP_ENTRY_POINTS.has(path)) {
+			this.restart();
+			return;
+		}
+
 		if (!isImported(path)) {
 			return;
 		}
@@ -141,6 +146,11 @@ export class Instance {
 	}
 
 	private async onFileChange(path: string) {
+		if (APP_ENTRY_POINTS.has(path)) {
+			this.restart();
+			return;
+		}
+
 		if (!isImported(path)) {
 			return;
 		}
