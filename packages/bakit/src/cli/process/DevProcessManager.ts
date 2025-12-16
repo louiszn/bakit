@@ -2,8 +2,7 @@ import { fork, type ChildProcess } from "node:child_process";
 import path, { resolve } from "node:path";
 
 import chokidar from "chokidar";
-
-import { getTopLevelDirectory } from "../../lib/utils/module.js";
+import { RPC } from "bakit";
 
 interface DevManagerOptions {
 	rootDir: string;
@@ -12,7 +11,7 @@ interface DevManagerOptions {
 }
 
 export class DevProcessManager {
-	private child: ChildProcess | null = null;
+	private rpc: RPC | null = null;
 	private restartTimer: NodeJS.Timeout | null = null;
 
 	constructor(private options: DevManagerOptions) {}
@@ -25,11 +24,13 @@ export class DevProcessManager {
 	}
 
 	private startChild() {
-		if (this.child) return;
+		if (this.rpc) {
+			return;
+		}
 
 		const entry = path.resolve(this.options.entry);
 
-		this.child = fork(entry, {
+		const child = fork(entry, {
 			execArgv: ["--import", "bakit/register"],
 			stdio: "inherit",
 			env: {
@@ -38,24 +39,23 @@ export class DevProcessManager {
 			},
 		});
 
-		this.child.on("exit", () => {
-			this.child = null;
-		});
+		this.rpc = new RPC(child);
+		this.rpc.on("restart", (fileUpdated) => this.scheduleRestart(fileUpdated));
 	}
 
 	private restartChild() {
-		if (!this.child) {
+		if (!this.rpc) {
 			return this.startChild();
 		}
 
-		const old = this.child;
+		const child = this.rpc.transport as ChildProcess;
 
-		old.once("exit", () => {
-			this.child = null;
+		child.once("exit", () => {
+			this.rpc = null;
 			this.startChild();
 		});
 
-		old.kill("SIGTERM");
+		child.kill("SIGTERM");
 	}
 
 	private startWatcher() {
@@ -69,34 +69,29 @@ export class DevProcessManager {
 			},
 		});
 
-		watcher.on("change", (path) => {
-			this.onFileChanged(path);
-		});
+		watcher.on("change", (path) => this.onFileUpdate("fileChange", path));
+		watcher.on("unlink", (path) => this.onFileUpdate("fileRemove", path));
 	}
 
-	private onFileChanged(path: string) {
-		if (!this.child) {
-			return;
+	private onFileUpdate(type: string, path: string) {
+		try {
+			// Let child process handle this with its custom loader
+			// Since it has a dependencies graph checker, it can handle it dynamically
+			this.rpc?.send(type, resolve(path));
+		} catch {
+			// Restart process in case the process exited
+			this.scheduleRestart(true);
 		}
-
-		const top = getTopLevelDirectory(path, this.options.rootDir);
-
-		if (top && this.options.hotDirs.includes(top)) {
-			// Let child process handle hot reloading
-			if (this.child.connected) {
-				this.child.send({ type: `hmr:${top}`, path: resolve(path) });
-			}
-			return;
-		}
-
-		this.scheduleRestart();
 	}
 
-	private scheduleRestart() {
+	private scheduleRestart(fileUpdated = false) {
 		if (this.restartTimer) clearTimeout(this.restartTimer);
 
 		this.restartTimer = setTimeout(() => {
-			console.log("Detected changes, restarting...");
+			if (fileUpdated) {
+				console.log("File changes detected, restarting...");
+			}
+
 			this.restartChild();
 			this.restartTimer = null;
 		}, 150);

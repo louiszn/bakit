@@ -6,15 +6,22 @@ import { Module } from "node:module";
 import { basename, dirname, resolve as resolvePath } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
-import type { MessagePort } from "node:worker_threads";
-import type { InitializeData, LoadContext, NextLoad, NextResolve, ResolveContext } from "../../types/loaderHooks.js";
+import { RPC } from "bakit";
 
-import type { PostMessage, ResponseMessage } from "./loader.js";
+import type {
+	InitializeData,
+	LoadContext,
+	NextLoad,
+	NextResolve,
+	ResolveContext,
+} from "../../types/loader/loaderHooks.js";
+import type { DependencyAdd } from "@/types/loader/message.js";
 
 const EXTENSIONS = [".js", ".ts"];
 
-let parentPort: MessagePort | undefined;
-let versions: Map<string, string> | undefined;
+let rpc: RPC;
+let versions: Map<string, string>;
+
 // eslint-disable-next-line @typescript-eslint/consistent-type-imports
 let esbuild: typeof import("esbuild") | undefined;
 
@@ -23,10 +30,12 @@ function isDevelopment() {
 }
 
 export async function initialize({ port }: InitializeData) {
+	rpc = new RPC(port);
+	versions = new Map();
+
+	rpc.on("message", onUnload);
+
 	if (isDevelopment()) {
-		parentPort = port;
-		parentPort!.on("message", onMessage);
-		versions = new Map();
 		esbuild = await import("esbuild");
 	}
 }
@@ -63,11 +72,10 @@ export async function resolve(specifier: string, context: ResolveContext, nextRe
 		const version = createVersion(filePath);
 		urlObj.searchParams.set("hmr", version);
 
-		if (parentURL && parentPort) {
-			parentPort.postMessage({
-				type: "dependency",
-				parent: parentURL,
-				child: url,
+		if (parentURL) {
+			rpc.send<DependencyAdd>("dependencyAdd", {
+				parentURL,
+				url,
 			});
 		}
 	}
@@ -113,11 +121,11 @@ export async function load(url: string, context: LoadContext, nextLoad: NextLoad
 }
 
 function createVersion(filename: string) {
-	let version = versions?.get(filename);
+	let version = versions.get(filename);
 
 	if (!version) {
 		version = Date.now().toString();
-		versions?.set(filename, version);
+		versions.set(filename, version);
 	}
 
 	return version;
@@ -137,22 +145,7 @@ function shouldSkip(specifier: string) {
 	return true;
 }
 
-function onMessage(message: PostMessage<string>) {
-	const { type, data, id } = message;
-
-	if (type !== "unload") {
-		parentPort?.postMessage({
-			id,
-			data: false,
-		} satisfies ResponseMessage<boolean>);
-
-		return;
-	}
-
-	versions?.delete(data);
-
-	parentPort?.postMessage({
-		id,
-		data: true,
-	} satisfies ResponseMessage<boolean>);
+function onUnload(id: string, path: string) {
+	const deleted = versions.delete(resolvePath(path));
+	rpc.success(id, deleted);
 }

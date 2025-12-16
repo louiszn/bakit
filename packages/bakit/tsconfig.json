@@ -2,8 +2,9 @@
 	"extends": "../../tsconfig.json",
 	"compilerOptions": {
 		"paths": {
-			"bakit": ["./src/index.ts"]
+			"bakit": ["./src/index.ts"],
+			"@/*": ["./src/*"]
 		}
 	},
-	"include": ["src/**/*.ts", "tests/**/*.ts", "example/**/*.ts", "tsup.config.ts"]
+	"include": ["src/**/*.ts", "tests/**/*.ts", "example/**/*.ts", "tsup.config.ts", "vitest.config.ts"]
 }
