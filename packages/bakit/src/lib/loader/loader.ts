@@ -1,16 +1,18 @@
 // API to communicate with custom loader
 // This file is exported as Loader by index.ts
 import { register } from "node:module";
-import { resolve } from "node:path";
+import { join, resolve } from "node:path";
 import { MessageChannel } from "node:worker_threads";
 import { fileURLToPath } from "node:url";
 
+import { Collection } from "discord.js";
+
 import { RPC } from "../RPC.js";
 
-import type { DependencyAdd } from "@/types/loader/message.js";
 import { HotReloadable } from "@/core/index.js";
 import { getEntryDirectory, getEntryFile, getTopLevelDirectory } from "../utils/module.js";
-import { Collection } from "discord.js";
+
+import type { DependencyAdd } from "@/types/loader/message.js";
 
 let hooksRPC: RPC | undefined;
 let processRPC: RPC | undefined;
@@ -205,6 +207,10 @@ function onDependencyAdd(data: DependencyAdd) {
 	const path = fileURLToPath(url);
 	const parentPath = fileURLToPath(parentURL);
 
+	if (parentPath.includes("/node_modules/")) {
+		return;
+	}
+
 	let reverseEntry = reverseDependencyGraph.get(path);
 	if (!reverseEntry) {
 		reverseEntry = new Set();
@@ -222,13 +228,18 @@ function onDependencyAdd(data: DependencyAdd) {
 
 export function isInHotDirectory(path: string) {
 	const sourceRoot = getEntryDirectory();
-
 	if (!path.startsWith(sourceRoot)) {
 		return false;
 	}
 
 	const topLevelDir = getTopLevelDirectory(path, sourceRoot);
-	return !!topLevelDir && hotReloaders.some((m) => m.entryDirectory === topLevelDir);
+	if (!topLevelDir) {
+		return;
+	}
+
+	const entryDirectory = join(sourceRoot, topLevelDir);
+
+	return hotReloaders.some((m) => m.entryDirectory === entryDirectory);
 }
 
 export function isEntryFile(path: string) {
@@ -248,7 +259,7 @@ function restartProcess() {
 }
 
 async function unloadModule(path: string, reload = false) {
-	const topLevel = getTopLevelDirectory(path, getEntryFile());
+	const topLevel = getTopLevelDirectory(path, getEntryDirectory());
 	if (!topLevel) {
 		return;
 	}
