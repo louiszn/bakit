@@ -30,8 +30,9 @@ program.command("dev").action(async () => {
 function getEntryFile(entryDirectory: string) {
 	const index = join(entryDirectory, "index");
 
-	if (existsSync(index + ".ts")) {
-		return index;
+	const tsPath = index + ".ts";
+	if (existsSync(tsPath)) {
+		return tsPath;
 	}
 
 	return index + ".js";
