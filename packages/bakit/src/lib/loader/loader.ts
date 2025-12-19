@@ -1,16 +1,18 @@
 // API to communicate with custom loader
 // This file is exported as Loader by index.ts
 import { register } from "node:module";
-import { resolve } from "node:path";
+import { join, resolve } from "node:path";
 import { MessageChannel } from "node:worker_threads";
 import { fileURLToPath } from "node:url";
 
+import { Collection } from "discord.js";
+
 import { RPC } from "../RPC.js";
 
-import type { DependencyAdd } from "@/types/loader/message.js";
 import { HotReloadable } from "@/core/index.js";
 import { getEntryDirectory, getEntryFile, getTopLevelDirectory } from "../utils/module.js";
-import { Collection } from "discord.js";
+
+import type { DependencyAdd } from "@/types/loader/message.js";
 
 let hooksRPC: RPC | undefined;
 let processRPC: RPC | undefined;
@@ -175,10 +177,21 @@ export function importsAny(path: string, targets: Set<string>): boolean {
 	return imports.some((imp) => targets.has(imp));
 }
 
+/**
+ * Check if the file is imported by the others.
+ * @param path The path of the file to check.
+ * @returns `boolean`
+ */
 export function isImported(path: string) {
 	return !!getImporters(path)?.size;
 }
 
+/**
+ * Check if the file is imported by a specific target.
+ * @param path The path of the file to check.
+ * @param matcher The target condition to match.
+ * @returns `boolean`
+ */
 export function isImportedBy(path: string, matcher: string | RegExp | ((path: string) => boolean)): boolean {
 	const chain = getDependencyChain(path).slice(1);
 
@@ -205,6 +218,10 @@ function onDependencyAdd(data: DependencyAdd) {
 	const path = fileURLToPath(url);
 	const parentPath = fileURLToPath(parentURL);
 
+	if (parentPath.includes("/node_modules/")) {
+		return;
+	}
+
 	let reverseEntry = reverseDependencyGraph.get(path);
 	if (!reverseEntry) {
 		reverseEntry = new Set();
@@ -220,35 +237,63 @@ function onDependencyAdd(data: DependencyAdd) {
 	forwardEntry.add(path);
 }
 
+/**
+ * Check if the file is under a hmr directory.
+ * @param path The path of the file to check.
+ * @returns `boolean`
+ */
 export function isInHotDirectory(path: string) {
 	const sourceRoot = getEntryDirectory();
-
 	if (!path.startsWith(sourceRoot)) {
 		return false;
 	}
 
 	const topLevelDir = getTopLevelDirectory(path, sourceRoot);
-	return !!topLevelDir && hotReloaders.some((m) => m.entryDirectory === topLevelDir);
+	if (!topLevelDir) {
+		return;
+	}
+
+	const entryDirectory = join(sourceRoot, topLevelDir);
+
+	return hotReloaders.some((m) => m.entryDirectory === entryDirectory);
 }
 
+/**
+ * Check if the file is the entry file (e.g, index.ts)
+ * @param path The path of the file to check.
+ * @returns `boolean`
+ */
 export function isEntryFile(path: string) {
 	return path === getEntryFile();
 }
 
+/**
+ * Check if the file chain includes the entry file (e.g, index.ts)
+ * @param path The chain of the files to check.
+ * @returns `boolean`
+ */
 export function containsEntryFile(chain: string[]) {
 	return chain.some((x) => isEntryFile(x));
 }
 
+/**
+ * Check if the file chain includes hmr files (e.g, index.ts)
+ * @param path The chain of the files to check.
+ * @returns `boolean`
+ */
 export function containsHotModule(chain: string[]) {
 	return chain.some((x) => isInHotDirectory(x));
 }
 
-function restartProcess() {
+/**
+ * Request to dev process manager to restart the process.
+ */
+export function restartProcess() {
 	processRPC?.send("restart");
 }
 
 async function unloadModule(path: string, reload = false) {
-	const topLevel = getTopLevelDirectory(path, getEntryFile());
+	const topLevel = getTopLevelDirectory(path, getEntryDirectory());
 	if (!topLevel) {
 		return;
 	}
