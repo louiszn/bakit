@@ -218,10 +218,6 @@ function onDependencyAdd(data: DependencyAdd) {
 	const path = fileURLToPath(url);
 	const parentPath = fileURLToPath(parentURL);
 
-	if (parentPath.includes("/node_modules/")) {
-		return;
-	}
-
 	let reverseEntry = reverseDependencyGraph.get(path);
 	if (!reverseEntry) {
 		reverseEntry = new Set();
@@ -293,6 +289,10 @@ export function restartProcess() {
 }
 
 async function unloadModule(path: string, reload = false) {
+	if (path.includes("/node_modules/")) {
+		return;
+	}
+
 	const topLevel = getTopLevelDirectory(path, getEntryDirectory());
 	if (!topLevel) {
 		return;
