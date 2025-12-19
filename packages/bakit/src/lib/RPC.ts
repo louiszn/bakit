@@ -95,7 +95,7 @@ export class RPC extends EventEmitter {
 		this.emit(message.type, message.id, message.data);
 	}
 
-	public send<Data extends Serializable>(type: string, data: Data, id: string = randomUUID()) {
+	public send<Data extends Serializable>(type: string, data: Data = {} as never, id: string = randomUUID()) {
 		const message: RPCRequest<Data> = {
 			id,
 			type,

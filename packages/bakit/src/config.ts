@@ -33,6 +33,11 @@ export const ProjectConfigSchema = z.object({
 	 * Your Discord bot token.
 	 */
 	token: z.string(),
+	/**
+	 * The main source directory.
+	 * @defaultvalue `src`
+	 */
+	entryDirectory: z.string().default("src"),
 });
 
 export type ProjectConfigInput = z.input<typeof ProjectConfigSchema>;

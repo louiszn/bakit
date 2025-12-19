@@ -1,13 +1,12 @@
 import { fork, type ChildProcess } from "node:child_process";
-import path, { resolve } from "node:path";
+import { resolve } from "node:path";
 
 import chokidar from "chokidar";
 import { RPC } from "bakit";
 
 interface DevManagerOptions {
-	rootDir: string;
-	entry: string;
-	hotDirs: string[];
+	entryFile: string;
+	entryDirectory: string;
 }
 
 export class DevProcessManager {
@@ -28,14 +27,15 @@ export class DevProcessManager {
 			return;
 		}
 
-		const entry = path.resolve(this.options.entry);
+		const { entryFile } = this.options;
 
-		const child = fork(entry, {
+		const child = fork(this.options.entryFile, {
 			execArgv: ["--import", "bakit/register"],
 			stdio: "inherit",
 			env: {
 				...process.env,
 				NODE_ENV: "development",
+				BAKIT_ENTRY_FILE: entryFile,
 			},
 		});
 
@@ -59,9 +59,9 @@ export class DevProcessManager {
 	}
 
 	private startWatcher() {
-		const { rootDir } = this.options;
+		const { entryDirectory } = this.options;
 
-		const watcher = chokidar.watch(rootDir, {
+		const watcher = chokidar.watch(entryDirectory, {
 			ignoreInitial: true,
 			awaitWriteFinish: {
 				stabilityThreshold: 200,

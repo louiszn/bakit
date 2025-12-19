@@ -1,12 +1,14 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { join } from "node:path";
 
 import type { CommandManager } from "../src/index.js";
-import { defineCommand, BakitClient } from "../src/index.js";
+import { defineCommand, BakitClient, loadConfig } from "../src/index.js";
 
 describe("CommandManager", () => {
 	let manager: CommandManager;
 
-	beforeEach(() => {
+	beforeEach(async () => {
+		await loadConfig(join(process.cwd(), "tests"));
 		const client = new BakitClient({ intents: [] }, {} as never);
 		manager = client.managers.commands;
 	});

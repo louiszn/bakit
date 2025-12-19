@@ -1,1 +1,1 @@
-export * from "./loader.js";
+export * as Loader from "./loader.js";

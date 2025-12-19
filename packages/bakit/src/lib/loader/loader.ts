@@ -1,3 +1,5 @@
+// API to communicate with custom loader
+// This file is exported as Loader by index.ts
 import { register } from "node:module";
 import { resolve } from "node:path";
 import { MessageChannel } from "node:worker_threads";
@@ -6,12 +8,33 @@ import { fileURLToPath } from "node:url";
 import { RPC } from "../RPC.js";
 
 import type { DependencyAdd } from "@/types/loader/message.js";
+import { HotReloadable } from "@/core/index.js";
+import { getEntryDirectory, getEntryFile, getTopLevelDirectory } from "../utils/module.js";
+import { Collection } from "discord.js";
 
-let rpc: RPC | undefined;
+let hooksRPC: RPC | undefined;
+let processRPC: RPC | undefined;
 
-const reverseDependencyGraph = new Map<string, Set<string>>();
+export const hotReloaders = new Collection<string, HotReloadable>();
 
-export function $initLoader() {
+const reverseDependencyGraph = new Collection<string, Set<string>>();
+const forwardDependencyGraph = new Collection<string, Set<string>>();
+
+/**
+ * Initliazie the loader
+ */
+export function init() {
+	initProcess();
+	initHooks();
+}
+
+function initProcess() {
+	processRPC = new RPC(process);
+	processRPC.on("fileChange", (_, path) => onFileChange(path));
+	processRPC.on("fileRemove", (_, path) => onFileRemove(path));
+}
+
+function initHooks() {
 	const { port1, port2 } = new MessageChannel();
 
 	// This is the only file in loader/ that will be included in index.js
@@ -23,22 +46,40 @@ export function $initLoader() {
 		transferList: [port1],
 	});
 
-	rpc = new RPC(port2);
-	rpc.on("dependencyAdd", (_id, data) => onDependencyAdd(data));
+	hooksRPC = new RPC(port2);
+	hooksRPC.on("dependencyAdd", (_, data) => onDependencyAdd(data));
 
 	port2.unref();
 }
 
-export function $unloadFile(path: string) {
-	if (!rpc) {
+/**
+ * Register a reloader for HMR.
+ * @param reloader Reloader extended from HotReloadable.
+ */
+export function addHotReloader(reloader: HotReloadable) {
+	hotReloaders.set(reloader.entryDirectory, reloader);
+}
+
+/**
+ * Remove the previous version of the file.
+ * @param path Path to unload.
+ * @returns `true` for unloaded successfully, `false` for unload failed.
+ */
+export function unload(path: string) {
+	if (!hooksRPC) {
 		throw new Error("Loader isn't initialized");
 	}
 
-	return rpc.request<string, boolean>("unload", resolve(path));
+	return hooksRPC.request<string, boolean>("unload", resolve(path));
 }
 
-export function getImporters(path: string, createNew: true): Set<string>;
+/**
+ * Get a list of the files which imported the target.
+ * @param path Target file path to get.
+ * @param createNew Create a new Set cache for the target path.
+ */
 export function getImporters(path: string, createNew?: false): Set<string> | undefined;
+export function getImporters(path: string, createNew: true): Set<string>;
 export function getImporters(path: string, createNew = false) {
 	path = resolve(path);
 
@@ -52,6 +93,30 @@ export function getImporters(path: string, createNew = false) {
 	return entry;
 }
 
+/**
+ * Get a list of the files which imported the target.
+ * @param path Target file path to get.
+ * @param createNew Create a new Set cache for the target path.
+ */
+export function getImports(path: string) {
+	path = resolve(path);
+
+	const imports = [];
+
+	for (const [target, importers] of reverseDependencyGraph) {
+		if (importers.has(path)) {
+			imports.push(target);
+		}
+	}
+
+	return imports;
+}
+
+/**
+ * Get a chain of dependencies for affected files.
+ * @param path
+ * @returns An array of affected dependencies.
+ */
 export function getDependencyChain(path: string): string[] {
 	path = resolve(path);
 
@@ -83,9 +148,31 @@ export function getDependencyChain(path: string): string[] {
 				queue.push(parent);
 			}
 		}
+
+		const children = getImports(current);
+
+		for (const child of children) {
+			if (visited.has(child)) {
+				continue;
+			}
+
+			if (importsAny(child, visited)) {
+				queue.push(child);
+			}
+		}
 	}
 
 	return Array.from(visited);
+}
+
+/**
+ * Checks if the target file imports any of the files in the 'targets' set.
+ * @param path The file path to check.
+ * @param targets The list of the files to check.
+ */
+export function importsAny(path: string, targets: Set<string>): boolean {
+	const imports = getImports(path);
+	return imports.some((imp) => targets.has(imp));
 }
 
 export function isImported(path: string) {
@@ -118,12 +205,113 @@ function onDependencyAdd(data: DependencyAdd) {
 	const path = fileURLToPath(url);
 	const parentPath = fileURLToPath(parentURL);
 
-	let entry = reverseDependencyGraph.get(path);
+	let reverseEntry = reverseDependencyGraph.get(path);
+	if (!reverseEntry) {
+		reverseEntry = new Set();
+		reverseDependencyGraph.set(path, reverseEntry);
+	}
+	reverseEntry.add(parentPath);
 
-	if (!entry) {
-		entry = new Set();
-		reverseDependencyGraph.set(path, entry);
+	let forwardEntry = forwardDependencyGraph.get(parentPath);
+	if (!forwardEntry) {
+		forwardEntry = new Set();
+		forwardDependencyGraph.set(parentPath, forwardEntry);
+	}
+	forwardEntry.add(path);
+}
+
+export function isInHotDirectory(path: string) {
+	const sourceRoot = getEntryDirectory();
+
+	if (!path.startsWith(sourceRoot)) {
+		return false;
 	}
 
-	entry.add(parentPath);
+	const topLevelDir = getTopLevelDirectory(path, sourceRoot);
+	return !!topLevelDir && hotReloaders.some((m) => m.entryDirectory === topLevelDir);
+}
+
+export function isEntryFile(path: string) {
+	return path === getEntryFile();
+}
+
+export function containsEntryFile(chain: string[]) {
+	return chain.some((x) => isEntryFile(x));
+}
+
+export function containsHotModule(chain: string[]) {
+	return chain.some((x) => isInHotDirectory(x));
+}
+
+function restartProcess() {
+	processRPC?.send("restart");
+}
+
+async function unloadModule(path: string, reload = false) {
+	const topLevel = getTopLevelDirectory(path, getEntryFile());
+	if (!topLevel) {
+		return;
+	}
+
+	const directory = resolve(getEntryDirectory(), topLevel);
+	const reloader = hotReloaders.get(directory);
+
+	if (!reloader) {
+		await unload(path);
+		return;
+	}
+
+	reloader[reload ? "reload" : "unload"](path);
+}
+
+async function onFileRemove(path: string) {
+	if (isEntryFile(path)) {
+		restartProcess();
+		return;
+	}
+
+	if (!isImported(path)) {
+		return;
+	}
+
+	const chain = getDependencyChain(path);
+
+	if (containsEntryFile(chain)) {
+		restartProcess();
+		return;
+	}
+
+	if (!containsHotModule(chain)) {
+		return;
+	}
+
+	for (const path of chain.reverse()) {
+		await unloadModule(path);
+	}
+}
+
+async function onFileChange(path: string) {
+	if (isEntryFile(path)) {
+		restartProcess();
+		return;
+	}
+
+	if (!isImported(path)) {
+		return;
+	}
+
+	const chain = getDependencyChain(path);
+
+	if (containsEntryFile(chain)) {
+		restartProcess();
+		return;
+	}
+
+	if (!containsHotModule(chain)) {
+		return;
+	}
+
+	for (const path of chain.toReversed()) {
+		await unloadModule(path, true);
+	}
 }
