@@ -9,7 +9,6 @@ import globals from "globals";
 export default tseslint.config(
 	eslint.configs.recommended,
 	tseslint.configs.recommended,
-	tseslint.configs.stylisticTypeChecked,
 	prettier,
 	{
 		ignores: ["**/dist/**", "**/node_modules/**"],
@@ -19,10 +18,6 @@ export default tseslint.config(
 			globals: {
 				...globals.node,
 				...globals.browser,
-			},
-			parserOptions: {
-				tsconfigRootDir: import.meta.dirname,
-				project: ["tsconfig.json", "./packages/*/tsconfig.json", "./apps/*/tsconfig.json"],
 			},
 		},
 	},
@@ -34,7 +29,6 @@ export default tseslint.config(
 			"@typescript-eslint/no-unused-vars": ["error", { argsIgnorePattern: "^_" }],
 			"@typescript-eslint/restrict-template-expressions": "off",
 			"@typescript-eslint/dot-notation": "off",
-			"@typescript-eslint/consistent-type-imports": "error",
 			"prettier/prettier": "error",
 		},
 	},

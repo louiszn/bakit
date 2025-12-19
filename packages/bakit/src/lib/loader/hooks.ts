@@ -21,8 +21,6 @@ const EXTENSIONS = [".js", ".ts"];
 
 let rpc: RPC;
 let versions: Map<string, string>;
-
-// eslint-disable-next-line @typescript-eslint/consistent-type-imports
 let esbuild: typeof import("esbuild") | undefined;
 
 function isDevelopment() {

@@ -4,7 +4,6 @@ export function tokenize(content: string): string[] {
 	let quoteChar: '"' | null = null;
 	let isEscaped = false;
 
-	// eslint-disable-next-line @typescript-eslint/prefer-for-of
 	for (let i = 0; i < content.length; i++) {
 		const char = content[i];
 

@@ -1,23 +1,28 @@
 import { Collection, GatewayIntentBits, IntentsBitField } from "discord.js";
 
 import { pathToFileURL } from "node:url";
-import { posix, resolve } from "node:path";
+import { join, resolve } from "node:path";
 import glob from "tiny-glob";
 
 import { Listener } from "../structures/Listener.js";
-import { BaseClientManager } from "./BaseClientManager.js";
 import { Context } from "../context/Context.js";
 
 import { EVENT_INTENT_MAPPING } from "@/lib/discord/EventIntents.js";
-import { $unloadFile } from "@/lib/loader/loader.js";
+import { HotReloadable } from "../structures/HotReloadable.js";
+import { getEntryDirectory } from "@/lib/index.js";
+import type { BakitClient } from "../client/BakitClient.js";
 
-export class ListenerManager extends BaseClientManager {
+export class ListenerManager extends HotReloadable {
 	public listeners: Listener[] = [];
 	public entries = new Collection<string, Listener>();
 	private executors = new WeakMap<Listener, (...args: unknown[]) => void>();
 
-	public async loadModules(entryDir: string): Promise<Listener[]> {
-		const pattern = posix.join(posix.resolve(entryDir), "listeners", "**/*.{ts,js}");
+	public constructor(public client: BakitClient) {
+		super(join(getEntryDirectory(), "listeners"));
+	}
+
+	public async loadModules(): Promise<Listener[]> {
+		const pattern = join(this.entryDirectory, "**/*.{ts,js}");
 		const files = await glob(pattern, { cwd: process.cwd(), absolute: true });
 
 		const results = await Promise.all(files.map((file) => this.load(file)));
@@ -66,7 +71,7 @@ export class ListenerManager extends BaseClientManager {
 		const listener = this.entries.get(path);
 		this.entries.delete(path);
 
-		await $unloadFile(path);
+		await this.unloadFile(path);
 
 		if (!listener) {
 			return;
