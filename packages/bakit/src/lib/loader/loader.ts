@@ -177,10 +177,21 @@ export function importsAny(path: string, targets: Set<string>): boolean {
 	return imports.some((imp) => targets.has(imp));
 }
 
+/**
+ * Check if the file is imported by the others.
+ * @param path The path of the file to check.
+ * @returns `boolean`
+ */
 export function isImported(path: string) {
 	return !!getImporters(path)?.size;
 }
 
+/**
+ * Check if the file is imported by a specific target.
+ * @param path The path of the file to check.
+ * @param matcher The target condition to match.
+ * @returns `boolean`
+ */
 export function isImportedBy(path: string, matcher: string | RegExp | ((path: string) => boolean)): boolean {
 	const chain = getDependencyChain(path).slice(1);
 
@@ -226,6 +237,11 @@ function onDependencyAdd(data: DependencyAdd) {
 	forwardEntry.add(path);
 }
 
+/**
+ * Check if the file is under a hmr directory.
+ * @param path The path of the file to check.
+ * @returns `boolean`
+ */
 export function isInHotDirectory(path: string) {
 	const sourceRoot = getEntryDirectory();
 	if (!path.startsWith(sourceRoot)) {
@@ -242,19 +258,37 @@ export function isInHotDirectory(path: string) {
 	return hotReloaders.some((m) => m.entryDirectory === entryDirectory);
 }
 
+/**
+ * Check if the file is the entry file (e.g, index.ts)
+ * @param path The path of the file to check.
+ * @returns `boolean`
+ */
 export function isEntryFile(path: string) {
 	return path === getEntryFile();
 }
 
+/**
+ * Check if the file chain includes the entry file (e.g, index.ts)
+ * @param path The chain of the files to check.
+ * @returns `boolean`
+ */
 export function containsEntryFile(chain: string[]) {
 	return chain.some((x) => isEntryFile(x));
 }
 
+/**
+ * Check if the file chain includes hmr files (e.g, index.ts)
+ * @param path The chain of the files to check.
+ * @returns `boolean`
+ */
 export function containsHotModule(chain: string[]) {
 	return chain.some((x) => isInHotDirectory(x));
 }
 
-function restartProcess() {
+/**
+ * Request to dev process manager to restart the process.
+ */
+export function restartProcess() {
 	processRPC?.send("restart");
 }
 
