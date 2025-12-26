@@ -1,0 +1,9 @@
+{
+	"extends": "../../tsconfig.json",
+	"compilerOptions": {
+		"paths": {
+			"@/*": ["./src/*"]
+		}
+	},
+	"include": ["src/**/*.ts", "tests/**/*.ts", "example/**/*.ts", "tsup.config.ts", "vitest.config.ts"]
+}
