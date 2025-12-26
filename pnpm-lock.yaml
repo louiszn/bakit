@@ -146,8 +146,15 @@ importers:
       msgpackr:
         specifier: ^1.11.8
         version: 1.11.8
+      type-fest:
+        specifier: ^4.41.0
+        version: 4.41.0
 
-  packages/utils: {}
+  packages/utils:
+    dependencies:
+      type-fest:
+        specifier: ^4.41.0
+        version: 4.41.0
 
 packages:
 
