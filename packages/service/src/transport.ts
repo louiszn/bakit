@@ -12,17 +12,31 @@ export interface TransportServerOptions {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type TransportRequestHandler = (...args: any[]) => void;
 
+/**
+ * Transport driver type identifiers.
+ */
 export const TransportDriver = {
+	/**
+	 * Uses Unix Domain Sockets / Named Pipes for communications between processes.
+	 */
 	Socket: "socket",
 } as const;
 export type TransportDriver = ValueOf<typeof TransportDriver>;
 
+/**
+ * Transport message type identifiers.
+ */
 export const TransportMessageType = {
 	Request: "request",
 	Response: "response",
 } as const;
 export type TransportMessageType = ValueOf<typeof TransportMessageType>;
 
+/**
+ * Create a transport server for communicate between services.
+ * @param options - The options for initalizing transport server.
+ * @returns The transport server interface.
+ */
 export function createTransportServer(options: TransportServerOptions) {
 	let driver: Driver;
 
@@ -38,6 +52,11 @@ export function createTransportServer(options: TransportServerOptions) {
 }
 export type TransportServer = ReturnType<typeof createTransportServer>;
 
+/**
+ * Create a transport connection to an existing server for communicating.
+ * @param options - The options for initalizing transport client.
+ * @returns The transport client interface.
+ */
 export function createTransportClient(options: TransportServerOptions) {
 	let driver: Driver;
 
@@ -53,6 +72,11 @@ export function createTransportClient(options: TransportServerOptions) {
 }
 export type TransportClient = ReturnType<typeof createTransportClient>;
 
+/**
+ * Create a handler interface for the transport.
+ * @param driver - The driver for the transport interface.
+ * @returns The transport handler interface.
+ */
 export function createTransportHandler(driver: Driver) {
 	const pendingRequests = new Map<
 		string,
@@ -148,6 +172,12 @@ export function createTransportHandler(driver: Driver) {
 }
 export type TransportHandler = ReturnType<typeof createTransportHandler>;
 
+/**
+ * Create a response interface for the incomming request.
+ * @param driver - The driver of the transport interface.
+ * @param id - The id of the incomming request.
+ * @returns The response interface.
+ */
 export function createTransportResponse(driver: Driver, id: string) {
 	const baseResponse = {
 		id: `${TransportMessageType.Response}:${id}`,
