@@ -1,16 +1,8 @@
 import { randomUUID } from "node:crypto";
 
-import type { Driver, Serializable } from "./types/driver.js";
+import type { Driver, Serializable } from "../types/driver.js";
 import type { ValueOf } from "type-fest";
 import { createSocketClient, createSocketServer } from "./driver/socket.js";
-
-export interface TransportServerOptions {
-	id: string;
-	driver: TransportDriver;
-}
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type TransportRequestHandler = (...args: any[]) => void;
 
 /**
  * Transport driver type identifiers.
@@ -22,6 +14,19 @@ export const TransportDriver = {
 	Socket: "socket",
 } as const;
 export type TransportDriver = ValueOf<typeof TransportDriver>;
+
+export interface TransportDriverSpecificOptions {
+	[TransportDriver.Socket]: {
+		id: string;
+	};
+}
+
+export type TransportOptions<D extends TransportDriver> = {
+	driver: TransportDriver;
+} & TransportDriverSpecificOptions[D];
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type TransportRequestHandler = (...args: any[]) => void;
 
 /**
  * Transport message type identifiers.
@@ -37,7 +42,7 @@ export type TransportMessageType = ValueOf<typeof TransportMessageType>;
  * @param options - The options for initalizing transport server.
  * @returns The transport server interface.
  */
-export function createTransportServer(options: TransportServerOptions) {
+export function createTransportServer<D extends TransportDriver>(options: TransportOptions<D>) {
 	let driver: Driver;
 
 	switch (options.driver) {
@@ -50,14 +55,14 @@ export function createTransportServer(options: TransportServerOptions) {
 
 	return createTransportHandler(driver);
 }
-export type TransportServer = ReturnType<typeof createTransportServer>;
+export type TransportServer<D extends TransportDriver = TransportDriver> = ReturnType<typeof createTransportServer<D>>;
 
 /**
  * Create a transport connection to an existing server for communicating.
  * @param options - The options for initalizing transport client.
  * @returns The transport client interface.
  */
-export function createTransportClient(options: TransportServerOptions) {
+export function createTransportClient<D extends TransportDriver>(options: TransportOptions<D>) {
 	let driver: Driver;
 
 	switch (options.driver) {
@@ -70,7 +75,7 @@ export function createTransportClient(options: TransportServerOptions) {
 
 	return createTransportHandler(driver);
 }
-export type TransportClient = ReturnType<typeof createTransportClient>;
+export type TransportClient<D extends TransportDriver = TransportDriver> = ReturnType<typeof createTransportClient<D>>;
 
 /**
  * Create a handler interface for the transport.
@@ -91,13 +96,8 @@ export function createTransportHandler(driver: Driver) {
 			return;
 		}
 
-		const index = message.id.indexOf(":");
-		if (index === -1) {
-			return;
-		}
-
-		const messageType = message.id.slice(0, index);
-		const id = message.id.slice(index + 1);
+		const [messageType, ...rest] = message.id.split(":");
+		const id = rest.join(":");
 
 		switch (messageType) {
 			case TransportMessageType.Request:
@@ -107,6 +107,14 @@ export function createTransportHandler(driver: Driver) {
 				handlePendingRequest(id, [message.data, message.error]);
 				break;
 		}
+	});
+
+	driver.on("close", () => {
+		for (const { reject } of pendingRequests.values()) {
+			reject(new Error("Transport closed"));
+		}
+
+		pendingRequests.clear();
 	});
 
 	function handlePendingRequest(id: string, result: [unknown, string]) {
@@ -127,7 +135,7 @@ export function createTransportHandler(driver: Driver) {
 		}
 	}
 
-	function request<T>(type: string, data: Serializable, timeout = 30_000) {
+	function request<T>(type: string, data: Serializable, timeout = 5_000) {
 		return new Promise<T>((resolve, reject) => {
 			const id = randomUUID();
 

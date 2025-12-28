@@ -1,4 +1,2 @@
-export * from "./driver/index.js";
-export * from "./transport.js";
-
+export * from "./lib/index.js";
 export type * from "./types/index.js";
