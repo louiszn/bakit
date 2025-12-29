@@ -5,7 +5,7 @@ import { join } from "node:path";
 import { unpack, pack } from "msgpackr";
 import { createEventEmitter } from "@bakit/utils";
 
-import type { Serializable, Driver } from "@/types/driver.js";
+import type { Serializable, Driver, DriverEvents } from "@/types/driver.js";
 
 const { platform } = process;
 const isWin32 = platform === "win32";
@@ -62,13 +62,13 @@ export function createSocketHandler() {
 	const sockets = new Set<Socket>();
 	const buffers = new WeakMap<Socket, Buffer>();
 
-	const emitter = createEventEmitter();
+	const emitter = createEventEmitter<DriverEvents>();
 
 	function addSocket(socket: Socket) {
 		sockets.add(socket);
 		buffers.set(socket, Buffer.alloc(0));
 
-		socket.on("connect", () => emitter.emit("connect", socket));
+		socket.on("connect", () => emitter.emit("open", socket));
 
 		socket.on("close", () => {
 			sockets.delete(socket);

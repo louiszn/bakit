@@ -1,10 +1,11 @@
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type EventMap = Record<string, any[]>;
+export type EventMap = Record<PropertyKey, any[]>;
 export type EventHandler<Events extends EventMap, K extends keyof Events> = (...args: Events[K]) => void;
 
-export function createEventEmitter<Events extends EventMap = EventMap>() {
+export function createEventEmitter<Events extends object = EventMap>() {
 	type Key = keyof Events;
-	type Handler<K extends Key> = EventHandler<Events, K>;
+	type IndexedEvents = Events & EventMap;
+	type Handler<K extends Key> = EventHandler<IndexedEvents, K>;
 
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	const listeners = new Map<Key, Set<Handler<any>>>();
@@ -62,7 +63,7 @@ export function createEventEmitter<Events extends EventMap = EventMap>() {
 		return emitter;
 	}
 
-	function emit<K extends Key>(eventName: K, ...args: Events[K]) {
+	function emit<K extends Key>(eventName: K, ...args: IndexedEvents[K]) {
 		const handlers = listeners.get(eventName);
 
 		if (!handlers) {
@@ -79,4 +80,4 @@ export function createEventEmitter<Events extends EventMap = EventMap>() {
 	return emitter;
 }
 
-export type EventEmitter<Events extends EventMap = EventMap> = ReturnType<typeof createEventEmitter<Events>>;
+export type EventEmitter<Events extends object = EventMap> = ReturnType<typeof createEventEmitter<Events>>;

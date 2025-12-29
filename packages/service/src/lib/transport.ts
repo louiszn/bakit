@@ -113,7 +113,8 @@ export function createTransportHandler(driver: Driver) {
 		}
 	>();
 
-	driver.on("message", (message) => {
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	driver.on("message", (message: any) => {
 		if (!message.id) {
 			return;
 		}
