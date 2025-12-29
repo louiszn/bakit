@@ -1,13 +1,13 @@
-import { createTransportClient, createTransportServer, TransportDriver, type TransportOptions } from "./transport.js";
+import { createTransportClient, createTransportServer, type TransportOptions } from "./transport.js";
 
 import { promisify, type Promisify, type FunctionLike } from "@bakit/utils";
 
-export interface ServiceOptions<D extends TransportDriver> {
+export interface ServiceOptions {
 	name?: string;
-	transport: TransportOptions<D>;
+	transport: TransportOptions;
 }
 
-export function createService<D extends TransportDriver>(options: ServiceOptions<D>) {
+export function createService(options: ServiceOptions) {
 	const isServer = process.env["BAKIT_SERVICE_NAME"] === options.name;
 	const transport = isServer ? createTransportServer(options.transport) : createTransportClient(options.transport);
 

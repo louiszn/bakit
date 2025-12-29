@@ -38,5 +38,9 @@
 		"@bakit/utils": "workspace:*",
 		"msgpackr": "^1.11.8",
 		"type-fest": "^4.41.0"
+	},
+	"devDependencies": {
+		"@types/ws": "^8.18.1",
+		"ws": "^8.18.3"
 	}
 }

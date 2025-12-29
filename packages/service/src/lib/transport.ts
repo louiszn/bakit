@@ -2,7 +2,9 @@ import { randomUUID } from "node:crypto";
 
 import type { Driver, Serializable } from "../types/driver.js";
 import type { ValueOf } from "type-fest";
+
 import { createSocketClient, createSocketServer } from "./driver/socket.js";
+import { createWebSocketServer, createWebSocketClient, type CreateWebSocketServerOptions } from "./driver/websocket.js";
 
 /**
  * Transport driver type identifiers.
@@ -12,6 +14,10 @@ export const TransportDriver = {
 	 * Uses Unix Domain Sockets / Named Pipes for communications between processes.
 	 */
 	Socket: "socket",
+	/**
+	 * Uses WebSocket for communications between servers.
+	 */
+	WebSocket: "ws",
 } as const;
 export type TransportDriver = ValueOf<typeof TransportDriver>;
 
@@ -19,11 +25,17 @@ export interface TransportDriverSpecificOptions {
 	[TransportDriver.Socket]: {
 		id: string;
 	};
+	[TransportDriver.WebSocket]: {
+		server: CreateWebSocketServerOptions;
+		serverURL: string;
+	};
 }
 
-export type TransportOptions<D extends TransportDriver> = {
-	driver: TransportDriver;
-} & TransportDriverSpecificOptions[D];
+export type TransportOptions = {
+	[D in TransportDriver]: {
+		driver: D;
+	} & TransportDriverSpecificOptions[D];
+}[TransportDriver];
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type TransportRequestHandler = (...args: any[]) => void;
@@ -42,40 +54,50 @@ export type TransportMessageType = ValueOf<typeof TransportMessageType>;
  * @param options - The options for initalizing transport server.
  * @returns The transport server interface.
  */
-export function createTransportServer<D extends TransportDriver>(options: TransportOptions<D>) {
+export function createTransportServer(options: TransportOptions) {
 	let driver: Driver;
 
 	switch (options.driver) {
-		case TransportDriver.Socket:
+		case TransportDriver.Socket: {
 			driver = createSocketServer(options.id);
 			break;
+		}
+		case TransportDriver.WebSocket: {
+			driver = createWebSocketServer(options.server);
+			break;
+		}
 		default:
 			throw new Error("Invalid transport driver provided");
 	}
 
 	return createTransportHandler(driver);
 }
-export type TransportServer<D extends TransportDriver = TransportDriver> = ReturnType<typeof createTransportServer<D>>;
+export type TransportServer = ReturnType<typeof createTransportServer>;
 
 /**
  * Create a transport connection to an existing server for communicating.
  * @param options - The options for initalizing transport client.
  * @returns The transport client interface.
  */
-export function createTransportClient<D extends TransportDriver>(options: TransportOptions<D>) {
+export function createTransportClient(options: TransportOptions) {
 	let driver: Driver;
 
 	switch (options.driver) {
-		case TransportDriver.Socket:
+		case TransportDriver.Socket: {
 			driver = createSocketClient(options.id);
 			break;
+		}
+		case TransportDriver.WebSocket: {
+			driver = createWebSocketClient(options.serverURL);
+			break;
+		}
 		default:
 			throw new Error("Invalid transport driver provided");
 	}
 
 	return createTransportHandler(driver);
 }
-export type TransportClient<D extends TransportDriver = TransportDriver> = ReturnType<typeof createTransportClient<D>>;
+export type TransportClient = ReturnType<typeof createTransportClient>;
 
 /**
  * Create a handler interface for the transport.
