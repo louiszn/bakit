@@ -3,7 +3,7 @@ import { existsSync, unlinkSync } from "node:fs";
 import { join } from "node:path";
 
 import { unpack, pack } from "msgpackr";
-import { createEventEmitter } from "@bakit/utils";
+import { createEventEmitter, createQueue, type Queue } from "@bakit/utils";
 
 import type { Serializable, Driver, DriverEvents } from "@/types/driver.js";
 
@@ -61,18 +61,27 @@ export function createSocketClient(id: string) {
 export function createSocketHandler() {
 	const sockets = new Set<Socket>();
 	const buffers = new WeakMap<Socket, Buffer>();
+	const buckets = new WeakMap<Socket, Queue>();
 
 	const emitter = createEventEmitter<DriverEvents>();
 
 	function addSocket(socket: Socket) {
+		const queue = createQueue({ concurrency: 10 });
+
 		sockets.add(socket);
 		buffers.set(socket, Buffer.alloc(0));
+		buckets.set(socket, queue);
 
-		socket.on("connect", () => emitter.emit("open", socket));
+		socket.on("connect", () => {
+			emitter.emit("open", socket);
+			queue.start();
+		});
 
 		socket.on("close", () => {
+			queue.clear();
 			sockets.delete(socket);
 			buffers.delete(socket);
+			buckets.delete(socket);
 			emitter.emit("disconnect", socket);
 		});
 
@@ -122,7 +131,13 @@ export function createSocketHandler() {
 
 	function send(data: Serializable) {
 		for (const socket of sockets) {
-			sendSocket(socket, data);
+			const queue = buckets.get(socket);
+			if (!queue) {
+				continue;
+			}
+
+			const ready = socket.writable && socket.readable;
+			queue.enqueue(() => sendSocket(socket, data), ready);
 		}
 	}
 
