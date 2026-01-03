@@ -1,1 +1,1 @@
-export * from "./socket.js";
+export * from "./ipc.js";

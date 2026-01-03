@@ -37,6 +37,7 @@
 	"dependencies": {
 		"@bakit/utils": "workspace:*",
 		"msgpackr": "^1.11.8",
+		"p-queue": "^9.0.1",
 		"type-fest": "^4.41.0"
 	},
 	"devDependencies": {
