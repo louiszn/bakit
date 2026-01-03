@@ -15,6 +15,7 @@ export function createEventEmitter<Events extends object = EventMap>() {
 		off,
 		once,
 		emit,
+		removeAllListeners,
 	};
 
 	function createHandlers(eventName: Key) {
@@ -63,10 +64,20 @@ export function createEventEmitter<Events extends object = EventMap>() {
 		return emitter;
 	}
 
+	function removeAllListeners() {
+		listeners.clear();
+		return emitter;
+	}
+
 	function emit<K extends Key>(eventName: K, ...args: IndexedEvents[K]) {
 		const handlers = listeners.get(eventName);
 
-		if (!handlers) {
+		if (!handlers || !handlers.size) {
+			if (eventName === "error") {
+				const [error] = args;
+				throw error instanceof Error ? error : new Error(error);
+			}
+
 			return emitter;
 		}
 
