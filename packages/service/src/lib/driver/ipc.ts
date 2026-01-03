@@ -1,0 +1,408 @@
+import { Socket, createServer, createConnection } from "node:net";
+import { join } from "node:path";
+
+import { pack, unpack } from "msgpackr";
+
+import PQueue from "p-queue";
+import { createEventEmitter } from "@bakit/utils";
+
+import type { ValueOf } from "type-fest";
+import type { Serializable } from "@/types/driver.js";
+
+const UNIX_SOCKET_DIR = "/tmp";
+const WINDOWS_PIPE_PREFIX = "\\\\.\\pipe\\";
+
+export const SocketState = {
+	Idle: 0,
+	Connecting: 1,
+	Connected: 2,
+	Disconnected: 3,
+	Reconnecting: 4,
+	Destroyed: 5,
+} as const;
+export type SocketState = ValueOf<typeof SocketState>;
+
+export function getIPCPath(id: string, platform = process.platform) {
+	// Using a switch so we can add more weird OS adventures later.
+	// Seriously, if you’re on some alien platform, good luck finding this code.
+	switch (platform) {
+		case "win32":
+			// Windows pipes: where plumbers earn their paycheck.
+			return `${WINDOWS_PIPE_PREFIX}${id}`;
+		default:
+			// Unix: just a cozy little socket file in /tmp
+			return join(UNIX_SOCKET_DIR, `${id}.sock`);
+	}
+}
+
+export interface IPCClientOptions {
+	platform?: NodeJS.Platform;
+	connection?: IPCSocketConnectionOptions;
+}
+
+export function createIPCClient(id: string, options: IPCClientOptions = {}) {
+	const ipcPath = getIPCPath(id, options.platform);
+	return createIPCSocketConnection(ipcPath, options.connection);
+}
+
+export interface IPCServerOptions {
+	platform?: NodeJS.Platform;
+}
+
+export function createIPCServer(id: string, options: IPCServerOptions = {}) {
+	const ipcPath = getIPCPath(id, options.platform);
+	const emitter = createEventEmitter();
+
+	const clients = new Set<Socket>();
+
+	const server = createServer((socket) => {
+		clients.add(socket);
+
+		const handler = createIPCSocketMessageHandler({
+			onMessage: (msg) => emitter.emit("message", socket, msg),
+			onWrite: (chunk) => writeSocket(socket, chunk),
+		});
+
+		socket.on("data", handler.handleData);
+		socket.on("error", (err) => emitter.emit("clientError", socket, err));
+		socket.on("close", () => {
+			clients.delete(socket);
+			emitter.emit("clientDisconnect", socket);
+		});
+
+		emitter.emit("clientConnect", socket);
+	});
+
+	function listen() {
+		server.listen(ipcPath);
+	}
+
+	function close() {
+		server.close();
+	}
+
+	function writeSocket(socket: Socket, chunk: Buffer) {
+		if (!socket.writable) {
+			return; // socket is on vacation, skip sending
+		}
+
+		const ok = socket.write(chunk); // attempt to send the goodies.
+
+		if (!ok) {
+			// If overwhelmed, wait for a breather.
+			socket.once("drain", () => emitter.emit("drain", socket));
+		}
+	}
+
+	/**
+	 * Shout the message to the clients.
+	 */
+	function broadcast(message: Serializable) {
+		const payload = pack(message);
+
+		const header = Buffer.alloc(4);
+		header.writeUInt32LE(payload.length); // always tell them how big the parcel is
+
+		const packet = Buffer.concat([header, payload]);
+
+		for (const socket of clients) {
+			writeSocket(socket, packet);
+		}
+	}
+
+	return {
+		...emitter,
+		listen,
+		close,
+		broadcast,
+	};
+}
+
+export interface IPCSocketConnectionOptions {
+	autoReconnect?: boolean;
+	maxReconnectAttempts?: number;
+	reconnectDelay?: number;
+	requestConcurrency?: number;
+}
+
+export const DEFAULT_IPC_SOCKET_CONNECTION_OPTIONS = {
+	autoReconnect: true,
+	maxReconnectAttempts: 10,
+	reconnectDelay: 10_000,
+	requestConcurrency: 10,
+} as const satisfies IPCSocketConnectionOptions;
+
+export function createIPCSocketConnection(socketPath: string, options: IPCSocketConnectionOptions = {}) {
+	const resolvedOptions = { ...DEFAULT_IPC_SOCKET_CONNECTION_OPTIONS, ...options };
+
+	const emitter = createEventEmitter();
+	const handler = createIPCSocketMessageHandler({
+		onMessage: (message) => emitter.emit("message", message),
+		onWrite: write,
+	});
+
+	const queue = new PQueue({
+		concurrency: resolvedOptions.requestConcurrency,
+		autoStart: true,
+	});
+	queue.pause(); // Paused by default to prevent unhandled messages.
+
+	let socket: Socket | undefined;
+	let state: SocketState = SocketState.Idle;
+
+	/**
+	 * This variable is for connect() to check if the function is called more than once
+	 * while trying to connect without messing with the state.
+	 */
+	let isConnecting = false;
+
+	let shouldReconnect = resolvedOptions.autoReconnect;
+	let reconnectAttempts = 0;
+	let reconnectTimeout: NodeJS.Timeout | undefined;
+
+	/**
+	 * Connect to the IPC server.
+	 */
+	function connect() {
+		if (state === SocketState.Destroyed) {
+			emitter.emit("error", new Error("Cannot start a new socket after destroyed."));
+			return;
+		}
+
+		if (state === SocketState.Connected || state === SocketState.Connecting) {
+			emitter.emit("error", new Error("The current socket is still running, use reconnect() instead."));
+			return;
+		}
+
+		if (isConnecting) {
+			emitter.emit("error", new Error("connect() shouldn't be called more than once."));
+			return;
+		}
+
+		// Keeps Reconnecting if possible, otherwise use Connecting state.
+		if (state !== SocketState.Reconnecting) {
+			state = SocketState.Connecting;
+		}
+
+		isConnecting = true;
+
+		socket = createConnection(socketPath);
+		initSocket();
+	}
+
+	function initSocket() {
+		if (!socket) {
+			return;
+		}
+
+		socket.on("connect", handleConnect);
+		socket.on("data", handler.handleData);
+		socket.on("error", handleError);
+		socket.on("close", handleClose);
+	}
+
+	function handleConnect() {
+		state = SocketState.Connected;
+
+		isConnecting = false;
+		reconnectAttempts = 0;
+		shouldReconnect = resolvedOptions.autoReconnect;
+
+		queue.start();
+
+		emitter.emit("connect");
+	}
+
+	function handleError(error: Error): void {
+		emitter.emit("error", error);
+	}
+
+	function handleClose() {
+		state = SocketState.Disconnected;
+		queue.pause(); // pause the message queue, socket is taking a nap
+		emitter.emit("disconnected");
+		scheduleReconnect(); // hope it comes back...
+	}
+
+	function scheduleReconnect() {
+		if (!shouldReconnect) {
+			return;
+		}
+
+		if (resolvedOptions.maxReconnectAttempts > 0 && reconnectAttempts > resolvedOptions.maxReconnectAttempts) {
+			emitter.emit("error", new Error(`Max reconnect attempts (${resolvedOptions.maxReconnectAttempts}) exceeded`));
+			state = SocketState.Disconnected;
+		}
+
+		// Prevent other timer to process reconnecting twice.
+		if (reconnectTimeout) {
+			clearTimeout(reconnectTimeout);
+			reconnectTimeout = undefined;
+		}
+
+		reconnectTimeout = setTimeout(() => {
+			reconnectTimeout = undefined;
+			reconnect();
+		}, resolvedOptions.reconnectDelay);
+	}
+
+	/**
+	 * Forces a reconnection attempt.
+	 * This bypasses `autoReconnect` and reconnect limits.
+	 */
+	function reconnect() {
+		if (state === SocketState.Destroyed || state === SocketState.Reconnecting) {
+			return;
+		}
+
+		reconnectAttempts++;
+
+		state = SocketState.Reconnecting;
+
+		cleanupSocket();
+		connect();
+	}
+
+	/**
+	 * Manually disconnect the socket and prevent auto reconnecting.
+	 */
+	function disconnect() {
+		state = SocketState.Disconnected;
+		shouldReconnect = false;
+		cleanupSocket();
+	}
+
+	/**
+	 * Destroy the socket and make it unusable.
+	 */
+	function destroy() {
+		state = SocketState.Destroyed;
+		shouldReconnect = false;
+		queue.clear();
+
+		emitter.removeAllListeners();
+		cleanupSocket();
+	}
+
+	/**
+	 * Clean up timer and connection. This is needed to prepare for making a new connection like reconnect().
+	 */
+	function cleanupSocket() {
+		queue.pause();
+
+		if (reconnectTimeout) {
+			clearTimeout(reconnectTimeout);
+			reconnectTimeout = undefined;
+		}
+
+		if (socket) {
+			// Removing all listeners also prevents 'close' event being fired twice.
+			socket.removeAllListeners();
+
+			if (!socket.destroyed) {
+				socket.destroy();
+			}
+
+			socket = undefined;
+		}
+	}
+
+	function write(chunk: Buffer) {
+		queue.add(() => {
+			return new Promise<void>((resolve, reject) => {
+				if (!socket || !socket.writable) {
+					return resolve();
+				}
+
+				// Due to async issues, we have to check if it is safe to resolve or reject the promise.
+				let done = false;
+
+				const safeResolve = () => {
+					if (!done) {
+						done = true;
+						resolve();
+					}
+				};
+				const safeReject = (err: Error) => {
+					if (!done) {
+						done = true;
+						reject(err);
+					}
+				};
+
+				const ok = socket.write(chunk, (err) => {
+					if (err) {
+						safeReject(err);
+					} else if (ok) {
+						safeResolve();
+					}
+				});
+
+				if (!ok) {
+					socket.once("drain", safeResolve);
+				}
+			});
+		});
+	}
+
+	return {
+		...emitter,
+		...handler,
+		connect,
+		disconnect,
+		destroy,
+		reconnect,
+		write,
+	};
+}
+
+export interface IPCSocketMessageHandlerOptions {
+	onWrite(chunk: Buffer): void;
+	onMessage(message: Serializable): void;
+}
+
+export function createIPCSocketMessageHandler(options: IPCSocketMessageHandlerOptions) {
+	let buffer = Buffer.alloc(0);
+
+	function handleData(chunk: Buffer) {
+		buffer = Buffer.concat([buffer, chunk]);
+
+		while (true) {
+			if (buffer.length < 4) {
+				break;
+			}
+
+			const messageLength = buffer.readUInt32LE(0);
+
+			if (buffer.length < 4 + messageLength) {
+				break;
+			}
+
+			const payload = buffer.subarray(4, 4 + messageLength);
+
+			try {
+				const message = unpack(payload);
+				options.onMessage(message);
+			} catch (error) {
+				console.error("Failed to unpack message:", error);
+			}
+
+			buffer = buffer.subarray(4 + messageLength);
+		}
+	}
+
+	function send(message: Serializable) {
+		const payload = pack(message);
+
+		const header = Buffer.alloc(4);
+		header.writeUInt32LE(payload.length);
+
+		const packet = Buffer.concat([header, payload]);
+		options.onWrite(packet);
+	}
+
+	return {
+		handleData,
+		send,
+	};
+}
