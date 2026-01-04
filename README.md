@@ -1,7 +1,7 @@
 # About us
 
 Bakit is a framework that makes building Discord bots easier.
-It's built on top of [discordeno](https://discordeno.js.org) and helps you handle the core system for your bot.
+It's built on top of a custom powerful core and helps you handle the core system for your bot.
 
 <div align="center">
 	<a href="https://npmjs.com/package/bakit"><img src="https://img.shields.io/npm/v/bakit?logo=npm" alt="npm" /></a>
