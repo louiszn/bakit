@@ -14,6 +14,7 @@ export function makeConfig(...options: Partial<Options>[]) {
 		target: "es2022",
 		treeshake: true,
 		minifySyntax: true,
+		external: [/^(?!\.{0,2}\/)/], // match anything that doesn't start with ./, ../, or /
 		...opts,
 	});
 
