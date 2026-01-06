@@ -1,11 +1,15 @@
 import PQueue, { type Options, type QueueAddOptions } from "p-queue";
 import type { FunctionLike } from "./types/index.js";
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type QueueOptions = Options<any, any>;
+
 /**
  * A p-queue wrapper to be used globally.
  */
 export interface Queue {
-	add<T>(fn: FunctionLike<[], PromiseLike<T>>, options?: Partial<QueueAddOptions>): Promise<T>;
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	add<T>(fn: FunctionLike<any[], PromiseLike<T>>, options?: Partial<QueueAddOptions>): Promise<T>;
 	pause(): void;
 	start(): PQueue;
 	readonly size: number;
@@ -14,12 +18,12 @@ export interface Queue {
 /**
  * Create a new queue.
  */
-export function createQueue(options: Options<never, never>): Queue {
-	const queue = new PQueue();
+export function createQueue(options?: QueueOptions): Queue {
+	const queue = new PQueue(options);
 
 	return {
-		add(fn) {
-			return queue.add(fn, options);
+		add(fn, opts) {
+			return queue.add(fn, opts);
 		},
 		pause() {
 			queue.pause();
