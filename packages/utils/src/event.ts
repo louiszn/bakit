@@ -1,16 +1,22 @@
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type EventMap = Record<PropertyKey, any[]>;
-export type EventHandler<Events extends EventMap, K extends keyof Events> = (...args: Events[K]) => void;
 
-export function createEventEmitter<Events extends object = EventMap>() {
+export interface EventEmitter<Events extends EventMap = EventMap> {
+	on<K extends keyof Events>(eventName: K, handler: (...args: Events[K]) => void): this;
+	once<K extends keyof Events>(eventName: K, handler: (...args: Events[K]) => void): this;
+	off<K extends keyof Events>(eventName: K, handler?: (...args: Events[K]) => void): this;
+	emit<K extends keyof Events>(eventName: K, ...args: Events[K]): this;
+	removeAllListeners(): this;
+}
+
+export function createEventEmitter<Events extends EventMap = EventMap>(): EventEmitter<Events> {
 	type Key = keyof Events;
-	type IndexedEvents = Events & EventMap;
-	type Handler<K extends Key> = EventHandler<IndexedEvents, K>;
+	type Handler<K extends Key> = (...args: Events[K]) => void;
 
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	const listeners = new Map<Key, Set<Handler<any>>>();
 
-	const emitter = {
+	const emitter: EventEmitter<Events> = {
 		on,
 		off,
 		once,
@@ -69,19 +75,19 @@ export function createEventEmitter<Events extends object = EventMap>() {
 		return emitter;
 	}
 
-	function emit<K extends Key>(eventName: K, ...args: IndexedEvents[K]) {
+	function emit<K extends Key>(eventName: K, ...args: Events[K]) {
 		const handlers = listeners.get(eventName);
 
 		if (!handlers || !handlers.size) {
 			if (eventName === "error") {
 				const [error] = args;
-				throw error instanceof Error ? error : new Error(error);
+				throw error instanceof Error ? error : new Error(String(error));
 			}
 
 			return emitter;
 		}
 
-		for (const handler of handlers) {
+		for (const handler of [...handlers]) {
 			handler(...args);
 		}
 
@@ -90,5 +96,3 @@ export function createEventEmitter<Events extends object = EventMap>() {
 
 	return emitter;
 }
-
-export type EventEmitter<Events extends object = EventMap> = ReturnType<typeof createEventEmitter<Events>>;
