@@ -35,6 +35,7 @@
 	"license": "MIT",
 	"packageManager": "pnpm@10.15.0",
 	"dependencies": {
+		"@discordjs/collection": "^2.1.1",
 		"p-queue": "^9.0.1",
 		"type-fest": "^4.41.0"
 	}
