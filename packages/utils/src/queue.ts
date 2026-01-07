@@ -12,6 +12,8 @@ export interface Queue {
 	add<T>(fn: FunctionLike<any[], PromiseLike<T>>, options?: Partial<QueueAddOptions>): Promise<T>;
 	pause(): void;
 	start(): PQueue;
+
+	concurrency: number;
 	readonly size: number;
 }
 
@@ -33,6 +35,12 @@ export function createQueue(options?: QueueOptions): Queue {
 		},
 		get size() {
 			return queue.size;
+		},
+		set concurrency(value: number) {
+			queue.concurrency = value;
+		},
+		get concurrency() {
+			return queue.concurrency;
 		},
 	};
 }
