@@ -96,7 +96,7 @@ export function createREST(options: RESTOptions): REST {
 		const bucket = buckets.use(route);
 
 		// Resolve the full request URL
-		const url = new URL(endpoint, baseURL).toString();
+		const url = new URL(endpoint.slice(1), baseURL).toString();
 
 		const init: RequestInit = {
 			method,
