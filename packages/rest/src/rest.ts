@@ -65,11 +65,6 @@ export interface RESTRouteMeta {
 
 export type RESTMethod = ValueOf<typeof RESTMethod>;
 
-export type RESTTopLevelScope =
-	| { type: "channel"; id: string }
-	| { type: "guild"; id: string }
-	| { type: "webhook"; id: string; token?: string };
-
 /**
  * Default REST options.
  */
