@@ -257,7 +257,10 @@ export function createRESTBucket(manager: RESTBucketManager): RESTBucket {
 		}
 
 		if (typeof data === "object") {
-			throw new DiscordHTTPError(data as DiscordHTTPValidationError);
+			throw new DiscordHTTPError(data as DiscordHTTPValidationError, {
+				url,
+				...init,
+			});
 		}
 
 		throw new Error("An unknown error occurred");

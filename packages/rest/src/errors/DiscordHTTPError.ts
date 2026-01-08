@@ -23,16 +23,25 @@ export interface DiscordHTTPFlattenedError {
 	message: string;
 }
 
+export type DiscordHTTPErrorRequest = RequestInit & { url: string };
+
 export class DiscordHTTPError extends Error {
 	public errors: DiscordHTTPFlattenedError[] = [];
 
-	constructor(data: DiscordHTTPValidationError) {
+	constructor(
+		data: DiscordHTTPValidationError,
+		public request: DiscordHTTPErrorRequest,
+	) {
 		super(data.message);
 
 		this.name = `DiscordHTTPError[${data.code}]`;
 
 		if (data.errors) {
 			this.errors = DiscordHTTPError.flattenErrors(data.errors);
+		}
+
+		if (request.headers && "Authorization" in request.headers) {
+			request.headers.Authorization = "Bot [TOKEN]";
 		}
 	}
 
