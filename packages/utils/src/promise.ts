@@ -17,6 +17,25 @@ export function isPromiseLike(value: unknown): value is PromiseLike<unknown> {
 	return "then" in value && typeof value.then === "function";
 }
 
-export function sleep(duration: number) {
-	return new Promise((res) => setTimeout(res, duration));
+export function sleep(duration: number, signal?: AbortSignal) {
+	return new Promise<void>((resolve, reject) => {
+		const cancel = () => reject(new DOMException("Aborted", "AbortError"));
+
+		if (signal?.aborted) {
+			cancel();
+			return;
+		}
+
+		const onAbort = () => {
+			clearTimeout(timeout);
+			reject(new DOMException("Aborted", "AbortError"));
+		};
+
+		const timeout = setTimeout(() => {
+			signal?.removeEventListener("abort", onAbort);
+			resolve();
+		}, duration);
+
+		signal?.addEventListener("abort", onAbort, { once: true });
+	});
 }
