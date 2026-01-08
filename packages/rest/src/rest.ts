@@ -57,7 +57,18 @@ export const RESTMethod = {
 	Delete: "DELETE",
 } as const;
 
+export interface RESTRouteMeta {
+	scopeId: string;
+	route: string;
+	original: string;
+}
+
 export type RESTMethod = ValueOf<typeof RESTMethod>;
+
+export type RESTTopLevelScope =
+	| { type: "channel"; id: string }
+	| { type: "guild"; id: string }
+	| { type: "webhook"; id: string; token?: string };
 
 /**
  * Default REST options.
@@ -90,10 +101,10 @@ export function createREST(options: RESTOptions): REST {
 	 */
 	async function request<T = unknown>(endpoint: RESTEndpoint, method: RESTMethod, payload?: unknown): Promise<T> {
 		// Normalize the endpoint into a Discord route shape
-		const route = getRoute(endpoint, method);
+		const routeMeta = getRouteMeta(endpoint, method);
 
 		// Get or create the corresponding rate limit bucket
-		const bucket = buckets.use(route);
+		const bucket = buckets.use(routeMeta);
 
 		// Resolve the full request URL
 		const url = new URL(endpoint.slice(1), baseURL).toString();
@@ -111,7 +122,7 @@ export function createREST(options: RESTOptions): REST {
 		}
 
 		// Execute the request through the bucket queue
-		const res = await bucket.request(route, url, init);
+		const res = await bucket.request(routeMeta, url, init);
 		return res as T;
 	}
 
@@ -140,20 +151,33 @@ export function createREST(options: RESTOptions): REST {
 }
 
 /**
- * Normalize a raw endpoint into a Discord route shape.
+ * Route metadata extraction inspired by Discord.js' REST bucket design.
  *
- * Route shapes are used to determine rate limit buckets.
- * IDs, tokens, and reactions are replaced with placeholders
- * so that routes sharing the same rate limit map to the same bucket.
+ * Discord calculates rate limits per route and per top-level resource
+ * (channel, guild, webhook), so we extract a normalized route and a
+ * scope ID to correctly shard rate limit buckets.
  */
-export function getRoute(endpoint: string, method: RESTMethod): string {
+export function getRouteMeta(endpoint: string, method: RESTMethod): RESTRouteMeta {
 	// Prevents params to be included
 	const { pathname } = new URL(endpoint, "https://discord.com");
 
 	// Interaction callbacks use a special shared bucket
 	if (pathname.startsWith("/interactions/") && pathname.endsWith("/callback")) {
-		return "/interactions/:id/:token/callback";
+		return {
+			scopeId: "global",
+			route: "/interactions/:id/:token/callback",
+			original: endpoint,
+		};
 	}
+
+	// Extract the top-level resource identifier ("scope") for this route.
+	//
+	// Discord rate limits are calculated per top-level resource
+	// (e.g. channel_id, guild_id, webhook_id).
+	//
+	// Requests with the same route but different scope IDs can be
+	// executed in parallel without sharing the same rate limit bucket.
+	const scopeId = extractScopeId(pathname);
 
 	let route = pathname
 		// Replace snowflake IDs
@@ -172,7 +196,7 @@ export function getRoute(endpoint: string, method: RESTMethod): string {
 
 		if (messageId) {
 			// Discord snowflake timestamp (ms)
-			const timestamp = Number(messageId) >> 22;
+			const timestamp = Number(BigInt(messageId) >> 22n);
 
 			// 14 days in milliseconds
 			if (Date.now() - timestamp > 1_209_600_000) {
@@ -181,5 +205,17 @@ export function getRoute(endpoint: string, method: RESTMethod): string {
 		}
 	}
 
-	return route;
+	return {
+		scopeId,
+		route,
+		original: endpoint,
+	};
+}
+
+export function extractScopeId(pathname: string): string {
+	const match = /^(?:\/webhooks\/(?<webhook>\d{17,19}\/[^/?]+)|\/(?:channels|guilds|webhooks)\/(?<id>\d{17,19}))/.exec(
+		pathname,
+	);
+
+	return match?.groups?.["id"] ?? match?.groups?.["webhook"] ?? "global";
 }

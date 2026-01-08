@@ -1,6 +1,7 @@
 import { Collection, createQueue, sleep } from "@bakit/utils";
 
 import { DiscordHTTPError, type DiscordHTTPValidationError } from "./errors/DiscordHTTPError.js";
+import type { RESTRouteMeta } from "./rest.js";
 
 /**
  * Represents a single rate limit bucket.
@@ -25,7 +26,7 @@ export interface RESTBucket {
 	 * Queue and execute a request through this bucket.
 	 * Requests are executed sequentially.
 	 */
-	request(route: string, url: string, init: RequestInit): Promise<unknown>;
+	request(routeMeta: RESTRouteMeta, url: string, init: RequestInit): Promise<unknown>;
 }
 
 /**
@@ -46,7 +47,7 @@ export interface RESTBucketManager {
 	/**
 	 * Get or create a bucket for a route shape.
 	 */
-	use(route: string): RESTBucket;
+	use(routeMeta: RESTRouteMeta): RESTBucket;
 
 	/**
 	 * Associate a route with a Discord-identified rate limit bucket.
@@ -59,7 +60,7 @@ export interface RESTBucketManager {
 	 * @param bucketId - The bucket ID provided by Discord.
 	 * @returns The bucket associated with the identified rate limit.
 	 */
-	setIdentifiedBucket(route: string, bucketId: string): RESTBucket;
+	setIdentifiedBucket(routeMeta: RESTRouteMeta, bucketId: string): RESTBucket;
 }
 
 export function createRESTBucketManager(): RESTBucketManager {
@@ -116,12 +117,13 @@ export function createRESTBucketManager(): RESTBucketManager {
 		controller?.abort();
 	}
 
-	function useBucket(route: string) {
-		let bucket = buckets.get(route);
+	function useBucket(routeMeta: RESTRouteMeta) {
+		const key = `${routeMeta.route}:${routeMeta.scopeId}`;
 
+		let bucket = buckets.get(key);
 		if (!bucket) {
 			bucket = createRESTBucket(manager);
-			buckets.set(route, bucket);
+			buckets.set(key, bucket);
 		}
 
 		return bucket;
@@ -138,22 +140,28 @@ export function createRESTBucketManager(): RESTBucketManager {
 	 * A single Discord-identified bucket may be shared by multiple routes
 	 * that are subject to the same rate limit.
 	 */
-	function setIdentifiedBucket(route: string, bucketId: string) {
-		const identified = identifiedBuckets.get(bucketId);
+	function setIdentifiedBucket(routeMeta: RESTRouteMeta, bucketId: string) {
+		const { route, scopeId } = routeMeta;
+
+		const bucketKey = `${route}:${scopeId}`;
+		const identifiedKey = `${bucketId}:${scopeId}`;
+
+		const identified = identifiedBuckets.get(identifiedKey);
 		if (identified) {
-			buckets.set(route, identified);
+			buckets.set(bucketKey, identified);
 			return identified;
 		}
 
-		const existing = buckets.get(route);
+		const existing = buckets.get(bucketKey);
 		if (existing) {
-			identifiedBuckets.set(bucketId, existing);
+			identifiedBuckets.set(identifiedKey, existing);
 			return existing;
 		}
 
 		const bucket = createRESTBucket(manager);
-		buckets.set(route, bucket);
-		identifiedBuckets.set(bucketId, bucket);
+		identifiedBuckets.set(identifiedKey, bucket);
+		buckets.set(bucketKey, bucket);
+
 		return bucket;
 	}
 
@@ -183,8 +191,8 @@ export function createRESTBucket(manager: RESTBucketManager): RESTBucket {
 			return remaining;
 		},
 
-		request(route, url, init) {
-			return queue.add(() => makeRequest(route, url, init));
+		request(routeMeta, url, init) {
+			return queue.add(() => makeRequest(routeMeta, url, init));
 		},
 	};
 
@@ -197,7 +205,7 @@ export function createRESTBucket(manager: RESTBucketManager): RESTBucket {
 	 * - 429 retries (including global limits)
 	 * - Bucket identification via response headers
 	 */
-	async function makeRequest(route: string, url: string, init: RequestInit, attempt = 0) {
+	async function makeRequest(routeMeta: RESTRouteMeta, url: string, init: RequestInit, attempt = 0) {
 		// Prevent infinite retry loops if Discord continuously returns 429
 		if (attempt > 5) {
 			throw new Error("Too many retries due to rate limits");
@@ -244,12 +252,12 @@ export function createRESTBucket(manager: RESTBucketManager): RESTBucket {
 				manager.updateGlobalRateLimit(retryAfter);
 			}
 
-			return await makeRequest(route, url, init, attempt + 1);
+			return await makeRequest(routeMeta, url, init, attempt + 1);
 		}
 
 		// Discord will send the real bucket ID for specific routes
 		if (xBucket) {
-			manager.setIdentifiedBucket(route, xBucket);
+			manager.setIdentifiedBucket(routeMeta, xBucket);
 		}
 
 		if (res.ok) {
