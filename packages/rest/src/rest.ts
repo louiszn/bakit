@@ -1,7 +1,12 @@
 import { createRESTBucketManager } from "./bucket.js";
-
 import type { OptionalKeysOf, ValueOf } from "type-fest";
 
+/**
+ * High-level REST client interface.
+ *
+ * Provides typed helper methods for common HTTP verbs while routing
+ * all requests through the internal rate limit bucket system.
+ */
 export interface REST {
 	request<T = unknown>(endpoint: RESTEndpoint, method: RESTMethod, payload?: unknown): Promise<T>;
 	get<T = unknown>(endpoint: RESTEndpoint): Promise<T>;
@@ -12,18 +17,37 @@ export interface REST {
 	patch<T = unknown, P = unknown>(endpoint: RESTEndpoint, payload?: P): Promise<T>;
 }
 
+/**
+ * Configuration options for the REST client.
+ */
 export interface RESTOptions {
 	/**
-	 * The version of Discord API.
+	 * Discord API version to target.
 	 * @defaultValue 10
 	 */
 	version?: number;
+
+	/**
+	 * Base API URL.
+	 * @defaultValue https://discord.com/api/
+	 */
 	baseURL?: string;
+
+	/**
+	 * Bot token used for authorization.
+	 */
 	token: string;
 }
 
+/**
+ * A valid Discord API endpoint.
+ * Must always start with `/`.
+ */
 export type RESTEndpoint = `/${string}`;
 
+/**
+ * Supported HTTP methods.
+ */
 export const RESTMethod = {
 	Get: "GET",
 	Put: "PUT",
@@ -32,75 +56,125 @@ export const RESTMethod = {
 	Head: "HEAD",
 	Delete: "DELETE",
 } as const;
+
 export type RESTMethod = ValueOf<typeof RESTMethod>;
 
+/**
+ * Default REST options.
+ */
 export const DEFAULT_REST_OPTIONS = {
 	version: 10,
 	baseURL: "https://discord.com/api/",
 } as const satisfies Pick<RESTOptions, OptionalKeysOf<RESTOptions>>;
 
+/**
+ * Create a REST client instance.
+ *
+ * All requests are routed through a rate limit bucket manager
+ * to ensure compliance with Discord's REST rate limits.
+ */
 export function createREST(options: RESTOptions): REST {
 	const resolvedOptions = { ...DEFAULT_REST_OPTIONS, ...options };
+
+	// Base API URL including version
 	const baseURL = new URL(`v${resolvedOptions.version}`, resolvedOptions.baseURL).toString();
 
+	// Central rate limit manager shared by all requests
 	const buckets = createRESTBucketManager();
 
-	function request<T = unknown>(endpoint: RESTEndpoint, method: RESTMethod, payload?: unknown): Promise<T> {
+	/**
+	 * Perform a raw REST request.
+	 *
+	 * The endpoint is normalized into a route shape which determines
+	 * the rate limit bucket used for this request.
+	 */
+	async function request<T = unknown>(endpoint: RESTEndpoint, method: RESTMethod, payload?: unknown): Promise<T> {
+		// Normalize the endpoint into a Discord route shape
 		const route = getRoute(endpoint, method);
+
+		// Get or create the corresponding rate limit bucket
 		const bucket = buckets.use(route);
 
-		const url = new URL(endpoint, baseURL).toString();
+		// Resolve the full request URL
+		const url = new URL(endpoint.slice(1), baseURL).toString();
 
-		return bucket.request(route, url, {
+		const init: RequestInit = {
 			method,
 			headers: {
 				Authorization: `Bot ${resolvedOptions.token}`,
 				"Content-Type": "application/json",
 			},
-			body: payload !== undefined ? JSON.stringify(payload) : "{}",
-		});
+		};
+
+		if (payload !== undefined) {
+			init.body = JSON.stringify(payload);
+		}
+
+		// Execute the request through the bucket queue
+		const res = await bucket.request(route, url, init);
+		return res as T;
 	}
 
 	return {
 		request,
-		get(endpoint: RESTEndpoint) {
+
+		get(endpoint) {
 			return request(endpoint, RESTMethod.Get);
 		},
-		head(endpoint: RESTEndpoint) {
+		head(endpoint) {
 			return request(endpoint, RESTMethod.Head);
 		},
-		delete(endpoint: RESTEndpoint) {
+		delete(endpoint) {
 			return request(endpoint, RESTMethod.Delete);
 		},
-		post(endpoint: RESTEndpoint, payload?: unknown) {
+		post(endpoint, payload) {
 			return request(endpoint, RESTMethod.Post, payload);
 		},
-		put(endpoint: RESTEndpoint, payload?: unknown) {
+		put(endpoint, payload) {
 			return request(endpoint, RESTMethod.Put, payload);
 		},
-		patch(endpoint: RESTEndpoint, payload?: unknown) {
+		patch(endpoint, payload) {
 			return request(endpoint, RESTMethod.Patch, payload);
 		},
 	};
 }
 
+/**
+ * Normalize a raw endpoint into a Discord route shape.
+ *
+ * Route shapes are used to determine rate limit buckets.
+ * IDs, tokens, and reactions are replaced with placeholders
+ * so that routes sharing the same rate limit map to the same bucket.
+ */
 export function getRoute(endpoint: string, method: RESTMethod): string {
+	// Prevents params to be included
 	const { pathname } = new URL(endpoint, "https://discord.com");
 
+	// Interaction callbacks use a special shared bucket
 	if (pathname.startsWith("/interactions/") && pathname.endsWith("/callback")) {
 		return "/interactions/:id/:token/callback";
 	}
 
 	let route = pathname
+		// Replace snowflake IDs
 		.replace(/\d{17,19}/g, ":id")
+		// Normalize reaction endpoints
 		.replace(/\/reactions\/.+$/, "/reactions/:reaction")
+		// Normalize webhook tokens
 		.replace(/\/webhooks\/:id\/[^/?]+/, "/webhooks/:id/:token");
 
+	/**
+	 * Discord applies a separate rate limit bucket for deleting
+	 * messages older than 14 days.
+	 */
 	if (method === RESTMethod.Delete && route === "/channels/:id/messages/:id") {
 		const messageId = pathname.match(/\d{17,19}$/)?.[0];
 
 		if (messageId) {
+			// Discord snowflake timestamp (ms)
 			const timestamp = Number(messageId) >> 22;
+
+			// 14 days in milliseconds
 			if (Date.now() - timestamp > 1_209_600_000) {
 				route += "/old";
 			}
