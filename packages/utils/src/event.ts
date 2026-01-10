@@ -1,98 +1,151 @@
+import { Collection } from "@discordjs/collection";
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type EventMap = Record<PropertyKey, any[]>;
 
-export interface EventEmitter<Events extends EventMap = EventMap> {
-	on<K extends keyof Events>(eventName: K, handler: (...args: Events[K]) => void): this;
-	once<K extends keyof Events>(eventName: K, handler: (...args: Events[K]) => void): this;
-	off<K extends keyof Events>(eventName: K, handler?: (...args: Events[K]) => void): this;
-	emit<K extends keyof Events>(eventName: K, ...args: Events[K]): this;
-	removeAllListeners(): this;
+type IndexableEventMap<T extends object = EventMap> = T & EventMap;
+type ArgsOf<Events extends object, K extends keyof Events> = IndexableEventMap<Events>[K];
+type ListenerHandler<Events extends object, K extends keyof Events> = (...args: ArgsOf<Events, K>) => void;
+
+export interface EventBus<Events extends object = EventMap> {
+	on<K extends keyof Events>(eventName: K, handler: ListenerHandler<Events, K>): this;
+	once<K extends keyof Events>(eventName: K, handler: ListenerHandler<Events, K>): this;
+	off<K extends keyof Events>(eventName: K, handler?: ListenerHandler<Events, K>): this;
+	emit<K extends keyof Events>(eventName: K, ...args: ArgsOf<Events, K>): this;
+	removeAllListeners(eventName?: keyof Events): this;
 }
 
-export function createEventEmitter<Events extends EventMap = EventMap>(): EventEmitter<Events> {
-	type Key = keyof Events;
-	type Handler<K extends Key> = (...args: Events[K]) => void;
+export interface EventListener {
+	type: "once" | "on";
+	handler: ListenerHandler<object, keyof object>;
+}
 
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	const listeners = new Map<Key, Set<Handler<any>>>();
+export function createEventBus<Events extends object = EventMap>(): EventBus<Events> {
+	type EventKey = keyof Events;
 
-	const emitter: EventEmitter<Events> = {
+	const events = new Collection<EventKey, Set<EventListener>>();
+
+	const self: EventBus<Events> = {
 		on,
-		off,
 		once,
+		off,
 		emit,
 		removeAllListeners,
 	};
 
-	function createHandlers(eventName: Key) {
-		let handlers = listeners.get(eventName);
+	function addListener(type: "on" | "once", eventName: EventKey, handler: ListenerHandler<object, keyof object>) {
+		let listeners = events.get(eventName);
 
-		if (!handlers) {
-			handlers = new Set();
-			listeners.set(eventName, handlers);
+		if (!listeners) {
+			listeners = new Set();
+			events.set(eventName, listeners);
 		}
 
-		return handlers;
+		listeners.add({
+			type,
+			handler,
+		});
+
+		return self;
 	}
 
-	function on<K extends Key>(eventName: K, handler: Handler<K>) {
-		createHandlers(eventName).add(handler);
-		return emitter;
+	function on<K extends EventKey>(eventName: K, handler: ListenerHandler<Events, K>) {
+		return addListener("on", eventName, handler);
 	}
 
-	function once<K extends Key>(eventName: K, handler: Handler<K>) {
-		const wrapper: Handler<K> = (...args) => {
-			handler(...args);
-			off(eventName, wrapper);
-		};
-
-		createHandlers(eventName).add(wrapper);
-		return emitter;
+	function once<K extends EventKey>(eventName: K, handler: ListenerHandler<Events, K>) {
+		return addListener("once", eventName, handler);
 	}
 
-	function off<K extends Key>(eventName: K, handler?: Handler<K>) {
-		const handlers = listeners.get(eventName);
-
-		if (!handlers) {
-			return emitter;
+	function off<K extends EventKey>(eventName: K, handler?: ListenerHandler<Events, K>) {
+		if (!handler) {
+			return removeAllListeners(eventName);
 		}
 
-		if (handler) {
-			handlers.delete(handler);
-		} else {
-			handlers.clear();
+		const listeners = events.get(eventName);
+
+		if (!listeners) {
+			return self;
 		}
 
-		if (!handlers.size) {
-			listeners.delete(eventName);
+		for (const listener of [...listeners]) {
+			if (listener.handler === handler) {
+				listeners.delete(listener);
+			}
 		}
 
-		return emitter;
+		if (listeners.size === 0) {
+			events.delete(eventName);
+		}
+
+		return self;
 	}
 
-	function removeAllListeners() {
-		listeners.clear();
-		return emitter;
+	function removeAllListeners(eventName?: EventKey) {
+		if (!eventName) {
+			events.clear();
+			return self;
+		}
+
+		const listeners = events.get(eventName);
+
+		if (listeners) {
+			listeners.clear();
+			events.delete(eventName);
+		}
+
+		return self;
 	}
 
-	function emit<K extends Key>(eventName: K, ...args: Events[K]) {
-		const handlers = listeners.get(eventName);
+	function emit<K extends keyof Events>(eventName: K, ...args: ArgsOf<Events, K>) {
+		const listeners = events.get(eventName);
 
-		if (!handlers || !handlers.size) {
+		if (!listeners || listeners.size === 0) {
 			if (eventName === "error") {
-				const [error] = args;
+				const error = args[0];
 				throw error instanceof Error ? error : new Error(String(error));
 			}
-
-			return emitter;
+			return self;
 		}
 
-		for (const handler of [...handlers]) {
-			handler(...args);
+		for (const listener of [...listeners]) {
+			listener.handler(...args);
+
+			if (listener.type === "once") {
+				listeners.delete(listener);
+			}
 		}
 
-		return emitter;
+		return self;
 	}
 
-	return emitter;
+	return self;
+}
+
+export function attachEventBus<T extends object, Events extends object = EventMap>(
+	base: T,
+	bus: EventBus<Events> = createEventBus(),
+): T & EventBus<Events> {
+	return Object.assign(base, {
+		on<K extends keyof Events>(event: K, handler: ListenerHandler<Events, K>) {
+			bus.on(event, handler);
+			return base as EventBus;
+		},
+		once<K extends keyof Events>(event: K, handler: ListenerHandler<Events, K>) {
+			bus.once(event, handler);
+			return base as EventBus;
+		},
+		off<K extends keyof Events>(event: K, handler?: ListenerHandler<Events, K>) {
+			bus.off(event, handler);
+			return base as EventBus;
+		},
+		emit<K extends keyof Events>(event: K, ...args: ArgsOf<Events, K>) {
+			bus.emit(event, ...args);
+			return base as EventBus;
+		},
+		removeAllListeners(event?: keyof Events) {
+			bus.removeAllListeners(event);
+			return base as EventBus;
+		},
+	});
 }

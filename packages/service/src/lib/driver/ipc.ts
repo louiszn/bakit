@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { pack, unpack } from "msgpackr";
 
 import PQueue from "p-queue";
-import { createEventEmitter } from "@bakit/utils";
+import { attachEventBus, type EventBus } from "@bakit/utils";
 
 import type { ValueOf } from "type-fest";
 import type { Serializable } from "@/types/driver.js";
@@ -22,6 +22,68 @@ export const SocketState = {
 } as const;
 export type SocketState = ValueOf<typeof SocketState>;
 
+export interface IPCServerEvents {
+	message: [socket: Socket, message: Serializable];
+	clientConnect: [socket: Socket];
+	clientDisconnect: [socket: Socket];
+	clientError: [socket: Socket, error: Error];
+	drain: [socket: Socket];
+}
+
+export interface IPCClientEvents {
+	message: [message: Serializable];
+	connect: [];
+	disconnected: [];
+	error: [error: Error];
+}
+
+export interface IPCServer extends EventBus<IPCServerEvents> {
+	listen: () => void;
+	close: () => void;
+	broadcast: (message: Serializable) => void;
+}
+
+export interface IPCSocketConnection extends EventBus<IPCClientEvents>, IPCSocketMessageHandler {
+	connect: () => void;
+	disconnect: () => void;
+	destroy: () => void;
+	reconnect: () => void;
+	write: (chunk: Buffer) => void;
+}
+
+export interface IPCSocketMessageHandler {
+	handleData: (chunk: Buffer) => void;
+	send: (message: Serializable) => void;
+}
+
+export interface IPCServerOptions {
+	platform?: NodeJS.Platform;
+}
+
+export interface IPCClientOptions {
+	platform?: NodeJS.Platform;
+	connection?: IPCSocketConnectionOptions;
+}
+
+export interface IPCSocketConnectionOptions {
+	autoReconnect?: boolean;
+	maxReconnectAttempts?: number;
+	reconnectDelay?: number;
+	requestConcurrency?: number;
+}
+
+export interface IPCSocketMessageHandlerOptions {
+	onWrite(chunk: Buffer): void;
+	onMessage(message: Serializable): void;
+}
+
+export const DEFAULT_IPC_SOCKET_CONNECTION_OPTIONS = {
+	autoReconnect: true,
+	maxReconnectAttempts: 10,
+	reconnectDelay: 10_000,
+	requestConcurrency: 10,
+} as const satisfies IPCSocketConnectionOptions;
+
 export function getIPCPath(id: string, platform = process.platform) {
 	// Using a switch so we can add more weird OS adventures later.
 	// Seriously, if you’re on some alien platform, good luck finding this code.
@@ -35,42 +97,37 @@ export function getIPCPath(id: string, platform = process.platform) {
 	}
 }
 
-export interface IPCClientOptions {
-	platform?: NodeJS.Platform;
-	connection?: IPCSocketConnectionOptions;
-}
-
 export function createIPCClient(id: string, options: IPCClientOptions = {}) {
 	const ipcPath = getIPCPath(id, options.platform);
 	return createIPCSocketConnection(ipcPath, options.connection);
 }
 
-export interface IPCServerOptions {
-	platform?: NodeJS.Platform;
-}
-
-export function createIPCServer(id: string, options: IPCServerOptions = {}) {
+export function createIPCServer(id: string, options: IPCServerOptions = {}): IPCServer {
 	const ipcPath = getIPCPath(id, options.platform);
-	const emitter = createEventEmitter();
-
 	const clients = new Set<Socket>();
+
+	const self: IPCServer = attachEventBus({
+		listen,
+		close,
+		broadcast,
+	});
 
 	const server = createServer((socket) => {
 		clients.add(socket);
 
 		const handler = createIPCSocketMessageHandler({
-			onMessage: (msg) => emitter.emit("message", socket, msg),
+			onMessage: (msg) => self.emit("message", socket, msg),
 			onWrite: (chunk) => writeSocket(socket, chunk),
 		});
 
 		socket.on("data", handler.handleData);
-		socket.on("error", (err) => emitter.emit("clientError", socket, err));
+		socket.on("error", (err) => self.emit("clientError", socket, err));
 		socket.on("close", () => {
 			clients.delete(socket);
-			emitter.emit("clientDisconnect", socket);
+			self.emit("clientDisconnect", socket);
 		});
 
-		emitter.emit("clientConnect", socket);
+		self.emit("clientConnect", socket);
 	});
 
 	function listen() {
@@ -90,7 +147,7 @@ export function createIPCServer(id: string, options: IPCServerOptions = {}) {
 
 		if (!ok) {
 			// If overwhelmed, wait for a breather.
-			socket.once("drain", () => emitter.emit("drain", socket));
+			socket.once("drain", () => self.emit("drain", socket));
 		}
 	}
 
@@ -110,34 +167,17 @@ export function createIPCServer(id: string, options: IPCServerOptions = {}) {
 		}
 	}
 
-	return {
-		...emitter,
-		listen,
-		close,
-		broadcast,
-	};
+	return self;
 }
 
-export interface IPCSocketConnectionOptions {
-	autoReconnect?: boolean;
-	maxReconnectAttempts?: number;
-	reconnectDelay?: number;
-	requestConcurrency?: number;
-}
-
-export const DEFAULT_IPC_SOCKET_CONNECTION_OPTIONS = {
-	autoReconnect: true,
-	maxReconnectAttempts: 10,
-	reconnectDelay: 10_000,
-	requestConcurrency: 10,
-} as const satisfies IPCSocketConnectionOptions;
-
-export function createIPCSocketConnection(socketPath: string, options: IPCSocketConnectionOptions = {}) {
+export function createIPCSocketConnection(
+	socketPath: string,
+	options: IPCSocketConnectionOptions = {},
+): IPCSocketConnection {
 	const resolvedOptions = { ...DEFAULT_IPC_SOCKET_CONNECTION_OPTIONS, ...options };
 
-	const emitter = createEventEmitter();
 	const handler = createIPCSocketMessageHandler({
-		onMessage: (message) => emitter.emit("message", message),
+		onMessage: (message) => connection.emit("message", message),
 		onWrite: write,
 	});
 
@@ -160,22 +200,31 @@ export function createIPCSocketConnection(socketPath: string, options: IPCSocket
 	let reconnectAttempts = 0;
 	let reconnectTimeout: NodeJS.Timeout | undefined;
 
+	const connection: IPCSocketConnection = attachEventBus({
+		...handler,
+		connect,
+		disconnect,
+		destroy,
+		reconnect,
+		write,
+	});
+
 	/**
 	 * Connect to the IPC server.
 	 */
 	function connect() {
 		if (state === SocketState.Destroyed) {
-			emitter.emit("error", new Error("Cannot start a new socket after destroyed."));
+			connection.emit("error", new Error("Cannot start a new socket after destroyed."));
 			return;
 		}
 
 		if (state === SocketState.Connected || state === SocketState.Connecting) {
-			emitter.emit("error", new Error("The current socket is still running, use reconnect() instead."));
+			connection.emit("error", new Error("The current socket is still running, use reconnect() instead."));
 			return;
 		}
 
 		if (isConnecting) {
-			emitter.emit("error", new Error("connect() shouldn't be called more than once."));
+			connection.emit("error", new Error("connect() shouldn't be called more than once."));
 			return;
 		}
 
@@ -210,17 +259,17 @@ export function createIPCSocketConnection(socketPath: string, options: IPCSocket
 
 		queue.start();
 
-		emitter.emit("connect");
+		connection.emit("connect");
 	}
 
 	function handleError(error: Error): void {
-		emitter.emit("error", error);
+		connection.emit("error", error);
 	}
 
 	function handleClose() {
 		state = SocketState.Disconnected;
 		queue.pause(); // pause the message queue, socket is taking a nap
-		emitter.emit("disconnected");
+		connection.emit("disconnected");
 		scheduleReconnect(); // hope it comes back...
 	}
 
@@ -229,8 +278,8 @@ export function createIPCSocketConnection(socketPath: string, options: IPCSocket
 			return;
 		}
 
-		if (resolvedOptions.maxReconnectAttempts > 0 && reconnectAttempts > resolvedOptions.maxReconnectAttempts) {
-			emitter.emit("error", new Error(`Max reconnect attempts (${resolvedOptions.maxReconnectAttempts}) exceeded`));
+		if (resolvedOptions.maxReconnectAttempts > 0 && reconnectAttempts >= resolvedOptions.maxReconnectAttempts) {
+			connection.emit("error", new Error(`Max reconnect attempts (${resolvedOptions.maxReconnectAttempts}) exceeded`));
 			state = SocketState.Disconnected;
 		}
 
@@ -280,7 +329,7 @@ export function createIPCSocketConnection(socketPath: string, options: IPCSocket
 		shouldReconnect = false;
 		queue.clear();
 
-		emitter.removeAllListeners();
+		connection.removeAllListeners();
 		cleanupSocket();
 	}
 
@@ -345,20 +394,7 @@ export function createIPCSocketConnection(socketPath: string, options: IPCSocket
 		});
 	}
 
-	return {
-		...emitter,
-		...handler,
-		connect,
-		disconnect,
-		destroy,
-		reconnect,
-		write,
-	};
-}
-
-export interface IPCSocketMessageHandlerOptions {
-	onWrite(chunk: Buffer): void;
-	onMessage(message: Serializable): void;
+	return connection;
 }
 
 export function createIPCSocketMessageHandler(options: IPCSocketMessageHandlerOptions) {
