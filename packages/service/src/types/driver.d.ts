@@ -1,6 +1,6 @@
 import type { EventBus } from "@bakit/utils";
 
-export type Serializable = string | number | bigint | boolean | object | null;
+export type Serializable = string | number | bigint | boolean | object | null | undefined;
 
 export interface BaseClientDriver extends EventBus<BaseClientDriverEvents> {
 	send(message: Serializable): void;
