@@ -2,6 +2,7 @@ export * from "./event.js";
 export * from "./string.js";
 export * from "./promise.js";
 export * from "./queue.js";
+export * from "./object.js";
 
 export { Collection, type ReadonlyCollection } from "@discordjs/collection";
 
