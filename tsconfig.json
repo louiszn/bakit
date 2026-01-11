@@ -10,7 +10,6 @@
 		"declarationMap": true,
 
 		"noUncheckedIndexedAccess": true,
-		"exactOptionalPropertyTypes": true,
 
 		"noImplicitReturns": true,
 		"noImplicitOverride": true,
@@ -24,7 +23,7 @@
 		"isolatedModules": true,
 		"noUncheckedSideEffectImports": true,
 		"moduleDetection": "force",
-		"skipLibCheck": true
+		"skipLibCheck": false
 	},
 	"include": ["eslint.config.js", "tsup.config.ts", "scripts/**/*.ts"],
 	"exclude": ["**/node_modules", "**/dist"]

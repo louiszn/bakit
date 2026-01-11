@@ -1,1 +1,1 @@
-export * from "./driver.d.ts";
+export type * from "./driver.d.ts";

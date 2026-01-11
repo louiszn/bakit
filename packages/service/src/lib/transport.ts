@@ -1,9 +1,12 @@
-import type { ValueOf, MergeExclusive } from "type-fest";
-
-import { createIPCClient, createIPCServer, type IPCClientOptions, type IPCServerOptions } from "./driver/ipc.js";
-import type { BaseTransportClientDriver, BaseTransportServerDriver, Serializable } from "@/types/driver.js";
-import { Collection, type RejectFn, type ResolveFn } from "@bakit/utils";
 import { randomUUID } from "node:crypto";
+
+import { Collection, isPlainObject, type Awaitable, type RejectFn, type ResolveFn } from "@bakit/utils";
+import { createIPCClient, createIPCServer, type IPCClientOptions, type IPCServerOptions } from "./driver/ipc.js";
+
+import { deserializeRPCError, serializeRPCError, type RPCErrorPayload } from "@/errors/RPCError.js";
+
+import type { ValueOf, MergeExclusive } from "type-fest";
+import type { BaseClientDriver, BaseServerDriver, Serializable } from "@/types/driver.js";
 
 /**
  * Transport driver type identifiers.
@@ -32,8 +35,30 @@ export type TransportServerOptions = {
 	[D in TransportDriver]: { driver: D } & TransportServerDriverSpecificOptions[D];
 }[TransportDriver];
 
-export interface TransportClientMessageHandler {
-	request<T>(id: string, ...args: Serializable[]): Promise<T>;
+export interface TransportClient extends TransportClientProtocol {
+	send: BaseServerDriver["send"];
+	connect: BaseClientDriver["connect"];
+	disconnect: BaseClientDriver["disconnect"];
+}
+
+export interface TransportServer extends TransportServerProtocol {
+	broadcast: BaseServerDriver["broadcast"];
+	listen: BaseServerDriver["listen"];
+}
+
+export interface TransportClientProtocol {
+	request<T>(method: string, ...args: Serializable[]): Promise<T>;
+}
+
+export type RPCHandler<Args extends Serializable[], Result extends Serializable | void> = (
+	...args: Args
+) => Awaitable<Result>;
+
+export interface TransportServerProtocol {
+	handle<Args extends Serializable[], Result extends Serializable | void>(
+		method: string,
+		handler: RPCHandler<Args, Result>,
+	): void;
 }
 
 export interface RPCRequestMessage {
@@ -43,19 +68,13 @@ export interface RPCRequestMessage {
 	args: Serializable[];
 }
 
-export interface RPCError {
-	code: string;
-	message: string;
-	data?: Serializable;
-}
-
 export type RPCResponseMessage = {
 	type: "response";
 	id: string;
-} & MergeExclusive<{ result: Serializable }, { error: RPCError }>;
+} & MergeExclusive<{ result: Serializable }, { error: RPCErrorPayload }>;
 
-export function createTransportClient(options: TransportClientOptions) {
-	let driver: BaseTransportClientDriver;
+export function createTransportClient(options: TransportClientOptions): TransportClient {
+	let driver: BaseClientDriver;
 
 	switch (options.driver) {
 		case TransportDriver.IPC: {
@@ -63,16 +82,18 @@ export function createTransportClient(options: TransportClientOptions) {
 		}
 	}
 
-	const handler = createTransportClientMessageHandler(driver);
+	const protocol = createTransportClientProtocol(driver);
 
 	return {
-		...handler,
+		...protocol,
 		send: driver.send,
+		connect: driver.connect,
+		disconnect: driver.disconnect,
 	};
 }
 
-export function createTransportServer(options: TransportServerOptions) {
-	let driver: BaseTransportServerDriver;
+export function createTransportServer(options: TransportServerOptions): TransportServer {
+	let driver: BaseServerDriver;
 
 	switch (options.driver) {
 		case TransportDriver.IPC: {
@@ -80,12 +101,16 @@ export function createTransportServer(options: TransportServerOptions) {
 		}
 	}
 
+	const protocol = createTransportServerProtocol(driver);
+
 	return {
+		...protocol,
 		broadcast: driver.broadcast,
+		listen: driver.listen,
 	};
 }
 
-export function createTransportClientMessageHandler(driver: BaseTransportClientDriver): TransportClientMessageHandler {
+export function createTransportClientProtocol(driver: BaseClientDriver): TransportClientProtocol {
 	const requests = new Collection<
 		string,
 		{
@@ -107,16 +132,14 @@ export function createTransportClientMessageHandler(driver: BaseTransportClientD
 
 		requests.delete(message.id);
 
+		console.log(message);
+
 		if (message.error !== undefined) {
-			entry.reject(message.error);
+			entry.reject(deserializeRPCError(message.error));
 		} else {
 			entry.resolve(message.result);
 		}
 	});
-
-	function isPlainObject(value: unknown): value is object {
-		return Object.prototype.toString.call(value) === "[object Object]";
-	}
 
 	function isResponseMessage(message: Serializable): message is RPCResponseMessage {
 		if (!isPlainObject(message)) {
@@ -165,5 +188,71 @@ export function createTransportClientMessageHandler(driver: BaseTransportClientD
 
 	return {
 		request,
+	};
+}
+
+export function createTransportServerProtocol(driver: BaseServerDriver): TransportServerProtocol {
+	const handlers = new Collection<string, RPCHandler<Serializable[], Serializable>>();
+
+	driver.on("message", async (connection, message) => {
+		if (!isRequestMessage(message)) {
+			return;
+		}
+
+		const handler = handlers.get(message.method);
+
+		const sendError = (error: Error | RPCErrorPayload) => {
+			const payload = error instanceof Error ? serializeRPCError(error) : error;
+
+			driver.send(connection, {
+				type: "response",
+				id: message.id,
+				error: payload,
+			} satisfies RPCResponseMessage);
+		};
+
+		const sendResult = (result: Serializable) => {
+			driver.send(connection, {
+				type: "response",
+				id: message.id,
+				result,
+			} satisfies RPCResponseMessage);
+		};
+
+		if (!handler) {
+			sendError({ message: `Unknown method: ${message.method}` });
+			return;
+		}
+
+		try {
+			const result = await handler(...message.args);
+			sendResult(result ?? null);
+		} catch (error) {
+			sendError(error as Error);
+		}
+	});
+
+	function isRequestMessage(message: Serializable): message is RPCRequestMessage {
+		if (!isPlainObject(message)) {
+			return false;
+		}
+
+		const hasType = "type" in message && message.type === "request";
+		const hasId = "id" in message && typeof message.id === "string";
+		const hasMethod = "method" in message && typeof message.method === "string";
+		const hasArgs = "args" in message && Array.isArray(message.args);
+
+		return hasType && hasId && hasMethod && hasArgs;
+	}
+
+	function handle<Args extends Serializable[], Result extends Serializable | void>(
+		method: string,
+		handler: RPCHandler<Args, Result>,
+	) {
+		handlers.set(method, handler as RPCHandler<Serializable[], Serializable>);
+	}
+
+	return {
+		handle,
 	};
 }

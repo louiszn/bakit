@@ -1,5 +1,6 @@
 import { Socket, createServer, createConnection } from "node:net";
 import { join } from "node:path";
+import { existsSync, rmSync } from "node:fs";
 
 import { pack, unpack } from "msgpackr";
 
@@ -7,7 +8,7 @@ import PQueue from "p-queue";
 import { attachEventBus, type EventBus } from "@bakit/utils";
 
 import type { ValueOf } from "type-fest";
-import type { Serializable, BaseTransportClientDriver, BaseTransportClientDriverEvents } from "@/types/driver.js";
+import type { Serializable, BaseClientDriver, BaseClientDriverEvents, BaseServerDriverEvents } from "@/types/driver.js";
 
 const UNIX_SOCKET_DIR = "/tmp";
 const WINDOWS_PIPE_PREFIX = "\\\\.\\pipe\\";
@@ -22,7 +23,7 @@ export const SocketState = {
 } as const;
 export type SocketState = ValueOf<typeof SocketState>;
 
-export interface IPCServerEvents {
+export interface IPCServerEvents extends BaseServerDriverEvents {
 	message: [socket: Socket, message: Serializable];
 	clientConnect: [socket: Socket];
 	clientDisconnect: [socket: Socket];
@@ -31,12 +32,13 @@ export interface IPCServerEvents {
 }
 
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type
-export interface IPCClientEvents extends BaseTransportClientDriverEvents {}
+export interface IPCClientEvents extends BaseClientDriverEvents {}
 
 export interface IPCServer extends EventBus<IPCServerEvents> {
-	listen: () => void;
-	close: () => void;
-	broadcast: (message: Serializable) => void;
+	listen(): void;
+	close(): void;
+	broadcast(message: Serializable): void;
+	send(socket: Socket, message: Serializable): void;
 }
 
 export interface IPCSocketConnection extends EventBus<IPCClientEvents>, IPCSocketMessageHandler {
@@ -47,7 +49,7 @@ export interface IPCSocketConnection extends EventBus<IPCClientEvents>, IPCSocke
 	write: (chunk: Buffer) => void;
 }
 
-export interface IPCSocketMessageHandler extends BaseTransportClientDriver {
+export interface IPCSocketMessageHandler extends BaseClientDriver {
 	handleData: (chunk: Buffer) => void;
 }
 
@@ -107,6 +109,7 @@ export function createIPCServer(options: IPCServerOptions): IPCServer {
 		listen,
 		close,
 		broadcast,
+		send,
 	});
 
 	const server = createServer((socket) => {
@@ -128,6 +131,10 @@ export function createIPCServer(options: IPCServerOptions): IPCServer {
 	});
 
 	function listen() {
+		if (existsSync(ipcPath)) {
+			rmSync(ipcPath);
+		}
+
 		server.listen(ipcPath);
 	}
 
@@ -162,6 +169,17 @@ export function createIPCServer(options: IPCServerOptions): IPCServer {
 		for (const socket of clients) {
 			writeSocket(socket, packet);
 		}
+	}
+
+	function send(socket: Socket, message: Serializable) {
+		const payload = pack(message);
+
+		const header = Buffer.alloc(4);
+		header.writeUInt32LE(payload.length);
+
+		const packet = Buffer.concat([header, payload]);
+
+		writeSocket(socket, packet);
 	}
 
 	return self;
