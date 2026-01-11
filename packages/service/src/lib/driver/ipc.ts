@@ -7,7 +7,7 @@ import PQueue from "p-queue";
 import { attachEventBus, type EventBus } from "@bakit/utils";
 
 import type { ValueOf } from "type-fest";
-import type { Serializable } from "@/types/driver.js";
+import type { Serializable, BaseTransportClientDriver, BaseTransportClientDriverEvents } from "@/types/driver.js";
 
 const UNIX_SOCKET_DIR = "/tmp";
 const WINDOWS_PIPE_PREFIX = "\\\\.\\pipe\\";
@@ -30,12 +30,8 @@ export interface IPCServerEvents {
 	drain: [socket: Socket];
 }
 
-export interface IPCClientEvents {
-	message: [message: Serializable];
-	connect: [];
-	disconnected: [];
-	error: [error: Error];
-}
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
+export interface IPCClientEvents extends BaseTransportClientDriverEvents {}
 
 export interface IPCServer extends EventBus<IPCServerEvents> {
 	listen: () => void;
@@ -51,16 +47,17 @@ export interface IPCSocketConnection extends EventBus<IPCClientEvents>, IPCSocke
 	write: (chunk: Buffer) => void;
 }
 
-export interface IPCSocketMessageHandler {
+export interface IPCSocketMessageHandler extends BaseTransportClientDriver {
 	handleData: (chunk: Buffer) => void;
-	send: (message: Serializable) => void;
 }
 
 export interface IPCServerOptions {
+	id: string;
 	platform?: NodeJS.Platform;
 }
 
 export interface IPCClientOptions {
+	id: string;
 	platform?: NodeJS.Platform;
 	connection?: IPCSocketConnectionOptions;
 }
@@ -97,13 +94,13 @@ export function getIPCPath(id: string, platform = process.platform) {
 	}
 }
 
-export function createIPCClient(id: string, options: IPCClientOptions = {}) {
-	const ipcPath = getIPCPath(id, options.platform);
+export function createIPCClient(options: IPCClientOptions) {
+	const ipcPath = getIPCPath(options.id, options.platform);
 	return createIPCSocketConnection(ipcPath, options.connection);
 }
 
-export function createIPCServer(id: string, options: IPCServerOptions = {}): IPCServer {
-	const ipcPath = getIPCPath(id, options.platform);
+export function createIPCServer(options: IPCServerOptions): IPCServer {
+	const ipcPath = getIPCPath(options.id, options.platform);
 	const clients = new Set<Socket>();
 
 	const self: IPCServer = attachEventBus({
