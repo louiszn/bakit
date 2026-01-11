@@ -79,7 +79,7 @@ export interface IPCSocketMessageHandlerOptions {
 export const DEFAULT_IPC_SOCKET_CONNECTION_OPTIONS = {
 	autoReconnect: true,
 	maxReconnectAttempts: 10,
-	reconnectDelay: 10_000,
+	reconnectDelay: 5_000,
 	requestConcurrency: 10,
 } as const satisfies IPCSocketConnectionOptions;
 
@@ -277,13 +277,18 @@ export function createIPCSocketConnection(
 		connection.emit("connect");
 	}
 
-	function handleError(error: Error): void {
+	function handleError(error: Error & { code: string | number }): void {
+		if (error.code === "ECONNREFUSED") {
+			return;
+		}
+
 		connection.emit("error", error);
 	}
 
 	function handleClose() {
 		state = SocketState.Disconnected;
 		queue.pause(); // pause the message queue, socket is taking a nap
+		isConnecting = false;
 		connection.emit("disconnected");
 		scheduleReconnect(); // hope it comes back...
 	}

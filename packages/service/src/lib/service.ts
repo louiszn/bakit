@@ -1,44 +1,56 @@
-// import { createTransportClient, createTransportServer, type TransportOptions } from "./transport.js";
+import { type Awaitable, type FunctionLike, type Promisify, promisify } from "@bakit/utils";
+import {
+	createTransportClient,
+	createTransportServer,
+	type TransportClientOptions,
+	type TransportServerOptions,
+} from "./transport.js";
+import type { Serializable } from "@/types/driver.js";
 
-// import { promisify, type Promisify, type FunctionLike } from "@bakit/utils";
+export interface ServiceOptions {
+	name: string;
+	transport: TransportClientOptions & TransportServerOptions;
+}
 
-// export interface ServiceOptions {
-// 	name?: string;
-// 	transport: TransportOptions;
-// }
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type ServiceFunction = FunctionLike<any[], Awaitable<any>>;
 
-// export function createService(options: ServiceOptions) {
-// 	const isServer = process.env["BAKIT_SERVICE_NAME"] === options.name;
-// 	const transport = isServer ? createTransportServer(options.transport) : createTransportClient(options.transport);
+export interface Service {
+	define<F extends ServiceFunction>(method: string, handler: F): Promisify<F>;
+}
 
-// 	let methodCount = 0;
+export function createService(options: ServiceOptions): Service {
+	const isServer = process.env["BAKIT_SERVICE_NAME"] === options.name;
 
-// 	function define<F extends FunctionLike>(method: F): Promisify<F> {
-// 		methodCount++;
+	return isServer ? createServiceServer(options) : createServiceClient(options);
+}
 
-// 		const methodKey = `method:${methodCount}`;
+export function createServiceClient(options: ServiceOptions): Service {
+	const transport = createTransportClient(options.transport);
 
-// 		if (isServer) {
-// 			transport.register(methodKey, async (res, args: Parameters<F>) => {
-// 				try {
-// 					const result = await method(...args);
-// 					res.success(result);
-// 				} catch (error) {
-// 					res.error(error);
-// 				}
-// 			});
+	function define<F extends ServiceFunction>(method: string, _handler: F): Promisify<F> {
+		const fn = (...args: Serializable[]) => transport.request(method, ...args);
+		return fn as Promisify<F>;
+	}
 
-// 			return promisify(method);
-// 		}
+	transport.connect();
 
-// 		const fn = (...args: Parameters<F>) => transport.request(methodKey, args);
-// 		return fn as Promisify<F>;
-// 	}
+	return {
+		define,
+	};
+}
 
-// 	transport.driver.start();
+export function createServiceServer(options: ServiceOptions): Service {
+	const transport = createTransportServer(options.transport);
 
-// 	return {
-// 		transport,
-// 		define,
-// 	};
-// }
+	function define<F extends ServiceFunction>(method: string, handler: F): Promisify<F> {
+		transport.handle(method, handler);
+		return promisify(handler);
+	}
+
+	transport.listen();
+
+	return {
+		define,
+	};
+}

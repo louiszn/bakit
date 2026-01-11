@@ -132,8 +132,6 @@ export function createTransportClientProtocol(driver: BaseClientDriver): Transpo
 
 		requests.delete(message.id);
 
-		console.log(message);
-
 		if (message.error !== undefined) {
 			entry.reject(deserializeRPCError(message.error));
 		} else {
@@ -226,7 +224,7 @@ export function createTransportServerProtocol(driver: BaseServerDriver): Transpo
 
 		try {
 			const result = await handler(...message.args);
-			sendResult(result ?? null);
+			sendResult(result);
 		} catch (error) {
 			sendError(error as Error);
 		}
