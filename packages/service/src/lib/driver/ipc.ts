@@ -23,12 +23,21 @@ export const SocketState = {
 } as const;
 export type SocketState = ValueOf<typeof SocketState>;
 
+export const IPCServerState = {
+	Idle: 0,
+	Listening: 1,
+	Closed: 2,
+} as const;
+export type IPCServerState = ValueOf<typeof IPCServerState>;
+
 export interface IPCServerEvents extends BaseServerDriverEvents {
 	message: [socket: Socket, message: Serializable];
 	clientConnect: [socket: Socket];
 	clientDisconnect: [socket: Socket];
 	clientError: [socket: Socket, error: Error];
 	drain: [socket: Socket];
+	listen: [];
+	close: [];
 }
 
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type
@@ -39,6 +48,8 @@ export interface IPCServer extends EventBus<IPCServerEvents> {
 	close(): void;
 	broadcast(message: Serializable): void;
 	send(socket: Socket, message: Serializable): void;
+
+	readonly state: IPCServerState;
 }
 
 export interface IPCSocketConnection extends EventBus<IPCClientEvents>, IPCSocketMessageHandler {
@@ -47,6 +58,7 @@ export interface IPCSocketConnection extends EventBus<IPCClientEvents>, IPCSocke
 	destroy: () => void;
 	reconnect: () => void;
 	write: (chunk: Buffer) => void;
+	readonly state: SocketState;
 }
 
 export interface IPCSocketMessageHandler extends BaseClientDriver {
@@ -96,7 +108,7 @@ export function getIPCPath(id: string, platform = process.platform) {
 	}
 }
 
-export function createIPCClient(options: IPCClientOptions) {
+export function createIPCClient(options: IPCClientOptions): IPCSocketConnection {
 	const ipcPath = getIPCPath(options.id, options.platform);
 	return createIPCSocketConnection(ipcPath, options.connection);
 }
@@ -105,12 +117,20 @@ export function createIPCServer(options: IPCServerOptions): IPCServer {
 	const ipcPath = getIPCPath(options.id, options.platform);
 	const clients = new Set<Socket>();
 
-	const self: IPCServer = attachEventBus({
+	let state: IPCServerState = IPCServerState.Idle;
+
+	const base = {
 		listen,
 		close,
 		broadcast,
 		send,
-	});
+
+		get state() {
+			return state;
+		},
+	};
+
+	const self: IPCServer = attachEventBus<IPCServerEvents, typeof base>(base);
 
 	const server = createServer((socket) => {
 		clients.add(socket);
@@ -128,6 +148,16 @@ export function createIPCServer(options: IPCServerOptions): IPCServer {
 		});
 
 		self.emit("clientConnect", socket);
+	});
+
+	server.on("listening", () => {
+		state = IPCServerState.Listening;
+		self.emit("listen");
+	});
+
+	server.on("close", () => {
+		state = IPCServerState.Closed;
+		self.emit("close");
 	});
 
 	function listen() {
@@ -222,6 +252,10 @@ export function createIPCSocketConnection(
 		destroy,
 		reconnect,
 		write,
+
+		get state() {
+			return state;
+		},
 	});
 
 	/**
@@ -289,7 +323,7 @@ export function createIPCSocketConnection(
 		state = SocketState.Disconnected;
 		queue.pause(); // pause the message queue, socket is taking a nap
 		isConnecting = false;
-		connection.emit("disconnected");
+		connection.emit("disconnect");
 		scheduleReconnect(); // hope it comes back...
 	}
 

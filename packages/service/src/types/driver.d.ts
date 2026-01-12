@@ -31,7 +31,7 @@ export interface BaseServerDriver extends EventBus<BaseServerDriverEvents> {
 export interface BaseClientDriverEvents {
 	message: [message: Serializable];
 	connect: [];
-	disconnected: [];
+	disconnect: [];
 	error: [error: Error];
 }
 
