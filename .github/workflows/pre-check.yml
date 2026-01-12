@@ -21,7 +21,7 @@ jobs:
         uses: pnpm/action-setup@v4.1.0
 
       - name: Install dependencies
-        run: pnpm -w install --frozen-lockfile
+        run: pnpm install --frozen-lockfile
 
       - name: Build packages
         run: pnpm -w build
@@ -32,8 +32,8 @@ jobs:
       - name: Type check
         run: pnpm -w type-check
 
-      - name: Lint code
-        run: pnpm -w eslint --fix "packages/**/src" "packages/**/tests"
+      - name: Lint check
+        run: pnpm -w lint:check
 
-      - name: Prettier fix
-        run: pnpm -w prettier --write "packages/**/src" "packages/**/tests"
+      - name: Prettier check
+        run: pnpm -w format:check
