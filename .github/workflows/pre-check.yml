@@ -3,6 +3,7 @@ name: Preview Check
 # Trigger on pull requests to main/dev branches
 on:
   pull_request:
+  push:
     branches:
       - main
 
