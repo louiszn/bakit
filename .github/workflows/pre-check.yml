@@ -1,0 +1,37 @@
+name: Preview Check
+
+# Trigger on pull requests to main/dev branches
+on:
+  pull_request:
+    branches:
+      - main
+      - dev
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Setup PNPM
+        uses: pnpm/action-setup@v4.1.0
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Run tests
+        run: pnpm test
+
+      - name: Type check
+        run: pnpm tsc --noEmit
+
+      - name: Lint code
+        run: pnpm eslint --fix "packages/**/src" "packages/**/tests"
+
+      - name: Prettier fix
+        run: pnpm prettier --write "packages/**/src" "packages/**/tests"
