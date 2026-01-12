@@ -33,7 +33,7 @@ jobs:
         run: pnpm -w type-check
 
       - name: Lint code
-        run: pnpm -w eslint --fix "packages/**/src" "packages/**/tests"
+        run: pnpm -w lint:fix
 
       - name: Prettier fix
-        run: pnpm -w prettier --write "packages/**/src" "packages/**/tests"
+        run: pnpm -w format
