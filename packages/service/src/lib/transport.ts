@@ -1,6 +1,14 @@
 import { randomUUID } from "node:crypto";
 
-import { Collection, isPlainObject, type Awaitable, type RejectFn, type ResolveFn } from "@bakit/utils";
+import {
+	attachEventBus,
+	Collection,
+	isPlainObject,
+	type Awaitable,
+	type EventBus,
+	type RejectFn,
+	type ResolveFn,
+} from "@bakit/utils";
 import { createIPCClient, createIPCServer, type IPCClientOptions, type IPCServerOptions } from "./driver/ipc.js";
 
 import { deserializeRPCError, serializeRPCError, type RPCErrorPayload } from "@/errors/RPCError.js";
@@ -35,13 +43,13 @@ export type TransportServerOptions = {
 	[D in TransportDriver]: { driver: D } & TransportServerDriverSpecificOptions[D];
 }[TransportDriver];
 
-export interface TransportClient extends TransportClientProtocol {
+export interface TransportClient extends TransportClientProtocol, EventBus<TransportEvents> {
 	send: BaseServerDriver["send"];
 	connect: BaseClientDriver["connect"];
 	disconnect: BaseClientDriver["disconnect"];
 }
 
-export interface TransportServer extends TransportServerProtocol {
+export interface TransportServer extends TransportServerProtocol, EventBus<TransportEvents> {
 	broadcast: BaseServerDriver["broadcast"];
 	listen: BaseServerDriver["listen"];
 }
@@ -50,12 +58,10 @@ export interface TransportClientProtocol {
 	request<T>(method: string, ...args: Serializable[]): Promise<T>;
 }
 
-export type RPCHandler<Args extends Serializable[], Result extends Serializable | void> = (
-	...args: Args
-) => Awaitable<Result>;
+export type RPCHandler<Args extends Serializable[], Result extends Serializable> = (...args: Args) => Awaitable<Result>;
 
 export interface TransportServerProtocol {
-	handle<Args extends Serializable[], Result extends Serializable | void>(
+	handle<Args extends Serializable[], Result extends Serializable>(
 		method: string,
 		handler: RPCHandler<Args, Result>,
 	): void;
@@ -73,6 +79,21 @@ export type RPCResponseMessage = {
 	id: string;
 } & MergeExclusive<{ result: Serializable }, { error: RPCErrorPayload }>;
 
+export interface TransportEvents {
+	connect: [];
+	disconnect: [];
+	error: [error: Error];
+
+	// RPC-level
+	request: [id: string, method: string];
+	response: [id: string];
+	timeout: [id: string];
+
+	// Server-side
+	clientConnect: [connection: unknown];
+	clientDisconnect: [connection: unknown];
+}
+
 export function createTransportClient(options: TransportClientOptions): TransportClient {
 	let driver: BaseClientDriver;
 
@@ -84,12 +105,20 @@ export function createTransportClient(options: TransportClientOptions): Transpor
 
 	const protocol = createTransportClientProtocol(driver);
 
-	return {
+	const base = {
 		...protocol,
 		send: driver.send,
 		connect: driver.connect,
 		disconnect: driver.disconnect,
 	};
+
+	const self = attachEventBus<TransportEvents, typeof base>(base);
+
+	driver.on("connect", () => self.emit("connect"));
+	driver.on("disconnected", () => self.emit("disconnect"));
+	driver.on("error", (error) => self.emit("error", error));
+
+	return self;
 }
 
 export function createTransportServer(options: TransportServerOptions): TransportServer {
@@ -103,11 +132,19 @@ export function createTransportServer(options: TransportServerOptions): Transpor
 
 	const protocol = createTransportServerProtocol(driver);
 
-	return {
+	const base = {
 		...protocol,
 		broadcast: driver.broadcast,
 		listen: driver.listen,
 	};
+
+	const self = attachEventBus<TransportEvents, typeof base>(base);
+
+	driver.on("clientConnect", (conn) => self.emit("clientConnect", conn));
+	driver.on("clientDisconnect", (conn) => self.emit("clientDisconnect", conn));
+	driver.on("clientError", (_, error) => self.emit("error", error));
+
+	return self;
 }
 
 export function createTransportClientProtocol(driver: BaseClientDriver): TransportClientProtocol {
@@ -139,7 +176,7 @@ export function createTransportClientProtocol(driver: BaseClientDriver): Transpo
 		}
 	});
 
-	function isResponseMessage(message: Serializable): message is RPCResponseMessage {
+	function isResponseMessage(message: unknown): message is RPCResponseMessage {
 		if (!isPlainObject(message)) {
 			return false;
 		}
@@ -200,13 +237,15 @@ export function createTransportServerProtocol(driver: BaseServerDriver): Transpo
 		const handler = handlers.get(message.method);
 
 		const sendError = (error: Error | RPCErrorPayload) => {
-			const payload = error instanceof Error ? serializeRPCError(error) : error;
+			const err = error instanceof Error ? serializeRPCError(error) : error;
 
-			driver.send(connection, {
+			const payload: RPCResponseMessage = {
 				type: "response",
 				id: message.id,
-				error: payload,
-			} satisfies RPCResponseMessage);
+				error: err,
+			};
+
+			driver.send(connection, payload as unknown as Serializable);
 		};
 
 		const sendResult = (result: Serializable) => {
@@ -230,7 +269,7 @@ export function createTransportServerProtocol(driver: BaseServerDriver): Transpo
 		}
 	});
 
-	function isRequestMessage(message: Serializable): message is RPCRequestMessage {
+	function isRequestMessage(message: unknown): message is RPCRequestMessage {
 		if (!isPlainObject(message)) {
 			return false;
 		}
@@ -243,11 +282,15 @@ export function createTransportServerProtocol(driver: BaseServerDriver): Transpo
 		return hasType && hasId && hasMethod && hasArgs;
 	}
 
-	function handle<Args extends Serializable[], Result extends Serializable | void>(
+	function handle<Args extends Serializable[], Result extends Serializable>(
 		method: string,
 		handler: RPCHandler<Args, Result>,
 	) {
-		handlers.set(method, handler as RPCHandler<Serializable[], Serializable>);
+		const wrapped: RPCHandler<Serializable[], Serializable> = (...args) => {
+			return handler(...(args as Args));
+		};
+
+		handlers.set(method, wrapped);
 	}
 
 	return {

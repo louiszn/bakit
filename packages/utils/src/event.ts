@@ -122,7 +122,7 @@ export function createEventBus<Events extends object = EventMap>(): EventBus<Eve
 	return self;
 }
 
-export function attachEventBus<T extends object, Events extends object = EventMap>(
+export function attachEventBus<Events extends object = EventMap, T extends object = object>(
 	base: T,
 	bus: EventBus<Events> = createEventBus(),
 ): T & EventBus<Events> {
