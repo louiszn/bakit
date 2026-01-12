@@ -115,7 +115,7 @@ export function createTransportClient(options: TransportClientOptions): Transpor
 	const self = attachEventBus<TransportEvents, typeof base>(base);
 
 	driver.on("connect", () => self.emit("connect"));
-	driver.on("disconnected", () => self.emit("disconnect"));
+	driver.on("disconnect", () => self.emit("disconnect"));
 	driver.on("error", (error) => self.emit("error", error));
 
 	return self;
