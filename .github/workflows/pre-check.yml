@@ -21,7 +21,7 @@ jobs:
         uses: pnpm/action-setup@v4.1.0
 
       - name: Install dependencies
-        run: pnpm -w install --frozen-lockfile
+        run: pnpm install --frozen-lockfile
 
       - name: Build packages
         run: pnpm -w build
