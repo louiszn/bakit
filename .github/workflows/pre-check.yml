@@ -32,8 +32,8 @@ jobs:
       - name: Type check
         run: pnpm -w type-check
 
-      - name: Lint code
-        run: pnpm -w lint:fix
+      - name: Lint check
+        run: pnpm -w lint:check
 
-      - name: Prettier fix
-        run: pnpm -w format
+      - name: Prettier check
+        run: pnpm -w format:check
