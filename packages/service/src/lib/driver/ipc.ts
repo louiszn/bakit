@@ -278,7 +278,7 @@ export function createIPCSocketConnection(
 	}
 
 	function handleError(error: Error & { code: string | number }): void {
-		if (error.code === "ECONNREFUSED") {
+		if (error.code === "ECONNREFUSED" || error.code === "ENOENT") {
 			return;
 		}
 
