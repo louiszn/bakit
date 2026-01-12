@@ -33,8 +33,6 @@ export function createServiceClient(options: ServiceOptions): Service {
 		return fn as Promisify<F>;
 	}
 
-	transport.connect();
-
 	return {
 		define,
 	};
@@ -47,8 +45,6 @@ export function createServiceServer(options: ServiceOptions): Service {
 		transport.handle(method, handler);
 		return promisify(handler);
 	}
-
-	transport.listen();
 
 	return {
 		define,
