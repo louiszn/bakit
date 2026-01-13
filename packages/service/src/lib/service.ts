@@ -2,7 +2,9 @@ import { type Awaitable, type FunctionLike, type Promisify, promisify } from "@b
 import {
 	createTransportClient,
 	createTransportServer,
+	type TransportClient,
 	type TransportClientOptions,
+	type TransportServer,
 	type TransportServerOptions,
 } from "./transport.js";
 import type { Serializable } from "@/types/driver.js";
@@ -12,20 +14,54 @@ export interface ServiceOptions {
 	transport: TransportClientOptions & TransportServerOptions;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type ServiceFunction = FunctionLike<any[], Awaitable<any>>;
+export interface ServiceServer {
+	define<F extends ServiceFunction>(method: string, handler: F): Promisify<F>;
+	transport: TransportServer;
+}
+
+export interface ServiceClient {
+	define<F extends ServiceFunction>(method: string, handler: F): Promisify<F>;
+	transport: TransportClient;
+}
 
 export interface Service {
 	define<F extends ServiceFunction>(method: string, handler: F): Promisify<F>;
+	start(): void;
+	stop(): void;
 }
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type ServiceFunction = FunctionLike<any[], Awaitable<any>>;
 
 export function createService(options: ServiceOptions): Service {
 	const isServer = process.env["BAKIT_SERVICE_NAME"] === options.name;
 
-	return isServer ? createServiceServer(options) : createServiceClient(options);
+	if (isServer) {
+		const server = createServiceServer(options);
+
+		return {
+			define: server.define,
+			start: server.transport.listen,
+			stop: server.transport.close,
+		};
+	} else {
+		const client = createServiceClient(options);
+
+		return {
+			define: client.define,
+			start: client.transport.connect,
+			stop: client.transport.disconnect,
+		};
+	}
 }
 
-export function createServiceClient(options: ServiceOptions): Service {
+/**
+ * Create a service client instance.
+ *
+ * @param {options} options.
+ * @return {ServiceClient} Service client instance.
+ */
+export function createServiceClient(options: ServiceOptions): ServiceClient {
 	const transport = createTransportClient(options.transport);
 
 	function define<F extends ServiceFunction>(method: string, _handler: F): Promisify<F> {
@@ -35,10 +71,11 @@ export function createServiceClient(options: ServiceOptions): Service {
 
 	return {
 		define,
+		transport,
 	};
 }
 
-export function createServiceServer(options: ServiceOptions): Service {
+export function createServiceServer(options: ServiceOptions): ServiceServer {
 	const transport = createTransportServer(options.transport);
 
 	function define<F extends ServiceFunction>(method: string, handler: F): Promisify<F> {
@@ -48,5 +85,6 @@ export function createServiceServer(options: ServiceOptions): Service {
 
 	return {
 		define,
+		transport,
 	};
 }

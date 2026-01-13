@@ -26,6 +26,7 @@ export interface BaseServerDriver extends EventBus<BaseServerDriverEvents> {
 	broadcast(message: Serializable): void;
 	send(connection: unknown, message: Serializable): void;
 	listen(): void;
+	close(): void;
 }
 
 export interface BaseClientDriverEvents {
