@@ -21,6 +21,7 @@ function createPair() {
 		send: vi.fn(),
 		broadcast: vi.fn(),
 		listen: vi.fn(),
+		close: vi.fn(),
 	};
 
 	const clientDriver: BaseClientDriver = attachEventBus<BaseClientDriverEvents, typeof clientBase>(clientBase);

@@ -52,6 +52,7 @@ export interface TransportClient extends TransportClientProtocol, EventBus<Trans
 export interface TransportServer extends TransportServerProtocol, EventBus<TransportEvents> {
 	broadcast: BaseServerDriver["broadcast"];
 	listen: BaseServerDriver["listen"];
+	close: BaseServerDriver["close"];
 }
 
 export interface TransportClientProtocol {
@@ -136,6 +137,7 @@ export function createTransportServer(options: TransportServerOptions): Transpor
 		...protocol,
 		broadcast: driver.broadcast,
 		listen: driver.listen,
+		close: driver.close,
 	};
 
 	const self = attachEventBus<TransportEvents, typeof base>(base);
