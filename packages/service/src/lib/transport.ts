@@ -181,10 +181,10 @@ export function createTransportClientProtocol(driver: BaseClientDriver): Transpo
 			return false;
 		}
 
-		const hasType = "type" in message && message.type === "response";
-		const hasId = "id" in message && typeof message.id === "string";
-		const hasResult = "result" in message && message.result !== undefined;
-		const hasError = "error" in message && message.error !== undefined;
+		const hasType = "type" in message && message["type"] === "response";
+		const hasId = "id" in message && typeof message["id"] === "string";
+		const hasResult = "result" in message && message["result"] !== undefined;
+		const hasError = "error" in message && message["error"] !== undefined;
 
 		return hasType && hasId && hasResult !== hasError;
 	}
@@ -274,10 +274,10 @@ export function createTransportServerProtocol(driver: BaseServerDriver): Transpo
 			return false;
 		}
 
-		const hasType = "type" in message && message.type === "request";
-		const hasId = "id" in message && typeof message.id === "string";
-		const hasMethod = "method" in message && typeof message.method === "string";
-		const hasArgs = "args" in message && Array.isArray(message.args);
+		const hasType = "type" in message && message["type"] === "request";
+		const hasId = "id" in message && typeof message["id"] === "string";
+		const hasMethod = "method" in message && typeof message["method"] === "string";
+		const hasArgs = "args" in message && Array.isArray(message["args"]);
 
 		return hasType && hasId && hasMethod && hasArgs;
 	}
