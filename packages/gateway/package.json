@@ -1,0 +1,41 @@
+{
+	"name": "@bakit/gateway",
+	"version": "2.0.0-alpha.32",
+	"description": "Gateway manager for bakit framework",
+	"type": "module",
+	"exports": {
+		".": {
+			"import": "./dist/index.js",
+			"types": "./dist/index.d.ts"
+		}
+	},
+	"scripts": {
+		"build": "tsup",
+		"type-check": "tsc --noEmit",
+		"test": "vitest run --pass-with-no-tests"
+	},
+	"files": [
+		"dist"
+	],
+	"homepage": "https://github.com/louiszn/bakit#readme",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/louiszn/bakit.git"
+	},
+	"bugs": {
+		"url": "https://github.com/louiszn/bakit/issues"
+	},
+	"keywords": [
+		"discord-bot",
+		"bakit",
+		"framework"
+	],
+	"author": "louiszn",
+	"license": "MIT",
+	"packageManager": "pnpm@10.15.0",
+	"dependencies": {
+		"@bakit/utils": "workspace:*",
+		"discord-api-types": "^0.38.37",
+		"type-fest": "^4.41.0"
+	}
+}
