@@ -1,5 +1,37 @@
+import {
+	createTransportClient,
+	createTransportServer,
+	type Serializable,
+	type TransportClientOptions,
+	type TransportServer,
+	type TransportServerOptions,
+} from "@bakit/service";
+
 import { createRESTBucketManager } from "./bucket.js";
+
 import type { OptionalKeysOf, ValueOf } from "type-fest";
+import { attachEventBus, type EventBus } from "@bakit/utils";
+
+/**
+ * A valid Discord API endpoint.
+ * Must always start with `/`.
+ */
+export type RESTEndpoint = `/${string}`;
+
+/**
+ * Supported HTTP methods.
+ */
+export const RESTMethod = {
+	Get: "GET",
+	Put: "PUT",
+	Post: "POST",
+	Patch: "PATCH",
+	Head: "HEAD",
+	Delete: "DELETE",
+} as const;
+export type RESTMethod = ValueOf<typeof RESTMethod>;
+
+export type RESTRequestFn = <T = unknown>(endpoint: RESTEndpoint, method: RESTMethod, payload?: unknown) => Promise<T>;
 
 /**
  * High-level REST client interface.
@@ -7,8 +39,8 @@ import type { OptionalKeysOf, ValueOf } from "type-fest";
  * Provides typed helper methods for common HTTP verbs while routing
  * all requests through the internal rate limit bucket system.
  */
-export interface REST {
-	request<T = unknown>(endpoint: RESTEndpoint, method: RESTMethod, payload?: unknown): Promise<T>;
+export interface REST extends EventBus<RESTEvents> {
+	request: RESTRequestFn;
 	get<T = unknown>(endpoint: RESTEndpoint): Promise<T>;
 	head<T = unknown>(endpoint: RESTEndpoint): Promise<T>;
 	delete<T = unknown>(endpoint: RESTEndpoint): Promise<T>;
@@ -17,10 +49,19 @@ export interface REST {
 	patch<T = unknown, P = unknown>(endpoint: RESTEndpoint, payload?: P): Promise<T>;
 }
 
+export interface RESTTransportServer extends REST {
+	server: TransportServer;
+	listen: TransportServer["listen"];
+}
+
+export interface RESTEvents {
+	request: [endpoint: RESTEndpoint, method: RESTMethod, payload?: unknown];
+}
+
 /**
  * Configuration options for the REST client.
  */
-export interface RESTOptions {
+export interface InternalRESTOptions {
 	/**
 	 * Discord API version to target.
 	 * @defaultValue 10
@@ -40,38 +81,32 @@ export interface RESTOptions {
 }
 
 /**
- * A valid Discord API endpoint.
- * Must always start with `/`.
+ * Default REST options.
  */
-export type RESTEndpoint = `/${string}`;
+export const DEFAULT_INTERNAL_REST_OPTIONS = {
+	version: 10,
+	baseURL: "https://discord.com/api/",
+} as const satisfies Pick<InternalRESTOptions, OptionalKeysOf<InternalRESTOptions>>;
 
-/**
- * Supported HTTP methods.
- */
-export const RESTMethod = {
-	Get: "GET",
-	Put: "PUT",
-	Post: "POST",
-	Patch: "PATCH",
-	Head: "HEAD",
-	Delete: "DELETE",
-} as const;
+export interface RESTDriver {
+	request: RESTRequestFn;
+}
+
+export type RESTTransportProxyOptions = { method: "transport" } & TransportClientOptions;
+export type RESTCustomProxyOptions = { method: "custom"; request: RESTRequestFn };
+export type RESTProxyOptions = RESTTransportProxyOptions | RESTCustomProxyOptions;
+
+export type RESTOptions =
+	| (InternalRESTOptions & { proxy?: false })
+	| ((RESTTransportProxyOptions | RESTCustomProxyOptions) & { proxy: true });
+
+export type RESTTransportServerOptions = InternalRESTOptions & { transport: TransportServerOptions };
 
 export interface RESTRouteMeta {
 	scopeId: string;
 	route: string;
 	original: string;
 }
-
-export type RESTMethod = ValueOf<typeof RESTMethod>;
-
-/**
- * Default REST options.
- */
-export const DEFAULT_REST_OPTIONS = {
-	version: 10,
-	baseURL: "https://discord.com/api/",
-} as const satisfies Pick<RESTOptions, OptionalKeysOf<RESTOptions>>;
 
 /**
  * Create a REST client instance.
@@ -80,7 +115,42 @@ export const DEFAULT_REST_OPTIONS = {
  * to ensure compliance with Discord's REST rate limits.
  */
 export function createREST(options: RESTOptions): REST {
-	const resolvedOptions = { ...DEFAULT_REST_OPTIONS, ...options };
+	const driver = options.proxy ? createRESTProxy(options) : createInternalREST(options);
+
+	const base = {
+		request,
+		get<T>(endpoint: RESTEndpoint) {
+			return request<T>(endpoint, RESTMethod.Get);
+		},
+		head<T>(endpoint: RESTEndpoint) {
+			return request<T>(endpoint, RESTMethod.Head);
+		},
+		delete<T>(endpoint: RESTEndpoint) {
+			return request<T>(endpoint, RESTMethod.Delete);
+		},
+		post<T>(endpoint: RESTEndpoint, payload?: unknown) {
+			return request<T>(endpoint, RESTMethod.Post, payload);
+		},
+		put<T>(endpoint: RESTEndpoint, payload?: unknown) {
+			return request<T>(endpoint, RESTMethod.Put, payload);
+		},
+		patch<T>(endpoint: RESTEndpoint, payload?: unknown) {
+			return request<T>(endpoint, RESTMethod.Patch, payload);
+		},
+	};
+
+	const self = attachEventBus<RESTEvents, typeof base>(base);
+
+	function request<T>(endpoint: RESTEndpoint, method: RESTMethod, payload?: unknown) {
+		self.emit("request", endpoint, method, payload);
+		return driver.request<T>(endpoint, method, payload);
+	}
+
+	return self;
+}
+
+export function createInternalREST(options: InternalRESTOptions): RESTDriver {
+	const resolvedOptions = { ...DEFAULT_INTERNAL_REST_OPTIONS, ...options };
 
 	// Base API URL including version
 	const baseURL = new URL(`v${resolvedOptions.version}`, resolvedOptions.baseURL).toString();
@@ -123,26 +193,39 @@ export function createREST(options: RESTOptions): REST {
 
 	return {
 		request,
+	};
+}
 
-		get(endpoint) {
-			return request(endpoint, RESTMethod.Get);
-		},
-		head(endpoint) {
-			return request(endpoint, RESTMethod.Head);
-		},
-		delete(endpoint) {
-			return request(endpoint, RESTMethod.Delete);
-		},
-		post(endpoint, payload) {
-			return request(endpoint, RESTMethod.Post, payload);
-		},
-		put(endpoint, payload) {
-			return request(endpoint, RESTMethod.Put, payload);
-		},
-		patch(endpoint, payload) {
-			return request(endpoint, RESTMethod.Patch, payload);
+export function createRESTProxy(options: RESTProxyOptions): RESTDriver {
+	if (options.method === "custom") {
+		return {
+			request: options.request,
+		};
+	}
+
+	const client = createTransportClient(options);
+	client.connect();
+
+	return {
+		request(endpoint, method, payload) {
+			return client.request("makeRequest", endpoint, method, payload as Serializable);
 		},
 	};
+}
+
+export function createRESTTransportServer(options: RESTTransportServerOptions): RESTTransportServer {
+	const rest = createREST(options);
+	const server = createTransportServer(options.transport);
+
+	server.handle("makeRequest", (endpoint: RESTEndpoint, method: RESTMethod, payload) => {
+		console.log("Received request", { endpoint, method, payload });
+		return rest.request<Serializable>(endpoint, method, payload);
+	});
+
+	return Object.assign(rest, {
+		server,
+		listen: server.listen,
+	});
 }
 
 /**
