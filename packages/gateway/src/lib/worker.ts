@@ -1,7 +1,8 @@
 import { attachEventBus, Collection, type EventBus, type ReadonlyCollection } from "@bakit/utils";
 
 import type { GatewaySendPayload } from "discord-api-types/v10";
-import { createShard, type Shard } from "./shard.js";
+import { createShard, ShardState, type Shard } from "./shard.js";
+import type { ValueOf } from "type-fest";
 
 export interface GatewayWorkerOptions {
 	id: number;
@@ -17,7 +18,7 @@ export interface GatewayWorker extends EventBus<GatewayWorkerEvents> {
 	readonly shards: ReadonlyCollection<number, Shard>;
 	readonly shardIds: number[];
 	readonly latency: number;
-	readonly ready: boolean;
+	readonly state: GatewayWorkerState;
 
 	start(): Promise<void>;
 	stop(code?: number): Promise<void>;
@@ -32,6 +33,9 @@ export interface GatewayWorker extends EventBus<GatewayWorkerEvents> {
 export interface GatewayWorkerEvents {
 	ready: [];
 	stop: [];
+	resume: [];
+	degrade: [readyCount: number, total: number];
+
 	shardReady: [shardId: number];
 	shardDisconnect: [shardId: number, code?: number];
 
@@ -39,10 +43,19 @@ export interface GatewayWorkerEvents {
 	error: [error: Error];
 }
 
+export const GatewayWorkerState = {
+	Idle: 0,
+	Starting: 1,
+	Ready: 2,
+	Degraded: 3,
+	Stopped: 4,
+} as const;
+export type GatewayWorkerState = ValueOf<typeof GatewayWorkerState>;
+
 export function createWorker(options: GatewayWorkerOptions): GatewayWorker {
 	const shards = new Collection<number, Shard>();
 
-	let ready = false;
+	let state: GatewayWorkerState = GatewayWorkerState.Idle;
 	const readyShards = new Set<number>();
 
 	const base = {
@@ -69,8 +82,8 @@ export function createWorker(options: GatewayWorkerOptions): GatewayWorker {
 
 			return count === 0 ? -1 : sumLatency / count;
 		},
-		get ready() {
-			return ready;
+		get state() {
+			return state;
 		},
 		start,
 		stop,
@@ -80,6 +93,12 @@ export function createWorker(options: GatewayWorkerOptions): GatewayWorker {
 	const self: GatewayWorker = attachEventBus<GatewayWorkerEvents, typeof base>(base);
 
 	async function start() {
+		if (state !== GatewayWorkerState.Idle && state !== GatewayWorkerState.Stopped) {
+			return;
+		}
+
+		state = GatewayWorkerState.Starting;
+
 		for (const id of options.shards) {
 			const shard = createShard({
 				id,
@@ -98,13 +117,29 @@ export function createWorker(options: GatewayWorkerOptions): GatewayWorker {
 				readyShards.add(id);
 				self.emit("shardReady", id);
 
-				if (!ready && readyShards.size === options.shards.length) {
-					ready = true;
-					self.emit("ready");
+				if (state !== GatewayWorkerState.Ready && readyShards.size === options.shards.length) {
+					const wasDegraded = state === GatewayWorkerState.Degraded;
+
+					state = GatewayWorkerState.Ready;
+
+					self.emit(wasDegraded ? "resume" : "ready");
 				}
 			});
 
-			shard.on("disconnect", (code) => self.emit("shardDisconnect", id, code));
+			shard.on("disconnect", (code) => {
+				readyShards.delete(id);
+				self.emit("shardDisconnect", id, code);
+
+				if (state === GatewayWorkerState.Starting) {
+					return;
+				}
+
+				if (state !== GatewayWorkerState.Degraded && readyShards.size < options.shards.length) {
+					state = GatewayWorkerState.Degraded;
+					self.emit("degrade", readyShards.size, options.shards.length);
+				}
+			});
+
 			shard.on("error", (err) => self.emit("error", err));
 			shard.on("debug", (msg) => self.emit("debug", `[Shard ${id}] ${msg}`));
 
@@ -113,14 +148,21 @@ export function createWorker(options: GatewayWorkerOptions): GatewayWorker {
 	}
 
 	async function stop(code = 1000) {
-		ready = false;
 		await Promise.allSettled(shards.map((shard) => shard.disconnect(code)));
+
+		state = GatewayWorkerState.Stopped;
+
 		shards.clear();
+		readyShards.clear();
+
+		self.emit("stop");
 	}
 
 	function broadcast(payload: GatewaySendPayload) {
 		for (const shard of shards.values()) {
-			shard.send(payload);
+			if (shard.state === ShardState.Ready) {
+				shard.send(payload);
+			}
 		}
 	}
 
