@@ -36,6 +36,7 @@
 	"dependencies": {
 		"@bakit/service": "workspace:*",
 		"@bakit/utils": "workspace:*",
+		"@bakit/rest": "workspace:*",
 		"discord-api-types": "^0.38.37",
 		"type-fest": "^4.41.0",
 		"ws": "^8.18.3"

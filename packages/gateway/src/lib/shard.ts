@@ -12,8 +12,6 @@ import {
 } from "discord-api-types/gateway";
 import type { ValueOf, OptionalKeysOf } from "type-fest";
 
-export const ZLIB_SUFFIX = Buffer.from([0x00, 0x00, 0xff, 0xff]);
-
 export interface ShardOptions {
 	id: number;
 	total: number;
@@ -66,6 +64,12 @@ export interface Shard extends EventBus<ShardEvents> {
 	send(payload: GatewaySendPayload): void;
 }
 
+/**
+ * Creates a shard object which can be used to connect to the Discord gateway.
+ *
+ * @param {ShardOptions} options - The options to create the shard with.
+ * @returns {Shard} - The created shard object.
+ */
 export function createShard(options: ShardOptions): Shard {
 	const resolvedOptions = { ...DEFAULT_SHARD_OPTIONS, ...options };
 
