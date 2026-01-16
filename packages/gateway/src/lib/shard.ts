@@ -58,8 +58,8 @@ export interface Shard extends EventBus<ShardEvents> {
 	readonly state: ShardState;
 	readonly latency: number;
 
-	connect(): void;
-	disconnect(code?: number): void;
+	connect(): Promise<void>;
+	disconnect(code?: number): Promise<void>;
 
 	send(payload: GatewaySendPayload): void;
 }
@@ -181,26 +181,42 @@ export function createShard(options: ShardOptions): Shard {
 	}
 
 	function connect() {
-		if (state !== ShardState.Idle && state !== ShardState.Disconnected) {
-			return;
-		}
+		return new Promise<void>((resolve) => {
+			if (state !== ShardState.Idle && state !== ShardState.Disconnected) {
+				return;
+			}
 
-		shouldReconnect = true;
-		shouldResume = false;
+			shouldReconnect = true;
+			shouldResume = false;
 
-		init();
+			self.once("ready", resolve);
+
+			init();
+		});
 	}
 
 	function disconnect(code = 1000) {
-		shouldResume = false;
-		shouldReconnect = false;
+		return new Promise<void>((resolve) => {
+			shouldResume = false;
+			shouldReconnect = false;
 
-		cleanup();
-		ws?.close(code);
+			if (!ws) {
+				resolve();
+				return;
+			}
+
+			ws.once("close", () => {
+				resolve();
+			});
+
+			ws.close(code);
+		});
 	}
 
 	function onMessage(data: RawData) {
-		if (!(data instanceof Buffer)) return;
+		if (!(data instanceof Buffer)) {
+			return;
+		}
 
 		// Safety guard (Discord hard limit ~8MB)
 		if (data.length > 8 * 1024 * 1024) {

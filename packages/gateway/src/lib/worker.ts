@@ -1,6 +1,6 @@
 import { attachEventBus, Collection, type EventBus, type ReadonlyCollection } from "@bakit/utils";
 
-import type { GatewaySendPayload } from "discord-api-types/v10";
+import type { GatewayReceivePayload, GatewaySendPayload } from "discord-api-types/v10";
 import { createShard, ShardState, type Shard } from "./shard.js";
 import type { ValueOf } from "type-fest";
 
@@ -38,6 +38,8 @@ export interface GatewayWorkerEvents {
 
 	shardReady: [shardId: number];
 	shardDisconnect: [shardId: number, code?: number];
+	shardRaw: [shardId: number, payload: GatewayReceivePayload];
+	shardDispatch: [shardId: number, payload: GatewayReceivePayload];
 
 	debug: [message: string];
 	error: [error: Error];
@@ -140,6 +142,9 @@ export function createWorker(options: GatewayWorkerOptions): GatewayWorker {
 				}
 			});
 
+			shard.on("raw", (payload) => self.emit("shardRaw", id, payload));
+			shard.on("dispatch", (payload) => self.emit("shardDispatch", id, payload));
+
 			shard.on("error", (err) => self.emit("error", err));
 			shard.on("debug", (msg) => self.emit("debug", `[Shard ${id}] ${msg}`));
 
@@ -148,7 +153,7 @@ export function createWorker(options: GatewayWorkerOptions): GatewayWorker {
 	}
 
 	async function stop(code = 1000) {
-		await Promise.allSettled(shards.map((shard) => shard.disconnect(code)));
+		await Promise.all(shards.map((shard) => shard.disconnect(code)));
 
 		state = GatewayWorkerState.Stopped;
 
