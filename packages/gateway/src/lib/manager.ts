@@ -14,11 +14,12 @@ import type {
 import type { GatewayWorkerOptions } from "./worker.js";
 import type { WorkerIPCMessage } from "@/types/worker.js";
 
-const WORKER_PATH = fileURLToPath(new URL("./services/worker.js", import.meta.url));
+export const DEFAULT_WORKER_PATH = fileURLToPath(new URL("./services/worker.js", import.meta.url));
 
 export interface GatewayManagerOptions {
 	token: string;
 	intents: number | bigint;
+	workerPath?: string;
 	gatewayURL?: string;
 	totalShards?: number | "auto";
 	shardsPerWorker?: number;
@@ -108,7 +109,7 @@ export function createGatewayManager(options: GatewayManagerOptions): GatewayMan
 	process.once("SIGTERM", shutdown);
 
 	function spawnWorker(payload: GatewayWorkerOptions) {
-		const child = fork(WORKER_PATH, [], {
+		const child = fork(opts.workerPath ?? DEFAULT_WORKER_PATH, [], {
 			env: {
 				WORKER_DATA: JSON.stringify(payload),
 			},
