@@ -5,15 +5,21 @@ import { type REST, type RESTOptions, createREST } from "@bakit/rest";
 import { attachEventBus, Collection, type EventBus } from "@bakit/utils";
 
 import type { OptionalKeysOf } from "type-fest";
-import type { APIGatewayBotInfo, GatewayDispatchPayload, GatewayReceivePayload } from "discord-api-types/v10";
+import type {
+	APIGatewayBotInfo,
+	GatewayDispatchPayload,
+	GatewayReadyDispatchData,
+	GatewayReceivePayload,
+} from "discord-api-types/v10";
 import type { GatewayWorkerOptions } from "./worker.js";
 import type { WorkerIPCMessage } from "@/types/worker.js";
 
-const WORKER_PATH = fileURLToPath(new URL("./services/worker.js", import.meta.url));
+export const DEFAULT_WORKER_PATH = fileURLToPath(new URL("./services/worker.js", import.meta.url));
 
 export interface GatewayManagerOptions {
 	token: string;
 	intents: number | bigint;
+	workerPath?: string;
 	gatewayURL?: string;
 	totalShards?: number | "auto";
 	shardsPerWorker?: number;
@@ -29,7 +35,7 @@ export const DEFAULT_GATEWAY_MANAGER_OPTIONS = {
 export interface GatewayManagerEvents {
 	error: [error: Error];
 
-	shardReady: [workerId: number, shardId: number];
+	shardReady: [workerId: number, shardId: number, payload: GatewayReadyDispatchData];
 	shardDisconnect: [workerId: number, shardId: number, code?: number];
 	shardRaw: [workerId: number, shardId: number, payload: GatewayReceivePayload];
 	shardDispatch: [workerId: number, shardId: number, payload: GatewayDispatchPayload];
@@ -103,7 +109,7 @@ export function createGatewayManager(options: GatewayManagerOptions): GatewayMan
 	process.once("SIGTERM", shutdown);
 
 	function spawnWorker(payload: GatewayWorkerOptions) {
-		const child = fork(WORKER_PATH, [], {
+		const child = fork(opts.workerPath ?? DEFAULT_WORKER_PATH, [], {
 			env: {
 				WORKER_DATA: JSON.stringify(payload),
 			},
@@ -123,7 +129,7 @@ export function createGatewayManager(options: GatewayManagerOptions): GatewayMan
 				}
 
 				case "shardReady": {
-					self.emit("shardReady", msg.workerId, msg.shardId);
+					self.emit("shardReady", msg.workerId, msg.shardId, msg.payload);
 					break;
 				}
 

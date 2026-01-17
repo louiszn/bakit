@@ -7,6 +7,7 @@ import {
 	GatewayDispatchEvents,
 	GatewayOpcodes,
 	type GatewayDispatchPayload,
+	type GatewayReadyDispatchData,
 	type GatewayReceivePayload,
 	type GatewaySendPayload,
 } from "discord-api-types/gateway";
@@ -33,7 +34,7 @@ const DEFAULT_SHARD_OPTIONS = {
 } satisfies Pick<ShardOptions, OptionalKeysOf<ShardOptions>>;
 
 export interface ShardEvents {
-	ready: [];
+	ready: [payload: GatewayReadyDispatchData];
 	disconnect: [code?: number];
 	resume: [];
 
@@ -189,7 +190,7 @@ export function createShard(options: ShardOptions): Shard {
 			shouldReconnect = true;
 			shouldResume = false;
 
-			self.once("ready", resolve);
+			self.once("ready", () => resolve());
 
 			init();
 		});
@@ -318,7 +319,7 @@ export function createShard(options: ShardOptions): Shard {
 				sessionId = data.session_id;
 				resumeGatewayURL = data.resume_gateway_url;
 
-				self.emit("ready");
+				self.emit("ready", data);
 				break;
 			}
 

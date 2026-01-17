@@ -1,8 +1,14 @@
 import { attachEventBus, Collection, type EventBus, type ReadonlyCollection } from "@bakit/utils";
 
-import type { GatewayReceivePayload, GatewaySendPayload } from "discord-api-types/v10";
+import type {
+	GatewayDispatchPayload,
+	GatewayReadyDispatchData,
+	GatewayReceivePayload,
+	GatewaySendPayload,
+} from "discord-api-types/v10";
 import { createShard, ShardState, type Shard } from "./shard.js";
 import type { ValueOf } from "type-fest";
+import type { WorkerIPCMessage } from "@/types/worker.js";
 
 export interface GatewayWorkerOptions {
 	id: number;
@@ -36,10 +42,10 @@ export interface GatewayWorkerEvents {
 	resume: [];
 	degrade: [readyCount: number, total: number];
 
-	shardReady: [shardId: number];
+	shardReady: [shardId: number, payload: GatewayReadyDispatchData];
 	shardDisconnect: [shardId: number, code?: number];
 	shardRaw: [shardId: number, payload: GatewayReceivePayload];
-	shardDispatch: [shardId: number, payload: GatewayReceivePayload];
+	shardDispatch: [shardId: number, payload: GatewayDispatchPayload];
 
 	debug: [message: string];
 	error: [error: Error];
@@ -115,9 +121,9 @@ export function createWorker(options: GatewayWorkerOptions): GatewayWorker {
 
 			shards.set(id, shard);
 
-			shard.on("ready", () => {
+			shard.on("ready", (data) => {
 				readyShards.add(id);
-				self.emit("shardReady", id);
+				self.emit("shardReady", id, data);
 
 				if (state !== GatewayWorkerState.Ready && readyShards.size === options.shards.length) {
 					const wasDegraded = state === GatewayWorkerState.Degraded;
@@ -172,4 +178,41 @@ export function createWorker(options: GatewayWorkerOptions): GatewayWorker {
 	}
 
 	return self;
+}
+
+export function bindWorkerToProcess(worker: GatewayWorker) {
+	worker.on("shardRaw", (shardId, payload) => send("shardRaw", { shardId, payload }));
+	worker.on("shardDispatch", (shardId, payload) => send("shardDispatch", { shardId, payload }));
+
+	worker.on("shardReady", (shardId, payload) => send("shardReady", { shardId, payload }));
+	worker.on("ready", () => send("ready", { workerId: worker.id }));
+	worker.on("stop", () => send("stop", { workerId: worker.id }));
+
+	worker.on("error", (error) => {
+		send("workerError", {
+			error: { message: error.message, stack: error.stack },
+		});
+	});
+
+	type IPCPayload<T extends WorkerIPCMessage["type"]> = Omit<
+		Extract<WorkerIPCMessage, { type: T }>,
+		"type" | "workerId"
+	>;
+
+	function send<T extends WorkerIPCMessage["type"]>(type: T, payload: IPCPayload<T>) {
+		process.send?.({ type, workerId: worker.id, ...payload });
+	}
+
+	process.on("SIGINT", () => {});
+	process.on("SIGTERM", () => worker.stop(1000));
+}
+
+export function getWorkerOptions(): GatewayWorkerOptions {
+	const { WORKER_DATA } = process.env;
+
+	if (!WORKER_DATA) {
+		throw new Error("WORKER_DATA is not set");
+	}
+
+	return JSON.parse(WORKER_DATA);
 }
