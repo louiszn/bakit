@@ -5,7 +5,12 @@ import { type REST, type RESTOptions, createREST } from "@bakit/rest";
 import { attachEventBus, Collection, type EventBus } from "@bakit/utils";
 
 import type { OptionalKeysOf } from "type-fest";
-import type { APIGatewayBotInfo, GatewayDispatchPayload, GatewayReceivePayload } from "discord-api-types/v10";
+import type {
+	APIGatewayBotInfo,
+	GatewayDispatchPayload,
+	GatewayReadyDispatchData,
+	GatewayReceivePayload,
+} from "discord-api-types/v10";
 import type { GatewayWorkerOptions } from "./worker.js";
 import type { WorkerIPCMessage } from "@/types/worker.js";
 
@@ -29,7 +34,7 @@ export const DEFAULT_GATEWAY_MANAGER_OPTIONS = {
 export interface GatewayManagerEvents {
 	error: [error: Error];
 
-	shardReady: [workerId: number, shardId: number];
+	shardReady: [workerId: number, shardId: number, payload: GatewayReadyDispatchData];
 	shardDisconnect: [workerId: number, shardId: number, code?: number];
 	shardRaw: [workerId: number, shardId: number, payload: GatewayReceivePayload];
 	shardDispatch: [workerId: number, shardId: number, payload: GatewayDispatchPayload];
@@ -123,7 +128,7 @@ export function createGatewayManager(options: GatewayManagerOptions): GatewayMan
 				}
 
 				case "shardReady": {
-					self.emit("shardReady", msg.workerId, msg.shardId);
+					self.emit("shardReady", msg.workerId, msg.shardId, msg.payload);
 					break;
 				}
 

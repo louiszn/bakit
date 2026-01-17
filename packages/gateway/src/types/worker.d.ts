@@ -1,4 +1,4 @@
-import type { GatewayDispatchPayload, GatewayReceivePayload } from "discord-api-types/v10";
+import type { GatewayDispatchPayload, GatewayReadyDispatchData, GatewayReceivePayload } from "discord-api-types/v10";
 
 export interface WorkerShardRawPayload {
 	type: "shardRaw";
@@ -18,6 +18,7 @@ export interface WorkerShardReadyPayload {
 	type: "shardReady";
 	workerId: number;
 	shardId: number;
+	payload: GatewayReadyDispatchData;
 }
 
 export interface WorkerShardDisconnectPayload {
