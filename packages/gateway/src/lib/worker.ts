@@ -43,9 +43,10 @@ export interface GatewayWorkerEvents {
 	degrade: [readyCount: number, total: number];
 
 	shardReady: [shardId: number, payload: GatewayReadyDispatchData];
-	shardDisconnect: [shardId: number, code?: number];
+	shardDisconnect: [shardId: number, code: number];
 	shardRaw: [shardId: number, payload: GatewayReceivePayload];
 	shardDispatch: [shardId: number, payload: GatewayDispatchPayload];
+	shardRequestIdentify: [shardId: number];
 
 	debug: [message: string];
 	error: [error: Error];
@@ -154,6 +155,8 @@ export function createWorker(options: GatewayWorkerOptions): GatewayWorker {
 			shard.on("error", (err) => self.emit("error", err));
 			shard.on("debug", (msg) => self.emit("debug", `[Shard ${id}] ${msg}`));
 
+			shard.on("requestIdentify", () => self.emit("shardRequestIdentify", id));
+
 			shard.connect();
 		}
 	}
@@ -185,8 +188,12 @@ export function bindWorkerToProcess(worker: GatewayWorker) {
 	worker.on("shardDispatch", (shardId, payload) => send("shardDispatch", { shardId, payload }));
 
 	worker.on("shardReady", (shardId, payload) => send("shardReady", { shardId, payload }));
-	worker.on("ready", () => send("ready", { workerId: worker.id }));
-	worker.on("stop", () => send("stop", { workerId: worker.id }));
+	worker.on("shardDisconnect", (shardId, code) => send("shardDisconnect", { shardId, code }));
+
+	worker.on("shardRequestIdentify", (shardId) => send("shardRequestIdentify", { shardId }));
+
+	worker.on("ready", () => send("ready", {}));
+	worker.on("stop", () => send("stop", {}));
 
 	worker.on("error", (error) => {
 		send("workerError", {
@@ -194,17 +201,36 @@ export function bindWorkerToProcess(worker: GatewayWorker) {
 		});
 	});
 
-	type IPCPayload<T extends WorkerIPCMessage["type"]> = Omit<
-		Extract<WorkerIPCMessage, { type: T }>,
-		"type" | "workerId"
-	>;
+	type IPCPayload<T extends WorkerIPCMessage["type"]> = Omit<Extract<WorkerIPCMessage, { type: T }>, "type">;
 
 	function send<T extends WorkerIPCMessage["type"]>(type: T, payload: IPCPayload<T>) {
-		process.send?.({ type, workerId: worker.id, ...payload });
+		process.send?.({ type, ...payload });
 	}
 
 	process.on("SIGINT", () => {});
-	process.on("SIGTERM", () => worker.stop(1000));
+	process.on("SIGTERM", async () => {
+		await worker.stop(1000);
+		process.exit(0);
+	});
+
+	process.on("message", (message: WorkerIPCMessage) => {
+		switch (message.type) {
+			case "identifyShard": {
+				worker.shards.get(message.shardId)?.identify();
+				break;
+			}
+
+			case "broadcast": {
+				worker.broadcast(message.payload);
+				break;
+			}
+
+			case "sendToShard": {
+				worker.shards.get(message.shardId)?.send(message.payload);
+				break;
+			}
+		}
+	});
 }
 
 export function getWorkerOptions(): GatewayWorkerOptions {
