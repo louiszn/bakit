@@ -48,19 +48,35 @@ export interface ShardEvents {
 	dispatch: [payload: GatewayDispatchPayload];
 }
 
+/**
+ * High-level lifecycle state of the shard connection.
+ */
 export const ShardState = {
+	/** Not connected. */
 	Idle: 0,
+	/** Initialzing connection. */
 	Connecting: 1,
+	/** Connected to gateway and identified. */
 	Ready: 2,
+	/** Resuming the session. */
 	Resuming: 3,
+	/** Disconnected the connection. */
 	Disconnected: 4,
 };
 export type ShardState = ValueOf<typeof ShardState>;
 
+/**
+ * Strategy describes *what to do next after a disconnect*.
+ * This is intentionally separate from ShardState.
+ */
 export const ShardStrategy = {
+	/** No decision yet (default on close). */
 	Unknown: 1,
+	/** Reconnect with IDENTIFY (new session). */
 	Reconnect: 2,
+	/** Reconnect and try RESUME. */
 	Resume: 3,
+	/** Do not reconnect. */
 	Shutdown: 4,
 };
 export type ShardStrategy = ValueOf<typeof ShardStrategy>;
@@ -128,6 +144,7 @@ export function createShard(options: ShardOptions): Shard {
 	const self: Shard = attachEventBus<ShardEvents, typeof base>(base);
 
 	function init() {
+		// Only allow connecting from Idle or Disconnected
 		if (state !== ShardState.Idle && state !== ShardState.Disconnected) {
 			self.emit("error", new Error("Shard is already connected or connecting."));
 			return;
@@ -137,7 +154,9 @@ export function createShard(options: ShardOptions): Shard {
 
 		const { gateway } = resolvedOptions;
 
-		const baseURL = strategy === ShardStrategy.Resume && resumeGatewayURL ? resumeGatewayURL : gateway.baseURL;
+		// Use resume gateway URL only if strategy explicitly allows resuming
+		// (Discord may give a different gateway for RESUME)
+		const baseURL = isResumable() && resumeGatewayURL ? resumeGatewayURL : gateway.baseURL;
 		const url = new URL(baseURL);
 
 		url.searchParams.set("v", gateway.version.toString());
@@ -148,14 +167,11 @@ export function createShard(options: ShardOptions): Shard {
 			perMessageDeflate: false,
 		});
 
+		// We use zlib-stream compression, so messages arrive as compressed chunks
+		// and must be reassembled before inflation.
 		zlibBuffer = Buffer.alloc(0);
 
-		ws.on("message", onMessage);
-		ws.on("close", onClose);
-		ws.on("error", (err) => {
-			self.emit("error", err);
-		});
-
+		// Inflate stream configured for Discord's Z_SYNC_FLUSH framing
 		inflater = createInflate({
 			flush: zlibConstants.Z_SYNC_FLUSH,
 		});
@@ -173,6 +189,10 @@ export function createShard(options: ShardOptions): Shard {
 			self.emit("error", err);
 			ws?.terminate();
 		});
+
+		ws.on("message", onMessage);
+		ws.on("close", onClose);
+		ws.on("error", (err) => self.emit("error", err));
 	}
 
 	function cleanup() {
@@ -202,10 +222,12 @@ export function createShard(options: ShardOptions): Shard {
 
 	function connect() {
 		return new Promise<void>((resolve) => {
+			// Prevent duplicate connect attempts
 			if (state !== ShardState.Idle && state !== ShardState.Disconnected) {
 				return;
 			}
 
+			// Reset strategy; let gateway decide resume vs identify
 			strategy = ShardStrategy.Unknown;
 
 			self.once("ready", () => resolve());
@@ -236,6 +258,7 @@ export function createShard(options: ShardOptions): Shard {
 			return;
 		}
 
+		// Hard cap to prevent memory abuse
 		if (data.length > 8 * 1024 * 1024) {
 			ws?.terminate();
 			return;
@@ -248,6 +271,7 @@ export function createShard(options: ShardOptions): Shard {
 			return;
 		}
 
+		// Full frame received, inflate and parse
 		inflater?.write(zlibBuffer);
 		zlibBuffer = Buffer.alloc(0);
 	}
@@ -296,12 +320,14 @@ export function createShard(options: ShardOptions): Shard {
 				const { heartbeat_interval: duration } = payload.d;
 
 				heartbeatInterval = setInterval(() => {
+					// If we sent a heartbeat but never got ACK, count it as missed
 					if (lastHeartbeatSent !== -1 && lastHeartbeatAcknowledged < lastHeartbeatSent) {
 						missedHeartbeats++;
 					} else {
 						missedHeartbeats = 0;
 					}
 
+					// Discord recommends reconnecting after 2 missed heartbeats
 					if (missedHeartbeats >= 2) {
 						self.emit("debug", "Missed 2 heartbeats, reconnecting");
 						ws?.terminate();
@@ -331,11 +357,13 @@ export function createShard(options: ShardOptions): Shard {
 			}
 
 			case GatewayOpcodes.InvalidSession: {
+				// Discord explicitly tells us whether RESUME is allowed
 				const shouldResume = payload.d;
 
 				if (shouldResume) {
 					strategy = ShardStrategy.Resume;
 				} else {
+					// Session is dead, must IDENTIFY again
 					strategy = ShardStrategy.Reconnect;
 
 					sessionId = undefined;
@@ -350,6 +378,7 @@ export function createShard(options: ShardOptions): Shard {
 			}
 
 			case GatewayOpcodes.Reconnect: {
+				// Discord requests a reconnect, but session is still valid to resume
 				strategy = ShardStrategy.Resume;
 
 				self.emit("debug", "Reconnecting to gateway");
