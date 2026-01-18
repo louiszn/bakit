@@ -4,6 +4,7 @@ import { createInflate, type Inflate, constants as zlibConstants } from "node:zl
 import { attachEventBus, type EventBus } from "@bakit/utils";
 
 import {
+	GatewayCloseCodes,
 	GatewayDispatchEvents,
 	GatewayOpcodes,
 	type GatewayDispatchPayload,
@@ -12,6 +13,8 @@ import {
 	type GatewaySendPayload,
 } from "discord-api-types/gateway";
 import type { ValueOf, OptionalKeysOf } from "type-fest";
+
+const ZLIB_FLUSH = Buffer.from([0x00, 0x00, 0xff, 0xff]);
 
 export interface ShardOptions {
 	id: number;
@@ -54,6 +57,14 @@ export const ShardState = {
 };
 export type ShardState = ValueOf<typeof ShardState>;
 
+export const ShardStrategy = {
+	Unknown: 1,
+	Reconnect: 2,
+	Resume: 3,
+	Shutdown: 4,
+};
+export type ShardStrategy = ValueOf<typeof ShardStrategy>;
+
 export interface Shard extends EventBus<ShardEvents> {
 	readonly id: number;
 	readonly state: ShardState;
@@ -75,22 +86,23 @@ export function createShard(options: ShardOptions): Shard {
 	const resolvedOptions = { ...DEFAULT_SHARD_OPTIONS, ...options };
 
 	let state: ShardState = ShardState.Idle;
+	let strategy: ShardStrategy = ShardStrategy.Unknown;
 
 	let ws: WebSocket | undefined;
-	let inflater: Inflate | undefined;
-
-	let shouldReconnect = true;
-	let shouldResume = false;
 	let resumeGatewayURL: string | undefined;
 
-	let sessionId: string | undefined;
-	let reconnectTimeout: NodeJS.Timeout | undefined;
+	let inflater: Inflate | undefined;
+	let zlibBuffer: Buffer | undefined;
 
+	let sessionId: string | undefined;
 	let lastSequence: number | undefined;
 
-	let heartbeatInterval: NodeJS.Timeout | undefined;
 	let lastHeartbeatSent = -1;
 	let lastHeartbeatAcknowledged = -1;
+	let missedHeartbeats = 0;
+
+	let reconnectTimeout: NodeJS.Timeout | undefined;
+	let heartbeatInterval: NodeJS.Timeout | undefined;
 
 	const base = {
 		send,
@@ -125,7 +137,7 @@ export function createShard(options: ShardOptions): Shard {
 
 		const { gateway } = resolvedOptions;
 
-		const baseURL = shouldResume && resumeGatewayURL ? resumeGatewayURL : gateway.baseURL;
+		const baseURL = strategy === ShardStrategy.Resume && resumeGatewayURL ? resumeGatewayURL : gateway.baseURL;
 		const url = new URL(baseURL);
 
 		url.searchParams.set("v", gateway.version.toString());
@@ -135,6 +147,8 @@ export function createShard(options: ShardOptions): Shard {
 		ws = new WebSocket(url.toString(), {
 			perMessageDeflate: false,
 		});
+
+		zlibBuffer = Buffer.alloc(0);
 
 		ws.on("message", onMessage);
 		ws.on("close", onClose);
@@ -177,6 +191,11 @@ export function createShard(options: ShardOptions): Shard {
 			inflater = undefined;
 		}
 
+		if (zlibBuffer) {
+			zlibBuffer = undefined;
+		}
+
+		missedHeartbeats = 0;
 		lastHeartbeatSent = -1;
 		lastHeartbeatAcknowledged = -1;
 	}
@@ -187,8 +206,7 @@ export function createShard(options: ShardOptions): Shard {
 				return;
 			}
 
-			shouldReconnect = true;
-			shouldResume = false;
+			strategy = ShardStrategy.Unknown;
 
 			self.once("ready", () => resolve());
 
@@ -198,8 +216,7 @@ export function createShard(options: ShardOptions): Shard {
 
 	function disconnect(code = 1000) {
 		return new Promise<void>((resolve) => {
-			shouldResume = false;
-			shouldReconnect = false;
+			strategy = ShardStrategy.Shutdown;
 
 			if (!ws) {
 				resolve();
@@ -215,17 +232,24 @@ export function createShard(options: ShardOptions): Shard {
 	}
 
 	function onMessage(data: RawData) {
-		if (!(data instanceof Buffer)) {
+		if (!(data instanceof Buffer) || !zlibBuffer) {
 			return;
 		}
 
-		// Safety guard (Discord hard limit ~8MB)
 		if (data.length > 8 * 1024 * 1024) {
 			ws?.terminate();
 			return;
 		}
 
-		inflater?.write(data);
+		zlibBuffer = Buffer.concat([zlibBuffer, data]);
+
+		// Wait for Z_SYNC_FLUSH
+		if (!zlibBuffer.subarray(zlibBuffer.length - 4).equals(ZLIB_FLUSH)) {
+			return;
+		}
+
+		inflater?.write(zlibBuffer);
+		zlibBuffer = Buffer.alloc(0);
 	}
 
 	function onClose(code: number) {
@@ -234,7 +258,27 @@ export function createShard(options: ShardOptions): Shard {
 		state = ShardState.Disconnected;
 		self.emit("disconnect", code);
 
-		if (shouldReconnect) {
+		if (strategy === ShardStrategy.Shutdown) {
+			switch (code) {
+				case GatewayCloseCodes.AuthenticationFailed:
+					self.emit("error", new Error("Invalid token provided"));
+					break;
+				case GatewayCloseCodes.InvalidIntents:
+					self.emit("error", new Error("Invalid intents provided"));
+					break;
+				case GatewayCloseCodes.DisallowedIntents:
+					self.emit("error", new Error("Disallowed intents provided"));
+					break;
+			}
+
+			return;
+		}
+
+		if (strategy === ShardStrategy.Unknown) {
+			strategy = getReconnectStrategy(code);
+		}
+
+		if (strategy === ShardStrategy.Reconnect || strategy === ShardStrategy.Resume) {
 			scheduleReconnect();
 		}
 	}
@@ -253,7 +297,13 @@ export function createShard(options: ShardOptions): Shard {
 
 				heartbeatInterval = setInterval(() => {
 					if (lastHeartbeatSent !== -1 && lastHeartbeatAcknowledged < lastHeartbeatSent) {
-						self.emit("debug", "Heartbeat not acknowledged, reconnecting");
+						missedHeartbeats++;
+					} else {
+						missedHeartbeats = 0;
+					}
+
+					if (missedHeartbeats >= 2) {
+						self.emit("debug", "Missed 2 heartbeats, reconnecting");
 						ws?.terminate();
 						return;
 					}
@@ -266,7 +316,7 @@ export function createShard(options: ShardOptions): Shard {
 					lastHeartbeatSent = Date.now();
 				}, duration);
 
-				if (shouldResume && sessionId && lastSequence !== undefined) {
+				if (isResumable()) {
 					resume();
 				} else {
 					identify();
@@ -281,22 +331,26 @@ export function createShard(options: ShardOptions): Shard {
 			}
 
 			case GatewayOpcodes.InvalidSession: {
-				shouldResume = payload.d;
+				const shouldResume = payload.d;
 
-				if (!shouldResume) {
+				if (shouldResume) {
+					strategy = ShardStrategy.Resume;
+				} else {
+					strategy = ShardStrategy.Reconnect;
+
 					sessionId = undefined;
 					lastSequence = undefined;
 					resumeGatewayURL = undefined;
 				}
 
-				self.emit("debug", `Invalid session (resumable=${shouldResume})`);
+				self.emit("debug", `Invalid session (resumable=${isResumable()})`);
 
 				ws?.terminate();
 				break;
 			}
 
 			case GatewayOpcodes.Reconnect: {
-				shouldResume = true;
+				strategy = ShardStrategy.Resume;
 
 				self.emit("debug", "Reconnecting to gateway");
 				ws?.terminate();
@@ -325,7 +379,7 @@ export function createShard(options: ShardOptions): Shard {
 
 			case GatewayDispatchEvents.Resumed: {
 				state = ShardState.Ready;
-				shouldResume = false;
+				strategy = ShardStrategy.Unknown;
 
 				self.emit("resume");
 				break;
@@ -334,7 +388,30 @@ export function createShard(options: ShardOptions): Shard {
 	}
 
 	function isResumable(): boolean {
-		return shouldResume && !!sessionId && lastSequence !== undefined;
+		const hasSessionId = sessionId !== undefined;
+		const hasSequence = lastSequence !== undefined;
+		const shouldResume = strategy === ShardStrategy.Resume;
+
+		return shouldResume && hasSequence && hasSessionId;
+	}
+
+	function getReconnectStrategy(code: GatewayCloseCodes | number): ShardStrategy {
+		switch (code) {
+			case GatewayCloseCodes.AuthenticationFailed:
+			case GatewayCloseCodes.InvalidIntents:
+			case GatewayCloseCodes.DisallowedIntents: {
+				return ShardStrategy.Shutdown;
+			}
+
+			case GatewayCloseCodes.InvalidSeq:
+			case GatewayCloseCodes.SessionTimedOut: {
+				return ShardStrategy.Reconnect;
+			}
+
+			default: {
+				return ShardStrategy.Resume;
+			}
+		}
 	}
 
 	function identify() {
@@ -354,10 +431,6 @@ export function createShard(options: ShardOptions): Shard {
 	}
 
 	function resume() {
-		if (!isResumable()) {
-			return;
-		}
-
 		state = ShardState.Resuming;
 
 		send({
