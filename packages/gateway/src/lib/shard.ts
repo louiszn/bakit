@@ -317,30 +317,7 @@ export function createShard(options: ShardOptions): Shard {
 			}
 
 			case GatewayOpcodes.Hello: {
-				const { heartbeat_interval: duration } = payload.d;
-
-				heartbeatInterval = setInterval(() => {
-					// If we sent a heartbeat but never got ACK, count it as missed
-					if (lastHeartbeatSent !== -1 && lastHeartbeatAcknowledged < lastHeartbeatSent) {
-						missedHeartbeats++;
-					} else {
-						missedHeartbeats = 0;
-					}
-
-					// Discord recommends reconnecting after 2 missed heartbeats
-					if (missedHeartbeats >= 2) {
-						self.emit("debug", "Missed 2 heartbeats, reconnecting");
-						ws?.terminate();
-						return;
-					}
-
-					send({
-						op: GatewayOpcodes.Heartbeat,
-						d: lastSequence ?? null,
-					});
-
-					lastHeartbeatSent = Date.now();
-				}, duration);
+				startHeartbeat(payload.d.heartbeat_interval);
 
 				if (isResumable()) {
 					resume();
@@ -348,6 +325,11 @@ export function createShard(options: ShardOptions): Shard {
 					identify();
 				}
 
+				break;
+			}
+
+			case GatewayOpcodes.Heartbeat: {
+				sendHeartbeat();
 				break;
 			}
 
@@ -472,6 +454,44 @@ export function createShard(options: ShardOptions): Shard {
 		});
 	}
 
+	function sendHeartbeat() {
+		if (lastHeartbeatSent !== -1 && lastHeartbeatAcknowledged < lastHeartbeatSent) {
+			missedHeartbeats++;
+		} else {
+			missedHeartbeats = 0;
+		}
+
+		if (missedHeartbeats >= 2) {
+			self.emit("debug", "Missed 2 heartbeats, reconnecting");
+			ws?.terminate();
+			return;
+		}
+
+		send({
+			op: GatewayOpcodes.Heartbeat,
+			d: lastSequence ?? null,
+		});
+
+		lastHeartbeatSent = Date.now();
+	}
+
+	function startHeartbeat(interval: number) {
+		if (heartbeatInterval) {
+			clearInterval(heartbeatInterval);
+			heartbeatInterval = undefined;
+		}
+
+		const jitter = Math.random();
+		const firstDelay = Math.floor(interval * jitter);
+
+		self.emit("debug", `Starting heartbeat (interval=${interval}ms, jitter=${firstDelay}ms)`);
+
+		setTimeout(() => {
+			sendHeartbeat();
+			heartbeatInterval = setInterval(sendHeartbeat, interval);
+		}, firstDelay);
+	}
+
 	function scheduleReconnect(delay = 1000) {
 		if (reconnectTimeout) {
 			return;
@@ -479,6 +499,7 @@ export function createShard(options: ShardOptions): Shard {
 
 		reconnectTimeout = setTimeout(() => {
 			reconnectTimeout = undefined;
+			state = ShardState.Idle;
 			init();
 		}, delay);
 	}
