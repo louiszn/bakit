@@ -1,46 +1,65 @@
-import type { GatewayDispatchPayload, GatewayReadyDispatchData, GatewayReceivePayload } from "discord-api-types/v10";
+import type {
+	GatewayDispatchPayload,
+	GatewayReadyDispatchData,
+	GatewayReceivePayload,
+	GatewaySendPayload,
+} from "discord-api-types/v10";
 
 export interface WorkerShardRawPayload {
 	type: "shardRaw";
-	workerId: number;
 	shardId: number;
 	payload: GatewayReceivePayload;
 }
 
 export interface WorkerShardDispatchPayload {
 	type: "shardDispatch";
-	workerId: number;
 	shardId: number;
 	payload: GatewayDispatchPayload;
 }
 
 export interface WorkerShardReadyPayload {
 	type: "shardReady";
-	workerId: number;
 	shardId: number;
 	payload: GatewayReadyDispatchData;
 }
 
 export interface WorkerShardDisconnectPayload {
 	type: "shardDisconnect";
-	workerId: number;
 	shardId: number;
 	code: number;
 }
 
 export interface WorkerReadyPayload {
 	type: "ready";
-	workerId: number;
 }
 
 export interface WorkerStopPayload {
 	type: "stop";
-	workerId: number;
+}
+
+export interface WorkerRequestIdentifyPayload {
+	type: "shardRequestIdentify";
+	shardId: number;
+}
+
+export interface WorkerIdentifyShardPayload {
+	type: "identifyShard";
+	shardId: number;
+}
+
+export interface WorkerBroadcastPayload {
+	type: "broadcast";
+	payload: GatewaySendPayload;
+}
+
+export interface WorkerSendToShardPayload {
+	type: "sendToShard";
+	shardId: number;
+	payload: GatewaySendPayload;
 }
 
 export interface WorkerErrorPayload {
 	type: "workerError";
-	workerId: number;
 	error: {
 		message: string;
 		stack?: string;
@@ -54,4 +73,8 @@ export type WorkerIPCMessage =
 	| WorkerShardDisconnectPayload
 	| WorkerErrorPayload
 	| WorkerReadyPayload
-	| WorkerStopPayload;
+	| WorkerStopPayload
+	| WorkerRequestIdentifyPayload
+	| WorkerIdentifyShardPayload
+	| WorkerBroadcastPayload
+	| WorkerSendToShardPayload;

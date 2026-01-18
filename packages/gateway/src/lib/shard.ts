@@ -38,7 +38,7 @@ const DEFAULT_SHARD_OPTIONS = {
 
 export interface ShardEvents {
 	ready: [payload: GatewayReadyDispatchData];
-	disconnect: [code?: number];
+	disconnect: [code: number];
 	resume: [];
 
 	error: [error: Error];
@@ -46,6 +46,8 @@ export interface ShardEvents {
 
 	raw: [payload: GatewayReceivePayload];
 	dispatch: [payload: GatewayDispatchPayload];
+
+	requestIdentify: [];
 }
 
 /**
@@ -90,6 +92,7 @@ export interface Shard extends EventBus<ShardEvents> {
 	disconnect(code?: number): Promise<void>;
 
 	send(payload: GatewaySendPayload): void;
+	identify(): void;
 }
 
 /**
@@ -118,12 +121,14 @@ export function createShard(options: ShardOptions): Shard {
 	let missedHeartbeats = 0;
 
 	let reconnectTimeout: NodeJS.Timeout | undefined;
+	let heartbeatTimeout: NodeJS.Timeout | undefined;
 	let heartbeatInterval: NodeJS.Timeout | undefined;
 
 	const base = {
 		send,
 		connect,
 		disconnect,
+		identify,
 
 		get id() {
 			return options.id;
@@ -147,6 +152,10 @@ export function createShard(options: ShardOptions): Shard {
 		// Only allow connecting from Idle or Disconnected
 		if (state !== ShardState.Idle && state !== ShardState.Disconnected) {
 			self.emit("error", new Error("Shard is already connected or connecting."));
+			return;
+		}
+
+		if (strategy === ShardStrategy.Shutdown) {
 			return;
 		}
 
@@ -201,6 +210,11 @@ export function createShard(options: ShardOptions): Shard {
 			heartbeatInterval = undefined;
 		}
 
+		if (heartbeatTimeout) {
+			clearTimeout(heartbeatTimeout);
+			heartbeatTimeout = undefined;
+		}
+
 		if (reconnectTimeout) {
 			clearTimeout(reconnectTimeout);
 			reconnectTimeout = undefined;
@@ -213,6 +227,15 @@ export function createShard(options: ShardOptions): Shard {
 
 		if (zlibBuffer) {
 			zlibBuffer = undefined;
+		}
+
+		if (ws) {
+			if (ws.readyState !== WebSocket.CLOSED) {
+				ws.terminate();
+			}
+
+			ws.removeAllListeners();
+			ws = undefined;
 		}
 
 		missedHeartbeats = 0;
@@ -322,7 +345,7 @@ export function createShard(options: ShardOptions): Shard {
 				if (isResumable()) {
 					resume();
 				} else {
-					identify();
+					self.emit("requestIdentify");
 				}
 
 				break;
@@ -486,7 +509,7 @@ export function createShard(options: ShardOptions): Shard {
 
 		self.emit("debug", `Starting heartbeat (interval=${interval}ms, jitter=${firstDelay}ms)`);
 
-		setTimeout(() => {
+		heartbeatTimeout = setTimeout(() => {
 			sendHeartbeat();
 			heartbeatInterval = setInterval(sendHeartbeat, interval);
 		}, firstDelay);
