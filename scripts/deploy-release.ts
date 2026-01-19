@@ -63,7 +63,9 @@ async function commitTagAndPush() {
 	await git.addConfig("user.email", `${BAKIT_APP_ID}+${BAKIT_APP_SLUG}@users.noreply.github.com`);
 
 	await git.add(paths);
-	await git.commit(`chore(release): ${version}`);
+	await git.commit(`chore(release): ${version}`, undefined, {
+		"--author": `Bakit Bot <${BAKIT_APP_ID}+${BAKIT_APP_SLUG}[bot]@users.noreply.github.com>`,
+	});
 	await git.addTag(version);
 
 	await git.raw([
