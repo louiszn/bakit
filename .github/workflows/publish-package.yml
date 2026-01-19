@@ -1,38 +1,55 @@
 name: Publish NPM Packages
+run-name: >
+  Publish ${{ github.event.release.tag_name }}
+  (${{ github.event.release.prerelease && 'prerelease' || 'stable' }})
 
 on:
   release:
     types: [created]
+
+concurrency:
+  group: npm-publish
+  cancel-in-progress: false
 
 jobs:
   publish:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: 22
           registry-url: https://registry.npmjs.org/
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4.1.0
+      - uses: pnpm/action-setup@v4.1.0
+        with:
+          run_install: false
 
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+      - name: Cache pnpm store
+        id: pnpm-cache
+        run: echo "STORE_PATH=$(pnpm store path)" >> $GITHUB_OUTPUT
 
-      - name: Build all packages
-        run: pnpm -r build
+      - uses: actions/cache@v4
+        with:
+          path: ${{ steps.pnpm-cache.outputs.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-${{ hashFiles('pnpm-lock.yaml') }}
+
+      - run: pnpm install --frozen-lockfile
+
+      - run: pnpm -r build
         env:
           NODE_ENV: production
 
-      - name: Publish workspace packages
-        run: pnpm -r publish --no-git-checks
+      - name: Publish packages
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-          NODE_ENV: production
+        run: |
+          if [[ "${{ github.event.release.prerelease }}" == "true" ]]; then
+            pnpm -r publish --no-git-checks --filter '!private' --tag next
+          else
+            pnpm -r publish --no-git-checks --filter '!private'
+          fi
