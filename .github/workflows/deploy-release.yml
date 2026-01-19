@@ -32,6 +32,7 @@ jobs:
 
       - name: Run deploy release script
         env:
+          HUSKY: 0
           BAKIT_APP_SLUG: ${{ secrets.BAKIT_APP_SLUG }}
           BAKIT_APP_ID: ${{ secrets.BAKIT_APP_ID }}
           BAKIT_APP_INSTALLATION_ID: ${{ secrets.BAKIT_APP_INSTALLATION_ID }}
