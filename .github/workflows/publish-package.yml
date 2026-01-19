@@ -1,71 +1,38 @@
-name: Publish NPM Package
+name: Publish NPM Packages
 
 on:
   release:
     types: [created]
-  workflow_dispatch:
 
 jobs:
-  build:
+  publish:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        package: [bakit]
+
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 22
+          registry-url: https://registry.npmjs.org/
 
-      - name: Setup PNPM
+      - name: Setup pnpm
         uses: pnpm/action-setup@v4.1.0
 
-      - name: Install necessary dependencies
-        run: pnpm install --filter ${{ matrix.package }}... --filter . --frozen-lockfile
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
 
-      - name: Check package tests
-        run: pnpm --filter ${{ matrix.package }} test
-
-      - name: Build package
-        run: pnpm --filter ${{ matrix.package }} build
+      - name: Build all packages
+        run: pnpm -r build
         env:
           NODE_ENV: production
 
-      - uses: actions/upload-artifact@v4
-        with:
-          name: dist-${{ matrix.package }}
-          path: packages/${{ matrix.package }}/dist
-
-  publish-npm:
-    needs: build
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        package: [bakit]
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          registry-url: https://registry.npmjs.org/
-
-      - uses: pnpm/action-setup@v4.1.0
-
-      - uses: actions/download-artifact@v4
-        with:
-          name: dist-${{ matrix.package }}
-          path: packages/${{ matrix.package }}/dist
-
-      - run: cp README.md packages/${{ matrix.package }}/README.md
-
-      - name: Install necessary dependencies
-        run: pnpm install --filter ${{ matrix.package }}... --filter . --frozen-lockfile
-
-      - run: npm publish
-        working-directory: packages/${{ matrix.package }}
+      - name: Publish workspace packages
+        run: pnpm -r publish --no-git-checks
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
           NODE_ENV: production
