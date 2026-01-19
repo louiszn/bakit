@@ -59,7 +59,7 @@ async function bumpVersions() {
 async function commitTagAndPush() {
 	const git = simpleGit();
 
-	await git.addConfig("user.name", "Bakit");
+	await git.addConfig("user.name", "Bakit Bot");
 	await git.addConfig("user.email", `${BAKIT_APP_ID}+${BAKIT_APP_SLUG}@users.noreply.github.com`);
 
 	await git.add(paths);
