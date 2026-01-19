@@ -5,30 +5,42 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: Version to release (e.g, v1.2.3 or v1.2.3-beta.1)
+        description: Version to release (e.g. v1.2.3 or v1.2.3-beta.1)
         required: true
         default: v1.0.0
+
+concurrency:
+  group: release
+  cancel-in-progress: false
 
 jobs:
   release:
     runs-on: ubuntu-latest
+
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
           persist-credentials: false
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: 22
 
-      - name: Setup PNPM
-        uses: pnpm/action-setup@v4.1.0
+      - uses: pnpm/action-setup@v4.1.0
+        with:
+          run_install: false
 
-      - name: Install necessary dependencies
-        run: pnpm install --frozen-lockfile
+      - name: Cache pnpm store
+        id: pnpm-cache
+        run: echo "STORE_PATH=$(pnpm store path)" >> $GITHUB_OUTPUT
+
+      - uses: actions/cache@v4
+        with:
+          path: ${{ steps.pnpm-cache.outputs.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-${{ hashFiles('pnpm-lock.yaml') }}
+
+      - run: pnpm install --frozen-lockfile
 
       - name: Run deploy release script
         env:
@@ -37,5 +49,4 @@ jobs:
           BAKIT_APP_ID: ${{ secrets.BAKIT_APP_ID }}
           BAKIT_APP_INSTALLATION_ID: ${{ secrets.BAKIT_APP_INSTALLATION_ID }}
           BAKIT_APP_PRIVATE: ${{ secrets.BAKIT_APP_PRIVATE }}
-        run: |
-          pnpm exec tsx scripts/deploy-release.ts --version="${{ github.event.inputs.version }}"
+        run: pnpm exec tsx scripts/deploy-release.ts --version="${{ github.event.inputs.version }}"

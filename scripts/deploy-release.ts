@@ -1,41 +1,29 @@
 import { simpleGit } from "simple-git";
 import { Octokit } from "@octokit/rest";
 import { createAppAuth, type InstallationAccessTokenAuthentication } from "@octokit/auth-app";
+import { readFile, writeFile } from "node:fs/promises";
 
-import { readFile, writeFile } from "fs/promises";
 import glob from "tiny-glob";
 import minimist from "minimist";
-import type { PackageJson } from "type-fest";
+import semver from "semver";
 
-// ------------------------------
-// General configuration
-// ------------------------------
-const GITHUB_CONFIG = {
+const GITHUB = {
 	owner: "louiszn",
 	repo: "bakit",
 } as const;
 
 const { BAKIT_APP_SLUG, BAKIT_APP_ID, BAKIT_APP_INSTALLATION_ID, BAKIT_APP_PRIVATE } = process.env;
 
-// ------------------------------
-// Parsing arguments
-// ------------------------------
-interface ParsedArguments {
-	version?: string;
+const args = minimist<{ version?: string }>(process.argv.slice(2));
+
+if (!args.version || !semver.valid(args.version)) {
+	throw new Error("Invalid version");
 }
 
-const args = minimist<ParsedArguments>(process.argv.slice(2));
+const parsed = semver.parse(args.version)!;
+const version = `v${parsed.version}`;
+const isPrerelease = parsed.prerelease.length > 0;
 
-if (!args.version) {
-	throw new Error("Version is required. Use --version vX.Y.Z");
-}
-
-// Stable release only has pattern vX.Y.Z
-const isPrerelease = Boolean(args.version.split("-")[1]);
-
-// ------------------------------
-// Creating github auth
-// ------------------------------
 const octokit = new Octokit({
 	authStrategy: createAppAuth,
 	auth: {
@@ -49,75 +37,54 @@ const installationAuth = (await octokit.auth({
 	type: "installation",
 })) as InstallationAccessTokenAuthentication;
 
-// ------------------------------
-// Helper methods
-// ------------------------------
-async function bumpVersion(paths: string[], version: string) {
-	for (const configPath of paths) {
-		console.log(`Bumping version for ${configPath}`);
+const paths = await glob("packages/**/package.json");
 
-		const configContent = await readFile(configPath, "utf-8");
-		const config = JSON.parse(configContent) as PackageJson;
-
-		// slice the v prefix
-		config.version = version.slice(1);
-
-		// Save new package.json file
-		// prettier will handle the format on commit stage
-		await writeFile(configPath, JSON.stringify(config, null, 4) + "\n", "utf-8");
+async function ensureCleanRepo() {
+	const git = simpleGit();
+	if (!(await git.status()).isClean()) {
+		throw new Error("Working tree is not clean");
 	}
 }
 
-async function pushChanges(paths: string[], version: string) {
+async function bumpVersions() {
+	await Promise.all(
+		paths.map(async (path) => {
+			const content = await readFile(path, "utf8");
+			const updated = content.replace(/"version"\s*:\s*"[^"]+"/, `"version": "${version.slice(1)}"`);
+			await writeFile(path, updated);
+		}),
+	);
+}
+
+async function commitTagAndPush() {
 	const git = simpleGit();
 
-	await git.addConfig("user.name", `Bakit Bot`);
-	await git.addConfig("user.email", `${String(BAKIT_APP_ID)}+${String(BAKIT_APP_SLUG)}[bot]@users.noreply.github.com`);
-
-	const tags = await git.tags();
-
-	if (tags.all.includes(version)) {
-		throw new Error(`Tag ${version} is already existed.`);
-	}
+	await git.addConfig("user.name", "Bakit");
+	await git.addConfig("user.email", `${BAKIT_APP_ID}+${BAKIT_APP_SLUG}@users.noreply.github.com`);
 
 	await git.add(paths);
-
 	await git.commit(`chore(release): ${version}`);
-
 	await git.addTag(version);
 
 	await git.raw([
-		"remote",
-		"set-url",
-		"origin",
-		`https://x-access-token:${installationAuth.token}@github.com/${GITHUB_CONFIG.owner}/${GITHUB_CONFIG.repo}.git`,
+		"push",
+		`https://x-access-token:${installationAuth.token}@github.com/${GITHUB.owner}/${GITHUB.repo}.git`,
+		"--follow-tags",
 	]);
-
-	await git.push("origin");
-	await git.pushTags("origin");
-
-	console.log("Pushed changes successfully");
 }
 
-async function createRelease(version: string) {
-	const result = await octokit.repos.createRelease({
-		owner: GITHUB_CONFIG.owner,
-		repo: GITHUB_CONFIG.repo,
+async function createRelease() {
+	await octokit.repos.createRelease({
+		owner: GITHUB.owner,
+		repo: GITHUB.repo,
 		tag_name: version,
 		name: version,
-		generate_release_notes: true,
 		prerelease: isPrerelease,
+		generate_release_notes: true,
 	});
-
-	console.log(`Created release ${version} at ${result.data.html_url}`);
 }
 
-// ------------------------------
-// Main execution
-// ------------------------------
-const { version } = args;
-const configPaths = await glob("packages/*/package.json");
-
-await bumpVersion(configPaths, version);
-await pushChanges(configPaths, version);
-await createRelease(version);
+await ensureCleanRepo();
+await bumpVersions();
+await commitTagAndPush();
+await createRelease();

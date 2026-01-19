@@ -6,47 +6,31 @@ settings:
 
 importers:
   .:
-    dependencies:
+    devDependencies:
+      "@eslint/js":
+        specifier: ^9.34.0
+        version: 9.34.0
       "@octokit/auth-app":
         specifier: ^8.1.0
         version: 8.1.0
       "@octokit/rest":
         specifier: ^22.0.0
         version: 22.0.0
-      dotenv:
-        specifier: ^17.2.1
-        version: 17.2.1
-      globals:
-        specifier: ^16.5.0
-        version: 16.5.0
-      minimist:
-        specifier: ^1.2.8
-        version: 1.2.8
-      simple-git:
-        specifier: ^3.28.0
-        version: 3.28.0
-      tiny-glob:
-        specifier: ^0.2.9
-        version: 0.2.9
-      type-fest:
-        specifier: ^4.41.0
-        version: 4.41.0
-      yaml:
-        specifier: ^2.8.1
-        version: 2.8.1
-    devDependencies:
-      "@eslint/js":
-        specifier: ^9.34.0
-        version: 9.34.0
       "@types/minimist":
         specifier: ^1.2.5
         version: 1.2.5
       "@types/node":
         specifier: ^24.3.0
         version: 24.3.0
+      "@types/semver":
+        specifier: ^7.7.1
+        version: 7.7.1
       "@vitest/ui":
         specifier: ^3.2.4
         version: 3.2.4(vitest@3.2.4)
+      dotenv:
+        specifier: ^17.2.1
+        version: 17.2.1
       eslint:
         specifier: ^9.34.0
         version: 9.34.0(jiti@2.6.1)
@@ -56,21 +40,39 @@ importers:
       eslint-plugin-prettier:
         specifier: ^5.5.4
         version: 5.5.4(@types/eslint@9.6.1)(eslint-config-prettier@10.1.8(eslint@9.34.0(jiti@2.6.1)))(eslint@9.34.0(jiti@2.6.1))(prettier@3.6.2)
+      globals:
+        specifier: ^16.5.0
+        version: 16.5.0
       husky:
         specifier: ^9.1.7
         version: 9.1.7
       lint-staged:
         specifier: ^16.1.5
         version: 16.1.5
+      minimist:
+        specifier: ^1.2.8
+        version: 1.2.8
       prettier:
         specifier: ^3.6.2
         version: 3.6.2
+      semver:
+        specifier: ^7.7.3
+        version: 7.7.3
+      simple-git:
+        specifier: ^3.28.0
+        version: 3.28.0
+      tiny-glob:
+        specifier: ^0.2.9
+        version: 0.2.9
       tsup:
         specifier: ^8.5.0
         version: 8.5.0(@swc/core@1.13.5)(jiti@2.6.1)(postcss@8.5.6)(tsx@4.20.5)(typescript@5.9.3)(yaml@2.8.1)
       tsx:
         specifier: ^4.20.5
         version: 4.20.5
+      type-fest:
+        specifier: ^4.41.0
+        version: 4.41.0
       typescript:
         specifier: ^5.9.3
         version: 5.9.3
@@ -83,6 +85,9 @@ importers:
       vitest:
         specifier: ^3.2.4
         version: 3.2.4(@types/debug@4.1.12)(@types/node@24.3.0)(@vitest/ui@3.2.4)(jiti@2.6.1)(lightningcss@1.30.1)(terser@5.44.0)(tsx@4.20.5)(yaml@2.8.1)
+      yaml:
+        specifier: ^2.8.1
+        version: 2.8.1
 
   packages/bakit:
     dependencies:
@@ -1145,6 +1150,10 @@ packages:
   "@types/qs@6.14.0":
     resolution:
       { integrity: sha512-eOunJqu0K1923aExK6y8p6fsihYEn/BYuQ4g0CxAAgFc4b/ZLN4CrsRZ55srTdqoiLzU2B2evC+apEIxprEzkQ== }
+
+  "@types/semver@7.7.1":
+    resolution:
+      { integrity: sha512-FmgJfu+MOcQ370SD0ev7EI8TlCAfKYU+B4m5T3yXc1CiRN94g/SZPtsCkk506aUDtlMnFZvasDwHHUcZUEaYuA== }
 
   "@types/ws@8.18.1":
     resolution:
@@ -2467,6 +2476,12 @@ packages:
     engines: { node: ">=10" }
     hasBin: true
 
+  semver@7.7.3:
+    resolution:
+      { integrity: sha512-SdsKMrI9TdgjdweUSR9MweHA4EJ8YxHn8DFaDisvhVlUOe4BF1tLD7GAj0lIqWVl+dPb/rExr0Btby5loQm20Q== }
+    engines: { node: ">=10" }
+    hasBin: true
+
   set-cookie-parser@2.7.2:
     resolution:
       { integrity: sha512-oeM1lpU/UvhTxw+g3cIfxXHyJRc/uidd3yK1P242gzHds0udQBYzs3y8j4gCCW+ZJ7ad0yctld8RYO+bdurlvw== }
@@ -3545,6 +3560,8 @@ snapshots:
 
   "@types/qs@6.14.0": {}
 
+  "@types/semver@7.7.1": {}
+
   "@types/ws@8.18.1":
     dependencies:
       "@types/node": 24.3.0
@@ -3620,7 +3637,7 @@ snapshots:
       fast-glob: 3.3.3
       is-glob: 4.0.3
       minimatch: 9.0.5
-      semver: 7.7.2
+      semver: 7.7.3
       ts-api-utils: 2.1.0(typescript@5.9.3)
       typescript: 5.9.3
     transitivePeerDependencies:
@@ -4650,6 +4667,8 @@ snapshots:
   secure-json-parse@4.1.0: {}
 
   semver@7.7.2: {}
+
+  semver@7.7.3: {}
 
   set-cookie-parser@2.7.2: {}
 
