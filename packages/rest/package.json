@@ -1,6 +1,6 @@
 {
 	"name": "@bakit/rest",
-	"version": "2.0.0-alpha.32",
+	"version": "2.0.0-alpha.34",
 	"description": "Rest manager for bakit framework",
 	"type": "module",
 	"exports": {
