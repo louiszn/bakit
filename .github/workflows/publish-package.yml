@@ -49,7 +49,14 @@ jobs:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
           if [[ "${{ github.event.release.prerelease }}" == "true" ]]; then
-            pnpm -r publish --no-git-checks --filter '!private' --tag next
+            pnpm -r publish \
+              --no-git-checks \
+              --filter '!private' \
+              --tag next \
+              --access public
           else
-            pnpm -r publish --no-git-checks --filter '!private'
+            pnpm -r publish \
+              --no-git-checks \
+              --filter '!private' \
+              --access public
           fi
