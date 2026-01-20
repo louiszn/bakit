@@ -83,8 +83,8 @@ For example, we will create `.changeset/add-new-change.md` with the following co
 
 ```
 ---
-@bakit/rest patch
-@bakit/service minor
+"@bakit/rest": patch
+"@bakit/service": minor
 ---
 
 Support service system for REST manager
