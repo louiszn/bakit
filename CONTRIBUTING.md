@@ -59,15 +59,14 @@ You are now ready to make changes.
 
 ## When do I need to update changelog
 
-When do I need a changelog entry:
+You must add a changeset if your change is user visible, including:
 
-- You must add a changeset if your change is user visible, including
 - Bug fixes
 - New features
 - Behavior changes
 - Anything that affects public usage
 
-You do not need a changeset for
+You do not need a changeset for:
 
 - Refactors with no behavior change
 - Internal tooling
