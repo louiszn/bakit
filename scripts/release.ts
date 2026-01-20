@@ -43,6 +43,8 @@ async function releasePackage(path: string) {
 		return;
 	}
 
+	const isLatest = !isPrerelease && pkgName === "bakit";
+
 	await octokit.repos.createRelease({
 		repo: GITHUB.repo,
 		owner: GITHUB.owner,
@@ -50,6 +52,7 @@ async function releasePackage(path: string) {
 		name: tagName,
 		body: summary,
 		prerelease: isPrerelease,
+		make_latest: isLatest ? "true" : "false",
 	});
 
 	await execa(
