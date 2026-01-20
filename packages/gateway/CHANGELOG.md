@@ -1,5 +1,11 @@
 # @bakit/gateway
 
+## 2.1.0
+
+### Minor Changes
+
+- Gateway manager will ask for a REST client instead of REST options
+
 ## 2.0.0
 
 ### Patch Changes

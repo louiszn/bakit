@@ -1,7 +1,7 @@
 import { fileURLToPath } from "node:url";
 import { ChildProcess, fork } from "node:child_process";
 
-import { type REST, type RESTOptions, createREST } from "@bakit/rest";
+import { type REST } from "@bakit/rest";
 import { attachEventBus, Collection, createQueue, type EventBus, type Queue } from "@bakit/utils";
 
 import type { OptionalKeysOf } from "type-fest";
@@ -29,7 +29,6 @@ export interface GatewayManagerOptions {
 	gatewayURL?: string;
 	totalShards?: number | "auto";
 	shardsPerWorker?: number;
-	rest?: RESTOptions;
 }
 
 export const DEFAULT_GATEWAY_MANAGER_OPTIONS = {
@@ -59,7 +58,7 @@ export interface GatewayManager extends EventBus<GatewayManagerEvents> {
 	sendToShard(id: number, payload: GatewaySendPayload): void;
 }
 
-export function createGatewayManager(options: GatewayManagerOptions): GatewayManager {
+export function createGatewayManager(options: GatewayManagerOptions, rest: REST): GatewayManager {
 	const opts = {
 		...DEFAULT_GATEWAY_MANAGER_OPTIONS,
 		...options,
@@ -68,7 +67,6 @@ export function createGatewayManager(options: GatewayManagerOptions): GatewayMan
 	let identifyQueue: Queue | undefined;
 
 	const workers = new Collection<number, ChildProcess>();
-	const rest = createREST(opts.rest ?? { token: options.token });
 
 	const base = {
 		get rest() {
@@ -84,7 +82,7 @@ export function createGatewayManager(options: GatewayManagerOptions): GatewayMan
 	const self = attachEventBus<GatewayManagerEvents, typeof base>(base);
 
 	async function spawn() {
-		const gatewayBotInfo = await rest.get<APIGatewayBotInfo>("/gateway/bot");
+		const gatewayBotInfo = await rest!.get<APIGatewayBotInfo>("/gateway/bot");
 		const { session_start_limit: limit } = gatewayBotInfo;
 
 		const totalShards = opts.totalShards === "auto" ? gatewayBotInfo.shards : opts.totalShards;
