@@ -1,6 +1,6 @@
 {
 	"name": "@bakit/rest",
-	"version": "2.0.0-alpha.36",
+	"version": "2.0.0",
 	"description": "Rest manager for bakit framework",
 	"type": "module",
 	"exports": {
@@ -34,8 +34,8 @@
 	"license": "MIT",
 	"packageManager": "pnpm@10.15.0",
 	"dependencies": {
-		"@bakit/utils": "workspace:*",
-		"@bakit/service": "workspace:*",
+		"@bakit/utils": "workspace:^",
+		"@bakit/service": "workspace:^",
 		"discord-api-types": "^0.38.37",
 		"type-fest": "^4.41.0"
 	}
