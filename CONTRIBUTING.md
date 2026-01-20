@@ -1,4 +1,4 @@
-# Contributin to Bakit
+# Contributing to Bakit
 
 Thanks for your interest in contributing to Bakit.
 This repository uses a changelog driven release workflow.
