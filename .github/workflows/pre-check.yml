@@ -1,4 +1,6 @@
 name: Preview Check
+permissions:
+  contents: read
 
 # Trigger on pull requests to main/dev branches
 on:
