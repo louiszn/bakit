@@ -5,7 +5,8 @@ import { remark } from "remark";
 import { parse } from "semver";
 import { simpleGit } from "simple-git";
 import { execa } from "execa";
-import glob from "tiny-glob";
+
+import type { PackageJson } from "type-fest";
 
 import type { Root, RootContent, Heading } from "mdast";
 
@@ -14,36 +15,54 @@ const GITHUB = {
 	repo: "bakit",
 } as const;
 
-const changelogs = await glob("packages/*/CHANGELOG.md");
+const PACKAGES_ORDER = ["utils", "service", "rest", "gateway", "bakit"] as const;
 
 const git = simpleGit();
 const octokit = new Octokit({ auth: process.env["GITHUB_TOKEN"] });
 const processor = remark();
 
-await Promise.all(changelogs.map(releasePackage));
+const tags = new Set((await git.tags()).all);
 
-async function releasePackage(path: string) {
-	const markdown = await readFile(path, "utf8");
-	const root = processor.parse(markdown) as Root;
+for (const pkg of PACKAGES_ORDER) {
+	await releasePackage(pkg);
+}
 
-	const pkgName = extractPackageName(root);
-	const pkgVersion = extractLatestVersion(root);
-	const pkgSummary = extractLatestSummary(root);
+async function releasePackage(name: string) {
+	const pkg = await getPackageJSON(name);
+
+	const pkgName = pkg.name!;
+	const pkgVersion = pkg.version!;
 
 	const semver = parse(pkgVersion, false, true);
 	const isPrerelease = semver.prerelease.length > 0;
+	const isLatest = !isPrerelease && pkgName === "bakit";
 
-	const summary = processor.stringify(pkgSummary);
+	const tagName = `${pkg.name}@${semver.version}`;
 
-	const tags = await git.tags();
-	const tagName = `${pkgName}@${semver.version}`;
-
-	if (tags.all.includes(tagName)) {
+	if (tags.has(tagName)) {
 		console.log(`Tag ${tagName} already exists, skipping...`);
 		return;
 	}
 
-	const isLatest = !isPrerelease && pkgName === "bakit";
+	tags.add(tagName);
+
+	const markdown = await readFile(`packages/${name}/CHANGELOG.md`, "utf8").catch(() => null);
+
+	if (!markdown) {
+		throw new Error(`Missing CHANGELOG.md for bumped package ${pkgName}`);
+	}
+
+	const root = processor.parse(markdown) as Root;
+
+	if (extractLatestVersion(root) !== pkgVersion) {
+		throw new Error(
+			`Version mismatch in ${pkgName} changelog: expected ${pkgVersion}, found ${extractLatestVersion(root)}`,
+		);
+	}
+
+	console.log(`Releasing ${tagName}...`);
+
+	const summary = processor.stringify(extractLatestSummary(root));
 
 	await octokit.repos.createRelease({
 		repo: GITHUB.repo,
@@ -74,20 +93,12 @@ async function releasePackage(path: string) {
 	console.log(`Released ${tagName}`);
 }
 
-function extractPackageName(root: Root) {
-	for (const node of root.children) {
-		if (node.type !== "heading" || node.depth !== 1) {
-			continue;
-		}
+async function getPackageJSON(name: string): Promise<PackageJson> {
+	const { default: pkg } = await import(`../packages/${name}/package.json`, {
+		with: { type: "json" },
+	});
 
-		const textNode = node.children.find((child) => child.type === "text");
-
-		if (textNode) {
-			return textNode.value.trim();
-		}
-	}
-
-	throw new Error("Package name not found in changelog");
+	return pkg as PackageJson;
 }
 
 function extractLatestVersion(root: Root) {
