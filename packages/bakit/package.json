@@ -1,6 +1,6 @@
 {
 	"name": "bakit",
-	"version": "2.0.0",
+	"version": "2.0.1",
 	"description": "A framework for discordeno",
 	"type": "module",
 	"exports": {
