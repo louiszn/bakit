@@ -1,0 +1,13 @@
+name: CodeQL
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  analyze:
+    uses: github/codeql-action/analyze@v3
+    with:
+      languages: actions
