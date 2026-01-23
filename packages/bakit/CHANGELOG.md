@@ -1,5 +1,18 @@
 # bakit
 
+## 2.0.2
+
+### Patch Changes
+
+- @bakit/service:
+  - Implemented new runtime binding for server and client service.
+  - Removed `createServiceServer` and `createrServiceClient`.
+  - Added connection events for tranport API.
+- Updated dependencies
+  - @bakit/service@3.0.0
+  - @bakit/gateway@2.1.2
+  - @bakit/rest@2.0.2
+
 ## 2.0.1
 
 ### Patch Changes

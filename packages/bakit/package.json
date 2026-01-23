@@ -1,6 +1,6 @@
 {
 	"name": "bakit",
-	"version": "2.0.1",
+	"version": "2.0.2",
 	"description": "A framework for discordeno",
 	"type": "module",
 	"exports": {
@@ -39,8 +39,10 @@
 	"dependencies": {
 		"@bakit/gateway": "workspace:^",
 		"@bakit/rest": "workspace:^",
-		"@bakit/utils": "workspace:^",
 		"@bakit/service": "workspace:^",
+		"@bakit/utils": "workspace:^",
+		"commander": "^14.0.2",
+		"tiny-glob": "^0.2.9",
 		"type-fest": "^4.41.0"
 	}
 }

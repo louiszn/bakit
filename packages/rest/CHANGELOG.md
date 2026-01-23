@@ -1,5 +1,12 @@
 # @bakit/rest
 
+## 2.0.2
+
+### Patch Changes
+
+- Updated dependencies
+  - @bakit/service@3.0.0
+
 ## 2.0.1
 
 ### Patch Changes

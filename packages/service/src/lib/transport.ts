@@ -43,13 +43,13 @@ export type TransportServerOptions = {
 	[D in TransportDriver]: { driver: D } & TransportServerDriverSpecificOptions[D];
 }[TransportDriver];
 
-export interface TransportClient extends TransportClientProtocol, EventBus<TransportEvents> {
+export interface TransportClient extends TransportClientProtocol, EventBus<TransportClientEvents> {
 	send: BaseServerDriver["send"];
 	connect: BaseClientDriver["connect"];
 	disconnect: BaseClientDriver["disconnect"];
 }
 
-export interface TransportServer extends TransportServerProtocol, EventBus<TransportEvents> {
+export interface TransportServer extends TransportServerProtocol, EventBus<TransportServerEvents> {
 	broadcast: BaseServerDriver["broadcast"];
 	listen: BaseServerDriver["listen"];
 	close: BaseServerDriver["close"];
@@ -80,17 +80,16 @@ export type RPCResponseMessage = {
 	id: string;
 } & MergeExclusive<{ result: Serializable }, { error: RPCErrorPayload }>;
 
-export interface TransportEvents {
+export interface TransportClientEvents {
 	connect: [];
 	disconnect: [];
 	error: [error: Error];
+}
 
-	// RPC-level
-	request: [id: string, method: string];
-	response: [id: string];
-	timeout: [id: string];
-
-	// Server-side
+export interface TransportServerEvents {
+	listen: [];
+	close: [];
+	error: [error: Error];
 	clientConnect: [connection: unknown];
 	clientDisconnect: [connection: unknown];
 }
@@ -113,7 +112,7 @@ export function createTransportClient(options: TransportClientOptions): Transpor
 		disconnect: driver.disconnect,
 	};
 
-	const self = attachEventBus<TransportEvents, typeof base>(base);
+	const self = attachEventBus<TransportClientEvents, typeof base>(base);
 
 	driver.on("connect", () => self.emit("connect"));
 	driver.on("disconnect", () => self.emit("disconnect"));
@@ -140,8 +139,9 @@ export function createTransportServer(options: TransportServerOptions): Transpor
 		close: driver.close,
 	};
 
-	const self = attachEventBus<TransportEvents, typeof base>(base);
+	const self = attachEventBus<TransportServerEvents, typeof base>(base);
 
+	driver.on("listen", () => self.emit("listen"));
 	driver.on("clientConnect", (conn) => self.emit("clientConnect", conn));
 	driver.on("clientDisconnect", (conn) => self.emit("clientDisconnect", conn));
 	driver.on("clientError", (_, error) => self.emit("error", error));

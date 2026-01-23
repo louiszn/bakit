@@ -37,6 +37,8 @@ export interface BaseClientDriverEvents {
 }
 
 export interface BaseServerDriverEvents {
+	listen: [];
+	close: [];
 	message: [connection: unknown, message: Serializable];
 	clientConnect: [connection: unknown];
 	clientDisconnect: [connection: unknown];
