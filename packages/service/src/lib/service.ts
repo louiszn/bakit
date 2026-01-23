@@ -121,7 +121,7 @@ export function createService(options: ServiceOptions): Service {
 	return service;
 }
 
-export function getInteralService(service: Service): ServiceInteral {
+export function getInternalService(service: Service): ServiceInteral {
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	return (service as any)[SERVICE_INTERNAL];
 }
