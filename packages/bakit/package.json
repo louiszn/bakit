@@ -1,13 +1,14 @@
 {
 	"name": "bakit",
-	"version": "2.0.2",
+	"version": "2.1.0",
 	"description": "A framework for discordeno",
 	"type": "module",
 	"exports": {
 		".": {
 			"import": "./dist/index.js",
 			"types": "./dist/index.d.ts"
-		}
+		},
+		"./cli": "./dist/cli.js"
 	},
 	"scripts": {
 		"build": "tsup",
@@ -42,7 +43,9 @@
 		"@bakit/service": "workspace:^",
 		"@bakit/utils": "workspace:^",
 		"commander": "^14.0.2",
+		"dotenv": "^17.2.3",
 		"tiny-glob": "^0.2.9",
+		"tsx": "^4.21.0",
 		"type-fest": "^4.41.0"
 	}
 }
