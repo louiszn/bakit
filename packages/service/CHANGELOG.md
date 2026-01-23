@@ -1,5 +1,12 @@
 # @bakit/service
 
+## 3.1.0
+
+### Minor Changes
+
+- @bakit/service: Implemented client binding on call.
+  bakit: Added new command `bakit start`.
+
 ## 3.0.0
 
 ### Major Changes
