@@ -1,5 +1,13 @@
 # @bakit/gateway
 
+## 2.1.2
+
+### Patch Changes
+
+- Updated dependencies
+  - @bakit/service@3.0.0
+  - @bakit/rest@2.0.2
+
 ## 2.1.1
 
 ### Patch Changes

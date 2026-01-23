@@ -1,4 +1,4 @@
-import { type Awaitable, type FunctionLike, type Promisify, promisify } from "@bakit/utils";
+import { type Awaitable, Collection, type FunctionLike, type Promisify } from "@bakit/utils";
 import {
 	createTransportClient,
 	createTransportServer,
@@ -7,84 +7,121 @@ import {
 	type TransportServer,
 	type TransportServerOptions,
 } from "./transport.js";
-import type { Serializable } from "@/types/driver.js";
+import type { ValueOf } from "type-fest";
 
 export interface ServiceOptions {
 	name: string;
 	transport: TransportClientOptions & TransportServerOptions;
 }
 
-export interface ServiceServer {
-	define<F extends ServiceFunction>(method: string, handler: F): Promisify<F>;
-	transport: TransportServer;
-}
-
-export interface ServiceClient {
-	define<F extends ServiceFunction>(method: string, handler: F): Promisify<F>;
-	transport: TransportClient;
-}
-
 export interface Service {
+	readonly name: string;
+	readonly role: ServiceRole;
 	define<F extends ServiceFunction>(method: string, handler: F): Promisify<F>;
-	start(): void;
-	stop(): void;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type ServiceFunction = FunctionLike<any[], Awaitable<any>>;
 
+export const ServiceRole = {
+	Client: "client",
+	Server: "server",
+	Unknown: "unknown",
+} as const;
+export type ServiceRole = ValueOf<typeof ServiceRole>;
+
+export type ServiceRuntime =
+	| { role: "unknown" }
+	| { role: "client"; transport: TransportClient }
+	| { role: "server"; transport: TransportServer };
+
+export interface ServiceInteral {
+	runtime: ServiceRuntime;
+	bind(role: "client" | "server"): void;
+}
+
+const SERVICE_INTERNAL = Symbol("service-internal");
+
 export function createService(options: ServiceOptions): Service {
-	const isServer = process.env["BAKIT_SERVICE_NAME"] === options.name;
+	const handlers = new Collection<string, ServiceFunction>();
 
-	if (isServer) {
-		const server = createServiceServer(options);
+	let runtime: ServiceRuntime = { role: "unknown" };
 
-		return {
-			define: server.define,
-			start: server.transport.listen,
-			stop: server.transport.close,
-		};
-	} else {
-		const client = createServiceClient(options);
-
-		return {
-			define: client.define,
-			start: client.transport.connect,
-			stop: client.transport.disconnect,
-		};
-	}
-}
-
-/**
- * Create a service client instance.
- *
- * @param {options} options.
- * @return {ServiceClient} Service client instance.
- */
-export function createServiceClient(options: ServiceOptions): ServiceClient {
-	const transport = createTransportClient(options.transport);
-
-	function define<F extends ServiceFunction>(method: string, _handler: F): Promisify<F> {
-		const fn = (...args: Serializable[]) => transport.request(method, ...args);
-		return fn as Promisify<F>;
-	}
-
-	return {
+	const service: Service = {
+		get name() {
+			return options.name;
+		},
+		get role() {
+			return runtime.role;
+		},
 		define,
-		transport,
 	};
-}
-
-export function createServiceServer(options: ServiceOptions): ServiceServer {
-	const transport = createTransportServer(options.transport);
 
 	function define<F extends ServiceFunction>(method: string, handler: F): Promisify<F> {
-		transport.handle(method, handler);
-		return promisify(handler);
+		if (handlers.has(method)) {
+			throw new Error(`Service method "${method}" already defined`);
+		}
+
+		handlers.set(method, handler);
+
+		const fn = (async (...args: Parameters<F>) => {
+			if (runtime.role === "unknown") {
+				throw new Error(`Service "${options.name}" is not bound (method "${method}")`);
+			}
+
+			if (runtime.role === "server") {
+				return handler(...args);
+			}
+
+			return runtime.transport.request(method, ...args);
+		}) as Promisify<F>;
+
+		return fn;
 	}
 
-	return {
-		define,
-		transport,
-	};
+	function bind(role: "client" | "server") {
+		if (runtime.role !== "unknown") {
+			throw new Error(`Service "${options.name}" already bound`);
+		}
+
+		if (role === "server") {
+			const server = createTransportServer(options.transport);
+
+			for (const [method, handler] of handlers) {
+				server.handle(method, handler);
+			}
+
+			runtime = {
+				role,
+				transport: server,
+			};
+
+			server.listen();
+		} else if (role === "client") {
+			const client = createTransportClient(options.transport);
+
+			runtime = {
+				role,
+				transport: client,
+			};
+
+			client.connect();
+		}
+	}
+
+	Object.defineProperty(service, SERVICE_INTERNAL, {
+		value: {
+			get runtime() {
+				return runtime;
+			},
+			bind,
+		} satisfies ServiceInteral,
+	});
+
+	return service;
+}
+
+export function getInteralService(service: Service): ServiceInteral {
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	return (service as any)[SERVICE_INTERNAL];
 }

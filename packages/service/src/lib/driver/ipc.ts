@@ -36,8 +36,6 @@ export interface IPCServerEvents extends BaseServerDriverEvents {
 	clientDisconnect: [socket: Socket];
 	clientError: [socket: Socket, error: Error];
 	drain: [socket: Socket];
-	listen: [];
-	close: [];
 }
 
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type

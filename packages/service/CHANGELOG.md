@@ -1,5 +1,14 @@
 # @bakit/service
 
+## 3.0.0
+
+### Major Changes
+
+- @bakit/service:
+  - Implemented new runtime binding for server and client service.
+  - Removed `createServiceServer` and `createrServiceClient`.
+  - Added connection events for tranport API.
+
 ## 2.0.1
 
 ### Patch Changes

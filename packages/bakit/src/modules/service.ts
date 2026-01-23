@@ -1,7 +1,5 @@
 export {
 	createService,
-	createServiceClient,
-	createServiceServer,
 	createTransportClient,
 	createTransportServer,
 	RPCError,
@@ -14,8 +12,6 @@ export {
 
 export type {
 	Service,
-	ServiceClient,
-	ServiceServer,
 	ServiceOptions,
 	ServiceFunction,
 	TransportClient,
@@ -23,7 +19,6 @@ export type {
 	TransportClientOptions,
 	TransportServerOptions,
 	TransportDriver,
-	TransportEvents,
 	Serializable,
 	RPCHandler,
 	RPCRequestMessage,
