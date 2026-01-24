@@ -1,5 +1,24 @@
 # @bakit/rest
 
+## 2.1.0
+
+### Minor Changes
+
+- @bakit/service:
+  - Added lifecycle hooks for `initialize` and `ready`.
+  - Added `ready` state checking for transport and driver.
+
+  @bakit/rest:
+  - Removed REST transport proxy.
+  - @bakit/service is no longer used.
+
+  @bakit/gateway:
+  - @bakit/service is no longer used.
+
+  bakit:
+  - TSX is no longer required.
+  - Added a check for using TSX if possible.
+
 ## 2.0.3
 
 ### Patch Changes

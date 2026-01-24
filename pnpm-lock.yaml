@@ -122,21 +122,19 @@ importers:
       tiny-glob:
         specifier: ^0.2.9
         version: 0.2.9
-      tsx:
-        specifier: ^4.21.0
-        version: 4.21.0
       type-fest:
         specifier: ^4.41.0
         version: 4.41.0
+    optionalDependencies:
+      tsx:
+        specifier: ^4.21.0
+        version: 4.21.0
 
   packages/gateway:
     dependencies:
       '@bakit/rest':
         specifier: workspace:^
         version: link:../rest
-      '@bakit/service':
-        specifier: workspace:^
-        version: link:../service
       '@bakit/utils':
         specifier: workspace:^
         version: link:../utils
@@ -156,9 +154,6 @@ importers:
 
   packages/rest:
     dependencies:
-      '@bakit/service':
-        specifier: workspace:^
-        version: link:../service
       '@bakit/utils':
         specifier: workspace:^
         version: link:../utils

@@ -8,7 +8,13 @@ import PQueue from "p-queue";
 import { attachEventBus, type EventBus } from "@bakit/utils";
 
 import type { ValueOf } from "type-fest";
-import type { Serializable, BaseClientDriver, BaseClientDriverEvents, BaseServerDriverEvents } from "@/types/driver.js";
+import type {
+	Serializable,
+	BaseClientDriver,
+	BaseClientDriverEvents,
+	BaseServerDriverEvents,
+	BaseServerDriver,
+} from "@/types/driver.js";
 
 const UNIX_SOCKET_DIR = "/tmp";
 const WINDOWS_PIPE_PREFIX = "\\\\.\\pipe\\";
@@ -57,6 +63,7 @@ export interface IPCSocketConnection extends EventBus<IPCClientEvents>, IPCSocke
 	reconnect: () => void;
 	write: (chunk: Buffer) => void;
 	readonly state: SocketState;
+	readonly ready: boolean;
 }
 
 export interface IPCSocketMessageHandler extends BaseClientDriver {
@@ -210,7 +217,7 @@ export function createIPCServer(options: IPCServerOptions): IPCServer {
 		writeSocket(socket, packet);
 	}
 
-	return self;
+	return self satisfies BaseServerDriver;
 }
 
 export function createIPCSocketConnection(
@@ -253,6 +260,10 @@ export function createIPCSocketConnection(
 
 		get state() {
 			return state;
+		},
+
+		get ready() {
+			return state === SocketState.Connected;
 		},
 	});
 
@@ -446,7 +457,7 @@ export function createIPCSocketConnection(
 		});
 	}
 
-	return connection;
+	return connection satisfies BaseClientDriver;
 }
 
 export function createIPCSocketMessageHandler(options: IPCSocketMessageHandlerOptions) {

@@ -1,11 +1,3 @@
-export { createREST, createRESTTransportServer } from "@bakit/rest";
+export { createREST } from "@bakit/rest";
 
-export type {
-	REST,
-	RESTEvents,
-	RESTEndpoint,
-	RESTMethod,
-	RESTTransportServer,
-	RESTOptions,
-	RESTTransportServerOptions,
-} from "@bakit/rest";
+export type { REST, RESTEvents, RESTEndpoint, RESTMethod, RESTOptions } from "@bakit/rest";

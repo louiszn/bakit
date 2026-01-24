@@ -20,6 +20,7 @@ export interface BaseClientDriver extends EventBus<BaseClientDriverEvents> {
 	send(message: Serializable): void;
 	connect(): void;
 	disconnect(): void;
+	readonly ready: boolean;
 }
 
 export interface BaseServerDriver extends EventBus<BaseServerDriverEvents> {

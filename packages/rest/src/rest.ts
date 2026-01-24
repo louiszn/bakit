@@ -1,12 +1,3 @@
-import {
-	createTransportClient,
-	createTransportServer,
-	type Serializable,
-	type TransportClientOptions,
-	type TransportServer,
-	type TransportServerOptions,
-} from "@bakit/service";
-
 import { createRESTBucketManager } from "./bucket.js";
 
 import type { OptionalKeysOf, ValueOf } from "type-fest";
@@ -49,11 +40,6 @@ export interface REST extends EventBus<RESTEvents> {
 	patch<T = unknown, P = unknown>(endpoint: RESTEndpoint, payload?: P): Promise<T>;
 }
 
-export interface RESTTransportServer extends REST {
-	server: TransportServer;
-	listen: TransportServer["listen"];
-}
-
 export interface RESTEvents {
 	request: [endpoint: RESTEndpoint, method: RESTMethod, payload?: unknown];
 }
@@ -92,15 +78,9 @@ export interface RESTDriver {
 	request: RESTRequestFn;
 }
 
-export type RESTTransportProxyOptions = { method: "transport" } & TransportClientOptions;
-export type RESTCustomProxyOptions = { method: "custom"; request: RESTRequestFn };
-export type RESTProxyOptions = RESTTransportProxyOptions | RESTCustomProxyOptions;
+export type RESTProxyOptions = { request: RESTRequestFn };
 
-export type RESTOptions =
-	| (InternalRESTOptions & { proxy?: false })
-	| ((RESTTransportProxyOptions | RESTCustomProxyOptions) & { proxy: true });
-
-export type RESTTransportServerOptions = InternalRESTOptions & { transport: TransportServerOptions };
+export type RESTOptions = (InternalRESTOptions & { proxy?: false }) | (RESTProxyOptions & { proxy: true });
 
 export interface RESTRouteMeta {
 	scopeId: string;
@@ -197,35 +177,9 @@ export function createInternalREST(options: InternalRESTOptions): RESTDriver {
 }
 
 export function createRESTProxy(options: RESTProxyOptions): RESTDriver {
-	if (options.method === "custom") {
-		return {
-			request: options.request,
-		};
-	}
-
-	const client = createTransportClient(options);
-	client.connect();
-
 	return {
-		request(endpoint, method, payload) {
-			return client.request("makeRequest", endpoint, method, payload as Serializable);
-		},
+		request: options.request,
 	};
-}
-
-export function createRESTTransportServer(options: RESTTransportServerOptions): RESTTransportServer {
-	const rest = createREST(options);
-	const server = createTransportServer(options.transport);
-
-	server.handle("makeRequest", (endpoint: RESTEndpoint, method: RESTMethod, payload) => {
-		console.log("Received request", { endpoint, method, payload });
-		return rest.request<Serializable>(endpoint, method, payload);
-	});
-
-	return Object.assign(rest, {
-		server,
-		listen: server.listen,
-	});
 }
 
 /**
