@@ -1,5 +1,13 @@
 # bakit
 
+## 2.1.2
+
+### Patch Changes
+
+- Fix: RPC messages being ignored
+- Updated dependencies
+  - @bakit/service@3.2.1
+
 ## 2.1.1
 
 ### Patch Changes
