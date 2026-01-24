@@ -1,4 +1,4 @@
-#!/usr/bin/env -S npx tsx
+#!/usr/bin/env node
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { type ChildProcess, fork } from "node:child_process";
 import { config as loadEnv } from "dotenv";
@@ -6,7 +6,7 @@ import { config as loadEnv } from "dotenv";
 import { program } from "commander";
 import glob from "tiny-glob";
 
-import { getInternalService, ServiceRole, type Service } from "@bakit/service";
+import { startServiceServer, type Service } from "@bakit/service";
 
 import pkg from "../../../package.json" with { type: "json" };
 
@@ -62,11 +62,14 @@ function spawnServices(services: Service[]) {
 	process.on("SIGINT", shutdown);
 	process.on("SIGTERM", shutdown);
 
+	const hasTSX = hasPackage("tsx");
+
 	for (const service of services) {
 		const child = fork(cliPath, ["start", service.name], {
 			env: {
 				...process.env,
 				BAKIT_SERVICE_NAME: service.name,
+				NODE_OPTIONS: hasTSX ? "--import tsx" : undefined,
 			},
 			stdio: "inherit",
 		});
@@ -114,18 +117,16 @@ async function runServiceWorker(name: string) {
 		process.exit(1);
 	}
 
-	await new Promise<void>((resolve) => {
-		const internal = getInternalService(service);
-
-		internal.bind(ServiceRole.Server);
-
-		if (internal.runtime.role !== "server") {
-			console.error(`Service "${name}" is not a server.`);
-			process.exit(1);
-		}
-
-		internal.runtime.transport.once("listen", resolve);
-	});
+	await startServiceServer(service);
 
 	console.log(`Service "${name}" started as server`);
+}
+
+function hasPackage(name: string) {
+	try {
+		import.meta.resolve(name);
+		return true;
+	} catch {
+		return false;
+	}
 }

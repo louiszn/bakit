@@ -1,6 +1,6 @@
 {
 	"name": "bakit",
-	"version": "2.1.0",
+	"version": "2.1.1",
 	"description": "A framework for discordeno",
 	"type": "module",
 	"exports": {
@@ -37,6 +37,9 @@
 	"author": "louiszn",
 	"license": "MIT",
 	"packageManager": "pnpm@10.15.0",
+	"optionalDependencies": {
+		"tsx": "^4.21.0"
+	},
 	"dependencies": {
 		"@bakit/gateway": "workspace:^",
 		"@bakit/rest": "workspace:^",
@@ -45,7 +48,6 @@
 		"commander": "^14.0.2",
 		"dotenv": "^17.2.3",
 		"tiny-glob": "^0.2.9",
-		"tsx": "^4.21.0",
 		"type-fest": "^4.41.0"
 	}
 }

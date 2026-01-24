@@ -15,6 +15,7 @@ function createPair() {
 		send: vi.fn(),
 		connect: vi.fn(),
 		disconnect: vi.fn(),
+		ready: true,
 	};
 
 	const serverBase = {

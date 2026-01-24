@@ -47,6 +47,8 @@ export interface TransportClient extends TransportClientProtocol, EventBus<Trans
 	send: BaseServerDriver["send"];
 	connect: BaseClientDriver["connect"];
 	disconnect: BaseClientDriver["disconnect"];
+
+	readonly ready: boolean;
 }
 
 export interface TransportServer extends TransportServerProtocol, EventBus<TransportServerEvents> {
@@ -110,6 +112,10 @@ export function createTransportClient(options: TransportClientOptions): Transpor
 		send: driver.send,
 		connect: driver.connect,
 		disconnect: driver.disconnect,
+
+		get ready() {
+			return driver.ready;
+		},
 	};
 
 	const self = attachEventBus<TransportClientEvents, typeof base>(base);

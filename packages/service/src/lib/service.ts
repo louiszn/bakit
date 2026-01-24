@@ -17,6 +17,10 @@ export interface ServiceOptions {
 export interface Service {
 	readonly name: string;
 	readonly role: ServiceRole;
+
+	initialize?: FunctionLike<[], Awaitable<void>>;
+	onReady?: FunctionLike<[], Awaitable<void>>;
+
 	define<F extends ServiceFunction>(method: string, handler: F): Promisify<F>;
 }
 
@@ -90,7 +94,8 @@ export function createService(options: ServiceOptions): Service {
 				return handler(...args);
 			}
 
-			assertClient(runtime);
+			assertRuntimeClient(service, runtime);
+
 			return runtime.transport.request(method, ...args);
 		}) as Promisify<F>;
 
@@ -103,11 +108,12 @@ export function createService(options: ServiceOptions): Service {
 		}
 
 		bind(ServiceRole.Client);
-	}
+		assertRuntimeClient(service, runtime);
 
-	function assertClient(runtime: MutableRuntime): asserts runtime is ServiceClientRuntime {
-		if (runtime.role !== "client") {
-			throw new Error(`Service "${options.name}" is not a client`);
+		// The role check will make sure this is only called once
+		// The service will be connected automatically when the `definition` is called
+		if (!runtime.transport.ready) {
+			runtime.transport.connect();
 		}
 	}
 
@@ -125,15 +131,11 @@ export function createService(options: ServiceOptions): Service {
 
 			runtime.role = "server";
 			runtime.transport = server;
-
-			server.listen();
 		} else if (role === "client") {
 			const client = createTransportClient(options.transport);
 
 			runtime.role = "client";
 			runtime.transport = client;
-
-			client.connect();
 		}
 	}
 
@@ -151,6 +153,42 @@ export function createService(options: ServiceOptions): Service {
 	});
 
 	return service;
+}
+
+export async function startServiceServer(service: Service) {
+	const internal = getInternalService(service);
+
+	internal.bind(ServiceRole.Server);
+	await service.initialize?.();
+
+	return await new Promise<void>((resolve) => {
+		assertRuntimeServer(service, internal.runtime);
+
+		internal.runtime.transport.once("listen", async () => {
+			resolve();
+			await service.onReady?.();
+		});
+
+		internal.runtime.transport.listen();
+	});
+}
+
+export function assertRuntimeClient(
+	service: Service,
+	runtime: MutableRuntime,
+): asserts runtime is ServiceClientRuntime {
+	if (runtime.role !== "client") {
+		throw new Error(`Service "${service.name}" is not a client`);
+	}
+}
+
+export function assertRuntimeServer(
+	service: Service,
+	runtime: MutableRuntime,
+): asserts runtime is ServiceServerRuntime {
+	if (runtime.role !== "server") {
+		throw new Error(`Service "${service.name}" is not a server`);
+	}
 }
 
 export function getInternalService(service: Service): ServiceInteral {
