@@ -191,7 +191,7 @@ export function createTransportClientProtocol(driver: BaseClientDriver): Transpo
 
 		const hasType = "type" in message && message["type"] === "response";
 		const hasId = "id" in message && typeof message["id"] === "string";
-		const hasResult = "result" in message && message["result"] !== undefined;
+		const hasResult = "result" in message;
 		const hasError = "error" in message && message["error"] !== undefined;
 
 		return hasType && hasId && hasResult !== hasError;
@@ -199,13 +199,6 @@ export function createTransportClientProtocol(driver: BaseClientDriver): Transpo
 
 	function request<T>(method: string, ...args: Serializable[]): Promise<T> {
 		const requestId = randomUUID();
-
-		driver.send({
-			type: "request",
-			id: requestId,
-			method,
-			args,
-		} satisfies RPCRequestMessage);
 
 		return new Promise<T>((resolve, reject) => {
 			const timeout = setTimeout(() => {
@@ -226,6 +219,13 @@ export function createTransportClientProtocol(driver: BaseClientDriver): Transpo
 					reject(e);
 				},
 			});
+
+			driver.send({
+				type: "request",
+				id: requestId,
+				method,
+				args,
+			} satisfies RPCRequestMessage);
 		});
 	}
 
