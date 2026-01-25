@@ -1,5 +1,14 @@
 # bakit
 
+## 2.2.2
+
+### Patch Changes
+
+- @bakit/gateway:
+  - Fixed incomplete message being deserialized.
+- Updated dependencies
+  - @bakit/gateway@2.1.7
+
 ## 2.2.1
 
 ### Patch Changes

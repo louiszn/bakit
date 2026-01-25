@@ -207,13 +207,12 @@ export function createShard(options: ShardOptions): Shard {
 
 				handlePayload(payload);
 			} catch (err) {
-				// SyntaxError = incomplete JSON
-				if (!(err instanceof SyntaxError)) {
-					inflateBuffer = Buffer.alloc(0);
-					self.emit("error", err as Error);
-				} else {
-					self.emit("error", err);
+				if (err instanceof SyntaxError) {
+					return;
 				}
+
+				inflateBuffer = Buffer.alloc(0);
+				self.emit("error", err as Error);
 			}
 		});
 
