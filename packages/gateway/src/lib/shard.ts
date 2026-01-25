@@ -14,7 +14,7 @@ import {
 } from "discord-api-types/gateway";
 import type { ValueOf, OptionalKeysOf } from "type-fest";
 
-const ZLIB_FLUSH = Buffer.from([0x00, 0x00, 0xff, 0xff]);
+const INCOMPLETE_JSON_REGEX = /unexpected end|unterminated|unexpected eof|end of json/i;
 
 export interface ShardOptions {
 	id: number;
@@ -111,8 +111,7 @@ export function createShard(options: ShardOptions): Shard {
 	let resumeGatewayURL: string | undefined;
 
 	let inflater: Inflate | undefined;
-	let inflateBuffer: Buffer | undefined;
-	let zlibBuffer: Buffer | undefined;
+	let inflateBuffer: Buffer = Buffer.alloc(0);
 
 	let sessionId: string | undefined;
 	let lastSequence: number | undefined;
@@ -177,44 +176,12 @@ export function createShard(options: ShardOptions): Shard {
 			perMessageDeflate: false,
 		});
 
-		// We use zlib-stream compression, so messages arrive as compressed chunks
-		// and must be reassembled before inflation.
-		inflateBuffer = Buffer.alloc(0);
-		zlibBuffer = Buffer.alloc(0);
-
 		// Inflate stream configured for Discord's Z_SYNC_FLUSH framing
 		inflater = createInflate({
 			flush: zlibConstants.Z_SYNC_FLUSH,
 		});
 
-		inflater.on("data", (chunk: Buffer) => {
-			if (!inflateBuffer) return;
-
-			inflateBuffer = Buffer.concat([inflateBuffer, chunk]);
-
-			// Safety cap (10MB decompressed)
-			if (inflateBuffer.length > 10 * 1024 * 1024) {
-				self.emit("error", new Error("Inflate buffer overflow"));
-				ws?.terminate();
-				return;
-			}
-
-			try {
-				const text = inflateBuffer.toString("utf8");
-				const payload = JSON.parse(text);
-
-				inflateBuffer = Buffer.alloc(0);
-
-				handlePayload(payload);
-			} catch (err) {
-				if (err instanceof SyntaxError) {
-					return;
-				}
-
-				inflateBuffer = Buffer.alloc(0);
-				self.emit("error", err as Error);
-			}
-		});
+		inflater.on("data", onInflate);
 
 		inflater.on("error", (err) => {
 			self.emit("error", err);
@@ -224,6 +191,10 @@ export function createShard(options: ShardOptions): Shard {
 		ws.on("message", onMessage);
 		ws.on("close", onClose);
 		ws.on("error", (err) => self.emit("error", err));
+	}
+
+	function isJSONIncomplete(err: unknown) {
+		return err instanceof Error && INCOMPLETE_JSON_REGEX.test(err.message);
 	}
 
 	function cleanup() {
@@ -247,8 +218,7 @@ export function createShard(options: ShardOptions): Shard {
 			inflater = undefined;
 		}
 
-		inflateBuffer = undefined;
-		zlibBuffer = undefined;
+		inflateBuffer = Buffer.alloc(0);
 
 		if (ws) {
 			if (ws.readyState !== WebSocket.CLOSED) {
@@ -298,26 +268,81 @@ export function createShard(options: ShardOptions): Shard {
 	}
 
 	function onMessage(data: RawData) {
-		if (!(data instanceof Buffer) || !zlibBuffer) {
+		if (!(data instanceof Buffer) || !inflater) {
 			return;
 		}
 
-		// Hard cap to prevent memory abuse
-		if (data.length > 8 * 1024 * 1024) {
+		// Safety: Discord's max payload size is 4MB compressed
+		if (data.length > 4 * 1024 * 1024) {
+			self.emit("error", new Error(`Compressed payload too large: ${data.length} bytes`));
 			ws?.terminate();
 			return;
 		}
 
-		zlibBuffer = Buffer.concat([zlibBuffer, data]);
+		try {
+			// Feed compressed data to inflater
+			// Z_SYNC_FLUSH mode automatically handles frame boundaries
+			inflater.write(data);
+		} catch (err) {
+			self.emit("error", new Error(`Zlib inflation error: ${err instanceof Error ? err.message : String(err)}`));
+			ws?.terminate();
+		}
+	}
 
-		// Wait for Z_SYNC_FLUSH
-		if (zlibBuffer.length < 4 || !zlibBuffer.subarray(zlibBuffer.length - 4).equals(ZLIB_FLUSH)) {
+	function onInflate(chunk: Buffer) {
+		inflateBuffer = Buffer.concat([inflateBuffer, chunk]);
+
+		// Safety cap (Discord's decompressed limit is 8MB)
+		if (inflateBuffer.length > 8 * 1024 * 1024) {
+			self.emit("error", new Error("Decompressed buffer overflow (8MB limit)"));
+			ws?.terminate();
 			return;
 		}
 
-		// Full frame received, inflate and parse
-		inflater?.write(zlibBuffer);
-		zlibBuffer = Buffer.alloc(0);
+		// Process complete JSON messages (newline-delimited)
+		let start = 0;
+		while (start < inflateBuffer.length) {
+			// Find next newline
+			const newlinePos = inflateBuffer.indexOf(0x0a, start);
+
+			if (newlinePos === -1) {
+				// No complete message yet
+				// Keep unprocessed data in buffer
+				if (start > 0) {
+					inflateBuffer = inflateBuffer.subarray(start);
+				}
+				return;
+			}
+
+			// Extract single JSON message
+			const messageSlice = inflateBuffer.subarray(start, newlinePos);
+
+			try {
+				const payload = JSON.parse(messageSlice.toString("utf8"));
+				handlePayload(payload);
+			} catch (err) {
+				if (!isJSONIncomplete(err)) {
+					self.emit(
+						"error",
+						new Error(`Failed to parse gateway payload: ${err instanceof Error ? err.message : String(err)}`),
+					);
+
+					// Clear buffer to avoid getting stuck
+					inflateBuffer = Buffer.alloc(0);
+					return;
+				}
+
+				// Incomplete JSON, wait for more data
+				inflateBuffer = inflateBuffer.subarray(start);
+				return;
+			}
+
+			// Move to next message
+			start = newlinePos + 1;
+		}
+
+		// All messages processed, clear buffer
+		inflateBuffer = Buffer.alloc(0);
 	}
 
 	function onClose(code: number) {
