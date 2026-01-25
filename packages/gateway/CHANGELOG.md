@@ -1,5 +1,12 @@
 # @bakit/gateway
 
+## 2.1.7
+
+### Patch Changes
+
+- @bakit/gateway:
+  - Fixed incomplete message being deserialized.
+
 ## 2.1.6
 
 ### Patch Changes
