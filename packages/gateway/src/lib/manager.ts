@@ -215,7 +215,9 @@ export function createGatewayManager(options: GatewayManagerOptions, rest: REST)
 
 	function broadcast(payload: GatewaySendPayload) {
 		for (const child of workers.values()) {
-			if (!child.connected) continue;
+			if (!child.connected) {
+				continue;
+			}
 
 			child.send({
 				type: "broadcast",

@@ -116,6 +116,9 @@ importers:
       commander:
         specifier: ^14.0.2
         version: 14.0.2
+      discord-api-types:
+        specifier: ^0.38.37
+        version: 0.38.37
       dotenv:
         specifier: ^17.2.3
         version: 17.2.3

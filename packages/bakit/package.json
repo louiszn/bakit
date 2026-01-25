@@ -1,6 +1,6 @@
 {
 	"name": "bakit",
-	"version": "2.1.2",
+	"version": "2.2.0",
 	"description": "A framework for discordeno",
 	"type": "module",
 	"exports": {
@@ -46,6 +46,7 @@
 		"@bakit/service": "workspace:^",
 		"@bakit/utils": "workspace:^",
 		"commander": "^14.0.2",
+		"discord-api-types": "^0.38.37",
 		"dotenv": "^17.2.3",
 		"tiny-glob": "^0.2.9",
 		"type-fest": "^4.41.0"

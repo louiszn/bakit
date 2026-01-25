@@ -1,5 +1,20 @@
 # bakit
 
+## 2.2.0
+
+### Minor Changes
+
+- bakit:
+  - Added Client API.
+
+  @bakit/gateway:
+  - Fixed error message after exiting the process.
+
+### Patch Changes
+
+- Updated dependencies
+  - @bakit/gateway@2.1.5
+
 ## 2.1.2
 
 ### Patch Changes
