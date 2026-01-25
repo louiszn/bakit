@@ -1,5 +1,16 @@
 # @bakit/gateway
 
+## 2.1.8
+
+### Patch Changes
+
+- fix(shard): correct zlib-stream compression handling
+  - Remove incorrect manual Z_SYNC_FLUSH marker detection
+  - Feed WebSocket data directly to zlib inflater with Z_SYNC_FLUSH mode
+  - Improve JSON parsing with proper newline splitting
+  - Add safety limits for compressed/decompressed payloads
+  - Enhance error handling and cleanup
+
 ## 2.1.7
 
 ### Patch Changes
