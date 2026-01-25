@@ -204,7 +204,9 @@ export function bindWorkerToProcess(worker: GatewayWorker) {
 	type IPCPayload<T extends WorkerIPCMessage["type"]> = Omit<Extract<WorkerIPCMessage, { type: T }>, "type">;
 
 	function send<T extends WorkerIPCMessage["type"]>(type: T, payload: IPCPayload<T>) {
-		process.send?.({ type, ...payload });
+		if (process.send && process.connected) {
+			process.send({ type, ...payload });
+		}
 	}
 
 	process.on("SIGINT", () => {});

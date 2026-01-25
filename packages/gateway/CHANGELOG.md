@@ -1,5 +1,15 @@
 # @bakit/gateway
 
+## 2.1.5
+
+### Patch Changes
+
+- bakit:
+  - Added Client API.
+
+  @bakit/gateway:
+  - Fixed error message after exiting the process.
+
 ## 2.1.4
 
 ### Patch Changes
