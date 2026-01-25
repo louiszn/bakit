@@ -1,5 +1,19 @@
 # bakit
 
+## 2.2.1
+
+### Patch Changes
+
+- @bakit/gateway:
+  - Fixed incomplete message being deserialized.
+
+  bakit:
+  - Added missing `guild_id` to message.
+  - Added missing `helpers` to client.
+
+- Updated dependencies
+  - @bakit/gateway@2.1.6
+
 ## 2.2.0
 
 ### Minor Changes

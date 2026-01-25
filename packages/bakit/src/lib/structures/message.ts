@@ -2,12 +2,14 @@ import { type User, createUser } from "./user.js";
 
 import type { Client } from "../client/index.js";
 import type { APIMessage } from "discord-api-types/v10";
+import type { GatewayMessageCreateDispatchData } from "discord-api-types/v9";
 
 export interface Message {
 	readonly client: Client;
 
 	readonly id: string;
 	readonly channelId: string;
+	readonly guildId?: string;
 
 	readonly author: User;
 
@@ -39,7 +41,7 @@ export interface Message {
 	readonly position?: number;
 }
 
-export function createMessage(client: Client, data: APIMessage): Message {
+export function createMessage(client: Client, data: APIMessage | GatewayMessageCreateDispatchData): Message {
 	let author: User | undefined;
 	let mentions: User[] | undefined;
 	let referencedMessage: Message | undefined;
@@ -55,6 +57,14 @@ export function createMessage(client: Client, data: APIMessage): Message {
 
 		get channelId() {
 			return data.channel_id;
+		},
+
+		get guildId() {
+			if ("guild_id" in data) {
+				return data.guild_id;
+			}
+
+			return undefined;
 		},
 
 		get author() {
