@@ -23,7 +23,7 @@ export function createClient(rest: REST): Client {
 	};
 
 	const self = attachEventBus<ClientEvents, typeof base>(base);
-	Object.assign(self, createHelpers(self));
+	Object.assign(self, { helpers: createHelpers(self) });
 
 	self.on("raw", (payload) => {
 		switch (payload.t) {

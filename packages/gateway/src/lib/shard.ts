@@ -111,6 +111,7 @@ export function createShard(options: ShardOptions): Shard {
 	let resumeGatewayURL: string | undefined;
 
 	let inflater: Inflate | undefined;
+	let inflateBuffer: Buffer | undefined;
 	let zlibBuffer: Buffer | undefined;
 
 	let sessionId: string | undefined;
@@ -178,6 +179,7 @@ export function createShard(options: ShardOptions): Shard {
 
 		// We use zlib-stream compression, so messages arrive as compressed chunks
 		// and must be reassembled before inflation.
+		inflateBuffer = Buffer.alloc(0);
 		zlibBuffer = Buffer.alloc(0);
 
 		// Inflate stream configured for Discord's Z_SYNC_FLUSH framing
@@ -186,11 +188,32 @@ export function createShard(options: ShardOptions): Shard {
 		});
 
 		inflater.on("data", (chunk: Buffer) => {
+			if (!inflateBuffer) return;
+
+			inflateBuffer = Buffer.concat([inflateBuffer, chunk]);
+
+			// Safety cap (10MB decompressed)
+			if (inflateBuffer.length > 10 * 1024 * 1024) {
+				self.emit("error", new Error("Inflate buffer overflow"));
+				ws?.terminate();
+				return;
+			}
+
 			try {
-				const payload = JSON.parse(chunk.toString("utf8"));
+				const text = inflateBuffer.toString("utf8");
+				const payload = JSON.parse(text);
+
+				inflateBuffer = Buffer.alloc(0);
+
 				handlePayload(payload);
 			} catch (err) {
-				self.emit("error", err as Error);
+				// SyntaxError = incomplete JSON
+				if (!(err instanceof SyntaxError)) {
+					inflateBuffer = Buffer.alloc(0);
+					self.emit("error", err as Error);
+				} else {
+					self.emit("error", err);
+				}
 			}
 		});
 
@@ -225,9 +248,8 @@ export function createShard(options: ShardOptions): Shard {
 			inflater = undefined;
 		}
 
-		if (zlibBuffer) {
-			zlibBuffer = undefined;
-		}
+		inflateBuffer = undefined;
+		zlibBuffer = undefined;
 
 		if (ws) {
 			if (ws.readyState !== WebSocket.CLOSED) {
@@ -290,7 +312,7 @@ export function createShard(options: ShardOptions): Shard {
 		zlibBuffer = Buffer.concat([zlibBuffer, data]);
 
 		// Wait for Z_SYNC_FLUSH
-		if (!zlibBuffer.subarray(zlibBuffer.length - 4).equals(ZLIB_FLUSH)) {
+		if (zlibBuffer.length < 4 || !zlibBuffer.subarray(zlibBuffer.length - 4).equals(ZLIB_FLUSH)) {
 			return;
 		}
 
