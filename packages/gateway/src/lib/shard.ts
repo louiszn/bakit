@@ -14,8 +14,6 @@ import {
 } from "discord-api-types/gateway";
 import type { ValueOf, OptionalKeysOf } from "type-fest";
 
-const INCOMPLETE_JSON_REGEX = /unexpected end|unterminated|unexpected eof|end of json/i;
-
 export interface ShardOptions {
 	id: number;
 	total: number;
@@ -104,6 +102,8 @@ export interface Shard extends EventBus<ShardEvents> {
 export function createShard(options: ShardOptions): Shard {
 	const resolvedOptions = { ...DEFAULT_SHARD_OPTIONS, ...options };
 
+	const textDecoder = new TextDecoder();
+
 	let state: ShardState = ShardState.Idle;
 	let strategy: ShardStrategy = ShardStrategy.Unknown;
 
@@ -111,7 +111,7 @@ export function createShard(options: ShardOptions): Shard {
 	let resumeGatewayURL: string | undefined;
 
 	let inflater: Inflate | undefined;
-	let inflateBuffer: Buffer = Buffer.alloc(0);
+	let decompressBuffer: Buffer[] = [];
 
 	let sessionId: string | undefined;
 	let lastSequence: number | undefined;
@@ -193,10 +193,6 @@ export function createShard(options: ShardOptions): Shard {
 		ws.on("error", (err) => self.emit("error", err));
 	}
 
-	function isJSONIncomplete(err: unknown) {
-		return err instanceof Error && INCOMPLETE_JSON_REGEX.test(err.message);
-	}
-
 	function cleanup() {
 		if (heartbeatInterval) {
 			clearInterval(heartbeatInterval);
@@ -218,8 +214,6 @@ export function createShard(options: ShardOptions): Shard {
 			inflater = undefined;
 		}
 
-		inflateBuffer = Buffer.alloc(0);
-
 		if (ws) {
 			if (ws.readyState !== WebSocket.CLOSED) {
 				ws.terminate();
@@ -229,6 +223,7 @@ export function createShard(options: ShardOptions): Shard {
 			ws = undefined;
 		}
 
+		decompressBuffer = [];
 		missedHeartbeats = 0;
 		lastHeartbeatSent = -1;
 		lastHeartbeatAcknowledged = -1;
@@ -268,81 +263,90 @@ export function createShard(options: ShardOptions): Shard {
 	}
 
 	function onMessage(data: RawData) {
-		if (!(data instanceof Buffer) || !inflater) {
+		if (!inflater) {
+			// Non-compressed message
+			try {
+				const text = data.toString();
+				const payload = JSON.parse(text);
+
+				handlePayload(payload);
+			} catch (error) {
+				self.emit("error", error as Error);
+			}
 			return;
 		}
 
-		// Safety: Discord's max payload size is 4MB compressed
-		if (data.length > 4 * 1024 * 1024) {
-			self.emit("error", new Error(`Compressed payload too large: ${data.length} bytes`));
-			ws?.terminate();
-			return;
+		let buffer: Buffer;
+
+		if (Buffer.isBuffer(data)) {
+			buffer = data;
+		} else if (Array.isArray(data)) {
+			buffer = Buffer.concat(data);
+		} else if (data instanceof ArrayBuffer) {
+			buffer = Buffer.from(data);
+		} else {
+			buffer = Buffer.from(String(data));
 		}
 
-		try {
-			// Feed compressed data to inflater
-			// Z_SYNC_FLUSH mode automatically handles frame boundaries
-			inflater.write(data);
-		} catch (err) {
-			self.emit("error", new Error(`Zlib inflation error: ${err instanceof Error ? err.message : String(err)}`));
-			ws?.terminate();
-		}
+		// Check for Z_SYNC_FLUSH marker
+		const hasSyncFlush =
+			buffer.length >= 4 &&
+			buffer[buffer.length - 4] === 0x00 &&
+			buffer[buffer.length - 3] === 0x00 &&
+			buffer[buffer.length - 2] === 0xff &&
+			buffer[buffer.length - 1] === 0xff;
+
+		// Write to inflater
+		inflater.write(buffer, (writeError) => {
+			if (writeError) {
+				self.emit("error", writeError);
+				return;
+			}
+
+			if (hasSyncFlush) {
+				// Force flush to process complete message
+				inflater?.flush(zlibConstants.Z_SYNC_FLUSH);
+			}
+		});
 	}
 
 	function onInflate(chunk: Buffer) {
-		inflateBuffer = Buffer.concat([inflateBuffer, chunk]);
+		decompressBuffer.push(chunk);
 
-		// Safety cap (Discord's decompressed limit is 8MB)
-		if (inflateBuffer.length > 8 * 1024 * 1024) {
-			self.emit("error", new Error("Decompressed buffer overflow (8MB limit)"));
-			ws?.terminate();
-			return;
-		}
+		try {
+			const fullBuffer = Buffer.concat(decompressBuffer);
+			const text = textDecoder.decode(fullBuffer);
 
-		// Process complete JSON messages (newline-delimited)
-		let start = 0;
-		while (start < inflateBuffer.length) {
-			// Find next newline
-			const newlinePos = inflateBuffer.indexOf(0x0a, start);
+			const payload = JSON.parse(text);
+			handlePayload(payload);
 
-			if (newlinePos === -1) {
-				// No complete message yet
-				// Keep unprocessed data in buffer
-				if (start > 0) {
-					inflateBuffer = inflateBuffer.subarray(start);
-				}
-				return;
-			}
+			decompressBuffer = [];
+		} catch (error) {
+			// If parsing fails, we might have an incomplete message
+			// Wait for more chunks
+			if (error instanceof SyntaxError) {
+				// Check if this looks like truncated JSON
+				const fullBuffer = Buffer.concat(decompressBuffer);
+				const text = textDecoder.decode(fullBuffer);
 
-			// Extract single JSON message
-			const messageSlice = inflateBuffer.subarray(start, newlinePos);
-
-			try {
-				const payload = JSON.parse(messageSlice.toString("utf8"));
-				handlePayload(payload);
-			} catch (err) {
-				if (!isJSONIncomplete(err)) {
-					self.emit(
-						"error",
-						new Error(`Failed to parse gateway payload: ${err instanceof Error ? err.message : String(err)}`),
-					);
-
-					// Clear buffer to avoid getting stuck
-					inflateBuffer = Buffer.alloc(0);
-					return;
+				if (text.includes("{") && !isValidJSON(text)) {
+					return; // Wait for more data
 				}
 
-				// Incomplete JSON, wait for more data
-				inflateBuffer = inflateBuffer.subarray(start);
-				return;
+				// Otherwise, it's a real error
+				self.emit("error", error);
+				decompressBuffer = [];
 			}
-
-			// Move to next message
-			start = newlinePos + 1;
 		}
+	}
 
-		// All messages processed, clear buffer
-		inflateBuffer = Buffer.alloc(0);
+	function isValidJSON(str: string): boolean {
+		try {
+			JSON.parse(str);
+			return true;
+		} catch {
+			return false;
+		}
 	}
 
 	function onClose(code: number) {

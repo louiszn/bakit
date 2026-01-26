@@ -1,5 +1,13 @@
 # bakit
 
+## 2.2.4
+
+### Patch Changes
+
+- fix(shard): implement proper zlib decompression with sync flush detection
+- Updated dependencies
+  - @bakit/gateway@2.1.9
+
 ## 2.2.3
 
 ### Patch Changes

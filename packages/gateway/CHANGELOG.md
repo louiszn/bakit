@@ -1,5 +1,11 @@
 # @bakit/gateway
 
+## 2.1.9
+
+### Patch Changes
+
+- fix(shard): implement proper zlib decompression with sync flush detection
+
 ## 2.1.8
 
 ### Patch Changes
