@@ -83,10 +83,10 @@ describe("createREST", () => {
 		const [, url, init] = bucketRequestMock.mock.calls[0]!;
 
 		expect(url).toContain("/users/@me");
-		expect(init).toMatchObject({
-			method: "GET",
-			headers: { Authorization: "Bot TOKEN" },
-		});
+
+		expect(init.method).toBe("GET");
+		expect(init.headers.get("Authorization")).toBe("Bot TOKEN");
+		expect(init.headers.get("Content-Type")).toBe("application/json");
 	});
 
 	it("stringifies payload for POST", async () => {
