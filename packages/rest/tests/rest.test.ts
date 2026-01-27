@@ -93,7 +93,7 @@ describe("createREST", () => {
 		bucketRequestMock.mockResolvedValueOnce({});
 
 		const rest = createREST({ token: "TOKEN" });
-		await rest.post("/channels/1447158057233813514/messages", { content: "hi" });
+		await rest.post("/channels/1447158057233813514/messages", { body: { content: "hi" } });
 
 		const [, , init] = bucketRequestMock.mock.calls[0]!;
 

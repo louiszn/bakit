@@ -1,7 +1,7 @@
 import { fileURLToPath } from "node:url";
 import { ChildProcess, fork } from "node:child_process";
 
-import { type REST } from "@bakit/rest";
+import { type REST, type RESTProxy } from "@bakit/rest";
 import { attachEventBus, Collection, createQueue, type EventBus, type Queue } from "@bakit/utils";
 
 import type { OptionalKeysOf } from "type-fest";
@@ -50,7 +50,7 @@ export interface GatewayManagerEvents {
 }
 
 export interface GatewayManager extends EventBus<GatewayManagerEvents> {
-	readonly rest: REST;
+	readonly rest: REST | RESTProxy;
 
 	spawn(): Promise<void>;
 	broadcast(payload: GatewaySendPayload): void;
@@ -58,7 +58,7 @@ export interface GatewayManager extends EventBus<GatewayManagerEvents> {
 	sendToShard(id: number, payload: GatewaySendPayload): void;
 }
 
-export function createGatewayManager(options: GatewayManagerOptions, rest: REST): GatewayManager {
+export function createGatewayManager(options: GatewayManagerOptions, rest: REST | RESTProxy): GatewayManager {
 	const opts = {
 		...DEFAULT_GATEWAY_MANAGER_OPTIONS,
 		...options,
