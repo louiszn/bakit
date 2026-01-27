@@ -22,7 +22,39 @@ export const RESTMethod = {
 } as const;
 export type RESTMethod = ValueOf<typeof RESTMethod>;
 
-export type RESTRequestFn = <T = unknown>(endpoint: RESTEndpoint, method: RESTMethod, payload?: unknown) => Promise<T>;
+/**
+ * Extended request options matching Fetch API RequestInit
+ * with Discord-specific enhancements.
+ */
+export interface RESTRequestOptions<Body = unknown> extends Omit<RequestInit, "method" | "body"> {
+	/** Query parameters for GET requests */
+	query?: Record<string, string | number | boolean | undefined>;
+
+	/** Request body (automatically serialized to JSON unless FormData) */
+	body?: Body;
+
+	/** Custom headers (will be merged with default headers) */
+	headers?: Record<string, string>;
+
+	/** Maximum number of retries (default: 5) */
+	maxRetries?: number;
+}
+
+export type RESTRequestFn = <T = unknown>(
+	endpoint: RESTEndpoint,
+	method: RESTMethod,
+	options?: RESTRequestOptions,
+) => Promise<T>;
+
+export interface RESTSingleton {
+	request: RESTRequestFn;
+	get<T = unknown>(endpoint: RESTEndpoint, options?: RESTRequestOptions): Promise<T>;
+	head<T = unknown>(endpoint: RESTEndpoint, options?: RESTRequestOptions): Promise<T>;
+	delete<T = unknown>(endpoint: RESTEndpoint, options?: RESTRequestOptions): Promise<T>;
+	post<T = unknown, B = unknown>(endpoint: RESTEndpoint, options?: RESTRequestOptions<B>): Promise<T>;
+	put<T = unknown, B = unknown>(endpoint: RESTEndpoint, options?: RESTRequestOptions<B>): Promise<T>;
+	patch<T = unknown, B = unknown>(endpoint: RESTEndpoint, options?: RESTRequestOptions<B>): Promise<T>;
+}
 
 /**
  * High-level REST client interface.
@@ -30,24 +62,28 @@ export type RESTRequestFn = <T = unknown>(endpoint: RESTEndpoint, method: RESTMe
  * Provides typed helper methods for common HTTP verbs while routing
  * all requests through the internal rate limit bucket system.
  */
-export interface REST extends EventBus<RESTEvents> {
-	request: RESTRequestFn;
-	get<T = unknown>(endpoint: RESTEndpoint): Promise<T>;
-	head<T = unknown>(endpoint: RESTEndpoint): Promise<T>;
-	delete<T = unknown>(endpoint: RESTEndpoint): Promise<T>;
-	post<T = unknown, P = unknown>(endpoint: RESTEndpoint, payload?: P): Promise<T>;
-	put<T = unknown, P = unknown>(endpoint: RESTEndpoint, payload?: P): Promise<T>;
-	patch<T = unknown, P = unknown>(endpoint: RESTEndpoint, payload?: P): Promise<T>;
+export interface REST extends EventBus<RESTEvents>, RESTSingleton {
+	readonly options: RESTOptions;
+}
+
+export interface RESTProxy extends EventBus, RESTSingleton {
+	readonly options: RESTProxyOptions;
 }
 
 export interface RESTEvents {
-	request: [endpoint: RESTEndpoint, method: RESTMethod, payload?: unknown];
+	request: [endpoint: RESTEndpoint, method: RESTMethod, options?: RESTRequestOptions];
+	rateLimit: [metadata: RESTRouteMeta, retryAfter: number];
+	globalRateLimit: [retryAfter: number];
+}
+
+export interface RESTProxyEvents {
+	request: [endpoint: RESTEndpoint, method: RESTMethod, options?: RESTRequestOptions];
 }
 
 /**
  * Configuration options for the REST client.
  */
-export interface InternalRESTOptions {
+export interface RESTOptions {
 	/**
 	 * Discord API version to target.
 	 * @defaultValue 10
@@ -64,29 +100,30 @@ export interface InternalRESTOptions {
 	 * Bot token used for authorization.
 	 */
 	token: string;
+
+	/**
+	 * User agent string.
+	 */
+	userAgent?: string;
+}
+
+export type RESTProxyOptions = { request: RESTRequestFn };
+
+export interface RESTRouteMeta {
+	scopeId: string;
+	route: string;
+	method: RESTMethod;
+	original: RESTEndpoint;
 }
 
 /**
  * Default REST options.
  */
-export const DEFAULT_INTERNAL_REST_OPTIONS = {
+export const DEFAULT_REST_OPTIONS = {
 	version: 10,
 	baseURL: "https://discord.com/api/",
-} as const satisfies Pick<InternalRESTOptions, OptionalKeysOf<InternalRESTOptions>>;
-
-export interface RESTDriver {
-	request: RESTRequestFn;
-}
-
-export type RESTProxyOptions = { request: RESTRequestFn };
-
-export type RESTOptions = (InternalRESTOptions & { proxy?: false }) | (RESTProxyOptions & { proxy: true });
-
-export interface RESTRouteMeta {
-	scopeId: string;
-	route: string;
-	original: string;
-}
+	userAgent: `Bakit (https://github.com/louiszn/bakit, version)`,
+} as const satisfies Pick<RESTOptions, OptionalKeysOf<RESTOptions>>;
 
 /**
  * Create a REST client instance.
@@ -95,48 +132,20 @@ export interface RESTRouteMeta {
  * to ensure compliance with Discord's REST rate limits.
  */
 export function createREST(options: RESTOptions): REST {
-	const driver = options.proxy ? createRESTProxy(options) : createInternalREST(options);
+	const opts = { ...DEFAULT_REST_OPTIONS, ...options };
+
+	const baseURL = new URL(`v${opts.version}/`, opts.baseURL).toString();
 
 	const base = {
-		request,
-		get<T>(endpoint: RESTEndpoint) {
-			return request<T>(endpoint, RESTMethod.Get);
-		},
-		head<T>(endpoint: RESTEndpoint) {
-			return request<T>(endpoint, RESTMethod.Head);
-		},
-		delete<T>(endpoint: RESTEndpoint) {
-			return request<T>(endpoint, RESTMethod.Delete);
-		},
-		post<T>(endpoint: RESTEndpoint, payload?: unknown) {
-			return request<T>(endpoint, RESTMethod.Post, payload);
-		},
-		put<T>(endpoint: RESTEndpoint, payload?: unknown) {
-			return request<T>(endpoint, RESTMethod.Put, payload);
-		},
-		patch<T>(endpoint: RESTEndpoint, payload?: unknown) {
-			return request<T>(endpoint, RESTMethod.Patch, payload);
+		...createRESTSingleton(request),
+
+		get options() {
+			return options;
 		},
 	};
-
 	const self = attachEventBus<RESTEvents, typeof base>(base);
 
-	function request<T>(endpoint: RESTEndpoint, method: RESTMethod, payload?: unknown) {
-		self.emit("request", endpoint, method, payload);
-		return driver.request<T>(endpoint, method, payload);
-	}
-
-	return self;
-}
-
-export function createInternalREST(options: InternalRESTOptions): RESTDriver {
-	const resolvedOptions = { ...DEFAULT_INTERNAL_REST_OPTIONS, ...options };
-
-	// Base API URL including version
-	const baseURL = new URL(`v${resolvedOptions.version}`, resolvedOptions.baseURL).toString();
-
-	// Central rate limit manager shared by all requests
-	const buckets = createRESTBucketManager();
+	const buckets = createRESTBucketManager(self);
 
 	/**
 	 * Perform a raw REST request.
@@ -144,7 +153,11 @@ export function createInternalREST(options: InternalRESTOptions): RESTDriver {
 	 * The endpoint is normalized into a route shape which determines
 	 * the rate limit bucket used for this request.
 	 */
-	async function request<T = unknown>(endpoint: RESTEndpoint, method: RESTMethod, payload?: unknown): Promise<T> {
+	async function request<T = unknown>(
+		endpoint: RESTEndpoint,
+		method: RESTMethod,
+		reqOptions: RESTRequestOptions = {},
+	): Promise<T> {
 		// Normalize the endpoint into a Discord route shape
 		const routeMeta = getRouteMeta(endpoint, method);
 
@@ -152,33 +165,81 @@ export function createInternalREST(options: InternalRESTOptions): RESTDriver {
 		const bucket = buckets.use(routeMeta);
 
 		// Resolve the full request URL
-		const url = new URL(endpoint.slice(1), baseURL).toString();
+		const url = new URL(endpoint.slice(1), baseURL);
+
+		if (reqOptions.query) {
+			for (const [key, value] of Object.entries(reqOptions.query)) {
+				if (value !== undefined) {
+					url.searchParams.append(key, String(value));
+				}
+			}
+		}
+
+		const headers = new Headers({
+			...reqOptions?.headers,
+			Authorization: `Bot ${opts.token}`,
+			"Content-Type": "application/json",
+			"User-Agent": opts.userAgent ?? "DiscordBot (https://github.com/bakit, 1.0.0)",
+		});
 
 		const init: RequestInit = {
+			...(reqOptions as Omit<RESTRequestOptions, "body">),
 			method,
-			headers: {
-				Authorization: `Bot ${resolvedOptions.token}`,
-				"Content-Type": "application/json",
-			},
+			headers,
 		};
 
-		if (payload !== undefined) {
-			init.body = JSON.stringify(payload);
+		if (reqOptions?.body) {
+			init.body = JSON.stringify(reqOptions.body);
 		}
 
 		// Execute the request through the bucket queue
-		const res = await bucket.request(routeMeta, url, init);
+		const res = await bucket.request(routeMeta, url.toString(), init, reqOptions.maxRetries);
+
 		return res as T;
 	}
 
-	return {
-		request,
-	};
+	return self;
 }
 
-export function createRESTProxy(options: RESTProxyOptions): RESTDriver {
+export function createRESTProxy(options: RESTProxyOptions): RESTProxy {
+	const base = {
+		...createRESTSingleton(request),
+
+		get options() {
+			return options;
+		},
+	};
+	const self = attachEventBus<RESTProxyEvents, typeof base>(base);
+
+	function request<T>(endpoint: RESTEndpoint, method: RESTMethod, resOptions?: RESTRequestOptions) {
+		self.emit("request", endpoint, method, resOptions);
+		return options.request<T>(endpoint, method, resOptions);
+	}
+
+	return self;
+}
+
+function createRESTSingleton(request: RESTRequestFn): RESTSingleton {
 	return {
-		request: options.request,
+		request,
+		get<T>(endpoint: RESTEndpoint, reqOptions?: RESTRequestOptions) {
+			return request<T>(endpoint, RESTMethod.Get, reqOptions);
+		},
+		head<T>(endpoint: RESTEndpoint, reqOptions?: RESTRequestOptions) {
+			return request<T>(endpoint, RESTMethod.Head, reqOptions);
+		},
+		delete<T>(endpoint: RESTEndpoint, reqOptions?: RESTRequestOptions) {
+			return request<T>(endpoint, RESTMethod.Delete, reqOptions);
+		},
+		post<T>(endpoint: RESTEndpoint, reqOptions?: RESTRequestOptions) {
+			return request<T>(endpoint, RESTMethod.Post, reqOptions);
+		},
+		put<T>(endpoint: RESTEndpoint, reqOptions?: RESTRequestOptions) {
+			return request<T>(endpoint, RESTMethod.Put, reqOptions);
+		},
+		patch<T>(endpoint: RESTEndpoint, reqOptions?: RESTRequestOptions) {
+			return request<T>(endpoint, RESTMethod.Patch, reqOptions);
+		},
 	};
 }
 
@@ -189,7 +250,7 @@ export function createRESTProxy(options: RESTProxyOptions): RESTDriver {
  * (channel, guild, webhook), so we extract a normalized route and a
  * scope ID to correctly shard rate limit buckets.
  */
-export function getRouteMeta(endpoint: string, method: RESTMethod): RESTRouteMeta {
+export function getRouteMeta(endpoint: RESTEndpoint, method: RESTMethod): RESTRouteMeta {
 	// Prevents params to be included
 	const { pathname } = new URL(endpoint, "https://discord.com");
 
@@ -198,6 +259,7 @@ export function getRouteMeta(endpoint: string, method: RESTMethod): RESTRouteMet
 		return {
 			scopeId: "global",
 			route: "/interactions/:id/:token/callback",
+			method,
 			original: endpoint,
 		};
 	}
@@ -240,6 +302,7 @@ export function getRouteMeta(endpoint: string, method: RESTMethod): RESTRouteMet
 	return {
 		scopeId,
 		route,
+		method,
 		original: endpoint,
 	};
 }

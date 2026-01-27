@@ -1,7 +1,7 @@
 import { Collection, createQueue, sleep } from "@bakit/utils";
 
 import { DiscordHTTPError, type DiscordHTTPValidationError } from "./errors/DiscordHTTPError.js";
-import type { RESTRouteMeta } from "./rest.js";
+import type { REST, RESTRouteMeta } from "./rest.js";
 
 /**
  * Represents a single rate limit bucket.
@@ -26,7 +26,7 @@ export interface RESTBucket {
 	 * Queue and execute a request through this bucket.
 	 * Requests are executed sequentially.
 	 */
-	request(routeMeta: RESTRouteMeta, url: string, init: RequestInit): Promise<unknown>;
+	request(routeMeta: RESTRouteMeta, url: string, init: RequestInit, maxRetries?: number): Promise<unknown>;
 }
 
 /**
@@ -61,9 +61,11 @@ export interface RESTBucketManager {
 	 * @returns The bucket associated with the identified rate limit.
 	 */
 	setIdentifiedBucket(routeMeta: RESTRouteMeta, bucketId: string): RESTBucket;
+
+	readonly rest: REST;
 }
 
-export function createRESTBucketManager(): RESTBucketManager {
+export function createRESTBucketManager(rest: REST): RESTBucketManager {
 	// Timestamp (ms) when the global rate limit resets
 	let globalResetAt = 0;
 
@@ -81,6 +83,10 @@ export function createRESTBucketManager(): RESTBucketManager {
 		updateGlobalRateLimit,
 		use: useBucket,
 		setIdentifiedBucket,
+
+		get rest() {
+			return rest;
+		},
 	};
 
 	/**
@@ -114,6 +120,7 @@ export function createRESTBucketManager(): RESTBucketManager {
 
 	async function updateGlobalRateLimit(retryAfter: number) {
 		globalResetAt = Math.max(globalResetAt, Date.now() + retryAfter);
+		rest.emit("globalRateLimit", globalResetAt - Date.now());
 		controller?.abort();
 	}
 
@@ -191,8 +198,8 @@ export function createRESTBucket(manager: RESTBucketManager): RESTBucket {
 			return remaining;
 		},
 
-		request(routeMeta, url, init) {
-			return queue.add(() => makeRequest(routeMeta, url, init));
+		request(routeMeta, url, init, maxRetries) {
+			return queue.add(() => makeRequest(routeMeta, url, init, maxRetries));
 		},
 	};
 
@@ -205,9 +212,9 @@ export function createRESTBucket(manager: RESTBucketManager): RESTBucket {
 	 * - 429 retries (including global limits)
 	 * - Bucket identification via response headers
 	 */
-	async function makeRequest(routeMeta: RESTRouteMeta, url: string, init: RequestInit, attempt = 0) {
+	async function makeRequest(routeMeta: RESTRouteMeta, url: string, init: RequestInit, maxRetries = 5, attempt = 0) {
 		// Prevent infinite retry loops if Discord continuously returns 429
-		if (attempt > 5) {
+		if (attempt > maxRetries) {
 			throw new Error("Too many retries due to rate limits");
 		}
 
@@ -225,34 +232,54 @@ export function createRESTBucket(manager: RESTBucketManager): RESTBucket {
 
 		const xRemaining = res.headers.get("x-ratelimit-remaining");
 		const xResetAfter = res.headers.get("x-ratelimit-reset-after");
+		const xReset = res.headers.get("x-ratelimit-reset"); // Absolute timestamp fallback
 		const xBucket = res.headers.get("x-ratelimit-bucket");
 
 		if (xRemaining !== null) {
-			remaining = Number(xRemaining);
+			const parsed = Number(xRemaining);
+
+			if (!Number.isNaN(parsed)) {
+				remaining = parsed;
+			}
 		} else {
 			remaining = Math.max(remaining - 1, 0);
 		}
 
+		// Prefer reset-after, fallback to reset - now
 		if (xResetAfter !== null) {
-			resetAt = Date.now() + Number(xResetAfter) * 1_000;
+			const parsed = Number(xResetAfter);
+
+			if (!Number.isNaN(parsed)) {
+				resetAt = Date.now() + parsed * 1_000;
+			}
+		} else if (xReset !== null) {
+			// Reset is absolute seconds since epoch
+			const parsed = Number(xReset);
+
+			if (!Number.isNaN(parsed)) {
+				resetAt = parsed * 1_000;
+			}
 		}
 
 		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		const data: any = await resolveResponse(res);
 
 		if (res.status === 429) {
-			remaining = 0; // Prevent phantom remaining counter for later requests
+			remaining = 0;
 
-			// `retryAfter` from the body is more accurate and could be global rate limit
-			const retryAfter = data.retry_after * 1_000;
+			// retry_after from body is in seconds
+			const retryAfter = (data.retry_after ?? 1) * 1_000;
+
+			// Update resetAt to ensure we wait long enough
 			resetAt = Math.max(resetAt, Date.now() + retryAfter);
 
 			if (data.global) {
-				// Apply the rate limit to all buckets
 				manager.updateGlobalRateLimit(retryAfter);
+			} else {
+				manager.rest.emit("rateLimit", routeMeta, retryAfter);
 			}
 
-			return await makeRequest(routeMeta, url, init, attempt + 1);
+			return await makeRequest(routeMeta, url, init, maxRetries, attempt + 1);
 		}
 
 		// Discord will send the real bucket ID for specific routes
