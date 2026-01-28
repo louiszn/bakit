@@ -1,5 +1,24 @@
 # @bakit/rest
 
+## 3.0.0
+
+### Major Changes
+
+- @bakit/rest:
+  - Migrated interfaces to class based
+  - Simplifed REST into REST and RESTProxy
+  - Enhanced error and rate limit handling
+  - Added more events for REST and RESTProxy
+
+  @bakit/utils:
+  - Removed `createQueue` function and export `Queue` class from `p-queue`
+  - Removed `createEventBus` function.
+
+### Patch Changes
+
+- Updated dependencies
+  - @bakit/utils@2.1.0
+
 ## 2.1.0
 
 ### Minor Changes

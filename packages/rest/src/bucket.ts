@@ -1,53 +1,76 @@
-import { Collection, createQueue, sleep } from "@bakit/utils";
+import { Collection, sleep, Queue } from "@bakit/utils";
 
 import { DiscordHTTPError, type DiscordHTTPValidationError } from "./errors/DiscordHTTPError.js";
 import type { REST, RESTRouteMeta } from "./rest.js";
 
 /**
- * Represents a single rate limit bucket.
- *
- * A bucket serializes requests (concurrency = 1) and tracks
- * Discord rate limit headers such as remaining requests and reset time.
- *
- * Buckets may be shared across multiple routes if Discord identifies
- * them as the same rate limit bucket.
+ * Manages rate limit buckets for REST requests.
  */
-export interface RESTBucket {
-	/** Number of queued requests */
-	readonly size: number;
+export class RESTBucketManager {
+	private buckets = new Collection<string, RESTBucket>();
+	private identifiedBuckets = new Collection<string, RESTBucket>();
 
-	/** Timestamp (ms) when this bucket resets */
-	readonly resetAt: number;
+	private waiting: Promise<void> | undefined;
+	private controller: AbortController | undefined;
 
-	/** Remaining requests before hitting the rate limit */
-	readonly remaining: number;
+	private globalResetAt = 0;
 
-	/**
-	 * Queue and execute a request through this bucket.
-	 * Requests are executed sequentially.
-	 */
-	request(routeMeta: RESTRouteMeta, url: string, init: RequestInit, maxRetries?: number): Promise<unknown>;
-}
+	public constructor(public readonly rest: REST) {}
 
-/**
- * Manages rate limit buckets and global rate limits.
- */
-export interface RESTBucketManager {
 	/**
 	 * Wait until the global rate limit resets (if active).
 	 */
-	wait(): Promise<void>;
+	public async wait(): Promise<void> {
+		if (Date.now() >= this.globalResetAt) {
+			return;
+		}
+
+		this.waiting ??= (async () => {
+			while (Date.now() < this.globalResetAt) {
+				this.controller ??= new AbortController();
+
+				try {
+					await sleep(this.globalResetAt - Date.now(), this.controller.signal);
+				} catch (error) {
+					if (!(error instanceof DOMException && error.name === "AbortError")) {
+						throw error;
+					}
+
+					this.controller = undefined;
+				}
+			}
+
+			this.waiting = undefined;
+		})();
+
+		return this.waiting;
+	}
 
 	/**
 	 * Apply a global rate limit returned by Discord.
 	 * This affects all buckets.
 	 */
-	updateGlobalRateLimit(restryAfter: number): void;
+	public updateGlobalRateLimit(retryAfter: number) {
+		this.globalResetAt = Math.max(this.globalResetAt, Date.now() + retryAfter);
+		this.rest.emit("globalRateLimit", this.globalResetAt - Date.now());
+		this.controller?.abort();
+	}
 
 	/**
 	 * Get or create a bucket for a route shape.
 	 */
-	use(routeMeta: RESTRouteMeta): RESTBucket;
+	public use(routeMeta: RESTRouteMeta): RESTBucket {
+		const key = `${routeMeta.route}:${routeMeta.scopeId}`;
+
+		let bucket = this.buckets.get(key);
+
+		if (!bucket) {
+			bucket = new RESTBucket(this);
+			this.buckets.set(key, bucket);
+		}
+
+		return bucket;
+	}
 
 	/**
 	 * Associate a route with a Discord-identified rate limit bucket.
@@ -60,171 +83,83 @@ export interface RESTBucketManager {
 	 * @param bucketId - The bucket ID provided by Discord.
 	 * @returns The bucket associated with the identified rate limit.
 	 */
-	setIdentifiedBucket(routeMeta: RESTRouteMeta, bucketId: string): RESTBucket;
-
-	readonly rest: REST;
-}
-
-export function createRESTBucketManager(rest: REST): RESTBucketManager {
-	// Timestamp (ms) when the global rate limit resets
-	let globalResetAt = 0;
-
-	// Shared promise so concurrent waiters don't create multiple timers
-	let waiting: Promise<void> | undefined;
-
-	// AbortController used to interrupt sleep when the limit changes
-	let controller: AbortController | undefined;
-
-	const buckets = new Collection<string, RESTBucket>();
-	const identifiedBuckets = new Collection<string, RESTBucket>();
-
-	const manager: RESTBucketManager = {
-		wait,
-		updateGlobalRateLimit,
-		use: useBucket,
-		setIdentifiedBucket,
-
-		get rest() {
-			return rest;
-		},
-	};
-
-	/**
-	 * Global rate limits are shared across all buckets.
-	 *
-	 * If Discord extends the global reset time while requests are waiting,
-	 * the current wait will be aborted and restarted using the new reset time.
-	 */
-	async function wait() {
-		if (Date.now() >= globalResetAt) return;
-
-		waiting ??= (async () => {
-			while (Date.now() < globalResetAt) {
-				controller ??= new AbortController();
-
-				try {
-					await sleep(globalResetAt - Date.now(), controller.signal);
-				} catch (error) {
-					if (!(error instanceof DOMException && error.name === "AbortError")) {
-						throw error;
-					}
-
-					controller = undefined;
-				}
-			}
-			waiting = undefined;
-		})();
-
-		return waiting;
-	}
-
-	async function updateGlobalRateLimit(retryAfter: number) {
-		globalResetAt = Math.max(globalResetAt, Date.now() + retryAfter);
-		rest.emit("globalRateLimit", globalResetAt - Date.now());
-		controller?.abort();
-	}
-
-	function useBucket(routeMeta: RESTRouteMeta) {
-		const key = `${routeMeta.route}:${routeMeta.scopeId}`;
-
-		let bucket = buckets.get(key);
-		if (!bucket) {
-			bucket = createRESTBucket(manager);
-			buckets.set(key, bucket);
-		}
-
-		return bucket;
-	}
-
-	/**
-	 * A bucket is initially created as a temporary "bootstrap" bucket
-	 * to handle queue and rate-limited requests.
-	 *
-	 * After a request is made, Discord may respond with an
-	 * `X-RateLimit-Bucket` header that identifies the canonical bucket
-	 * for that route.
-	 *
-	 * A single Discord-identified bucket may be shared by multiple routes
-	 * that are subject to the same rate limit.
-	 */
-	function setIdentifiedBucket(routeMeta: RESTRouteMeta, bucketId: string) {
+	public setIdentifiedBucket(routeMeta: RESTRouteMeta, bucketId: string) {
 		const { route, scopeId } = routeMeta;
 
 		const bucketKey = `${route}:${scopeId}`;
 		const identifiedKey = `${bucketId}:${scopeId}`;
 
-		const identified = identifiedBuckets.get(identifiedKey);
+		const identified = this.identifiedBuckets.get(identifiedKey);
 		if (identified) {
-			buckets.set(bucketKey, identified);
+			this.buckets.set(bucketKey, identified);
 			return identified;
 		}
 
-		const existing = buckets.get(bucketKey);
+		const existing = this.buckets.get(bucketKey);
 		if (existing) {
-			identifiedBuckets.set(identifiedKey, existing);
+			this.identifiedBuckets.set(identifiedKey, existing);
 			return existing;
 		}
 
-		const bucket = createRESTBucket(manager);
-		identifiedBuckets.set(identifiedKey, bucket);
-		buckets.set(bucketKey, bucket);
+		const bucket = new RESTBucket(this);
+
+		this.identifiedBuckets.set(identifiedKey, bucket);
+		this.buckets.set(bucketKey, bucket);
 
 		return bucket;
 	}
-
-	return manager;
 }
 
-export function createRESTBucket(manager: RESTBucketManager): RESTBucket {
-	// Buckets are strictly serialized.
-	// Discord rate limits are per-bucket and sequential execution avoids
-	// race conditions when updating remaining/resetAt.
-	const queue = createQueue({
-		autoStart: true,
-		concurrency: 1,
-	});
+/**
+ * Represents a single rate limit bucket.
+ *
+ * A bucket serializes requests (concurrency = 1) and tracks
+ * Discord rate limit headers such as remaining requests and reset time.
+ *
+ * Buckets may be shared across multiple routes if Discord identifies
+ * them as the same rate limit bucket.
+ */
+export class RESTBucket {
+	private queue: Queue;
 
-	let resetAt = 0;
-	let remaining = Infinity; // Unknown until the first response provides rate limit headers
+	public resetAt = 0;
+	public remaining = Infinity;
 
-	const bucket: RESTBucket = {
-		get size() {
-			return queue.size;
-		},
-		get resetAt() {
-			return resetAt;
-		},
-		get remaining() {
-			return remaining;
-		},
+	public constructor(public readonly manager: RESTBucketManager) {
+		this.queue = new Queue({
+			autoStart: true,
+			concurrency: 1,
+		});
+	}
 
-		request(routeMeta, url, init, maxRetries) {
-			return queue.add(() => makeRequest(routeMeta, url, init, maxRetries));
-		},
-	};
+	public get size() {
+		return this.queue.size;
+	}
 
-	/**
-	 * Execute a single HTTP request with rate limit handling.
-	 *
-	 * Handles:
-	 * - Global rate limits
-	 * - Per-bucket rate limits
-	 * - 429 retries (including global limits)
-	 * - Bucket identification via response headers
-	 */
-	async function makeRequest(routeMeta: RESTRouteMeta, url: string, init: RequestInit, maxRetries = 5, attempt = 0) {
+	public request(routeMeta: RESTRouteMeta, url: string, init: RequestInit, maxRetries?: number) {
+		return this.queue.add(() => this.makeRequest(routeMeta, url, init, maxRetries));
+	}
+
+	private async makeRequest(
+		routeMeta: RESTRouteMeta,
+		url: string,
+		init: RequestInit,
+		maxRetries = 5,
+		attempt = 0,
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	): Promise<any> {
 		// Prevent infinite retry loops if Discord continuously returns 429
 		if (attempt > maxRetries) {
 			throw new Error("Too many retries due to rate limits");
 		}
 
 		// Respect global rate limits first
-		await manager.wait();
+		await this.manager.wait();
 
-		const resetAfter = resetAt - Date.now();
+		const resetAfter = this.resetAt - Date.now();
 
 		// Prevent requests when the bucket is exhausted
-		if (remaining <= 0 && resetAfter > 0) {
+		if (this.remaining <= 0 && resetAfter > 0) {
 			await sleep(resetAfter);
 		}
 
@@ -239,10 +174,10 @@ export function createRESTBucket(manager: RESTBucketManager): RESTBucket {
 			const parsed = Number(xRemaining);
 
 			if (!Number.isNaN(parsed)) {
-				remaining = parsed;
+				this.remaining = parsed;
 			}
 		} else {
-			remaining = Math.max(remaining - 1, 0);
+			this.remaining = Math.max(this.remaining - 1, 0);
 		}
 
 		// Prefer reset-after, fallback to reset - now
@@ -250,14 +185,13 @@ export function createRESTBucket(manager: RESTBucketManager): RESTBucket {
 			const parsed = Number(xResetAfter);
 
 			if (!Number.isNaN(parsed)) {
-				resetAt = Date.now() + parsed * 1_000;
+				this.resetAt = Date.now() + parsed * 1_000;
 			}
 		} else if (xReset !== null) {
-			// Reset is absolute seconds since epoch
 			const parsed = Number(xReset);
 
 			if (!Number.isNaN(parsed)) {
-				resetAt = parsed * 1_000;
+				this.resetAt = parsed * 1_000;
 			}
 		}
 
@@ -265,26 +199,26 @@ export function createRESTBucket(manager: RESTBucketManager): RESTBucket {
 		const data: any = await resolveResponse(res);
 
 		if (res.status === 429) {
-			remaining = 0;
+			this.remaining = 0;
 
 			// retry_after from body is in seconds
 			const retryAfter = (data.retry_after ?? 1) * 1_000;
 
 			// Update resetAt to ensure we wait long enough
-			resetAt = Math.max(resetAt, Date.now() + retryAfter);
+			this.resetAt = Math.max(this.resetAt, Date.now() + retryAfter);
 
 			if (data.global) {
-				manager.updateGlobalRateLimit(retryAfter);
+				this.manager.updateGlobalRateLimit(retryAfter);
 			} else {
-				manager.rest.emit("rateLimit", routeMeta, retryAfter);
+				this.manager.rest.emit("rateLimit", routeMeta, retryAfter);
 			}
 
-			return await makeRequest(routeMeta, url, init, maxRetries, attempt + 1);
+			return await this.makeRequest(routeMeta, url, init, maxRetries, attempt + 1);
 		}
 
 		// Discord will send the real bucket ID for specific routes
 		if (xBucket) {
-			manager.setIdentifiedBucket(routeMeta, xBucket);
+			this.manager.setIdentifiedBucket(routeMeta, xBucket);
 		}
 
 		if (res.ok) {
@@ -300,20 +234,18 @@ export function createRESTBucket(manager: RESTBucketManager): RESTBucket {
 
 		throw new Error("An unknown error occurred");
 	}
+}
 
-	async function resolveResponse(res: Response): Promise<unknown> {
-		const contentType = res.headers.get("content-type");
+export async function resolveResponse(res: Response): Promise<unknown> {
+	const contentType = res.headers.get("content-type");
 
-		if (!contentType) {
-			return;
-		}
-
-		if (contentType.startsWith("application/json")) {
-			return await res.json();
-		}
-
-		return await res.text();
+	if (!contentType) {
+		return;
 	}
 
-	return bucket;
+	if (contentType.startsWith("application/json")) {
+		return await res.json();
+	}
+
+	return await res.text();
 }

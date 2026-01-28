@@ -1,13 +1,15 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { createREST, getRouteMeta, extractScopeId, RESTMethod } from "@/index.js";
+import { REST, getRouteMeta, extractScopeId, RESTMethod } from "@/index.js";
 
 const bucketRequestMock = vi.fn();
 
+const useMock = vi.fn(() => ({
+	request: bucketRequestMock,
+}));
+
 vi.mock("@/bucket.js", () => ({
-	createRESTBucketManager: vi.fn(() => ({
-		use: vi.fn(() => ({
-			request: bucketRequestMock,
-		})),
+	RESTBucketManager: vi.fn(() => ({
+		use: useMock,
 	})),
 }));
 
@@ -63,11 +65,11 @@ describe("getRouteMeta", () => {
 	});
 });
 
-describe("createREST", () => {
+describe("REST", () => {
 	it("routes request through bucket", async () => {
 		bucketRequestMock.mockResolvedValueOnce({ ok: true });
 
-		const rest = createREST({ token: "TOKEN" });
+		const rest = new REST({ token: "TOKEN" });
 		const res = await rest.get("/users/@me");
 
 		expect(res).toEqual({ ok: true });
@@ -77,7 +79,7 @@ describe("createREST", () => {
 	it("passes correct request data", async () => {
 		bucketRequestMock.mockResolvedValueOnce({});
 
-		const rest = createREST({ token: "TOKEN" });
+		const rest = new REST({ token: "TOKEN" });
 		await rest.get("/users/@me");
 
 		const [, url, init] = bucketRequestMock.mock.calls[0]!;
@@ -92,7 +94,7 @@ describe("createREST", () => {
 	it("stringifies payload for POST", async () => {
 		bucketRequestMock.mockResolvedValueOnce({});
 
-		const rest = createREST({ token: "TOKEN" });
+		const rest = new REST({ token: "TOKEN" });
 		await rest.post("/channels/1447158057233813514/messages", { body: { content: "hi" } });
 
 		const [, , init] = bucketRequestMock.mock.calls[0]!;
@@ -106,7 +108,7 @@ describe("createREST", () => {
 	it("supports all HTTP helpers", async () => {
 		bucketRequestMock.mockResolvedValue({});
 
-		const rest = createREST({ token: "TOKEN" });
+		const rest = new REST({ token: "TOKEN" });
 
 		await Promise.all([
 			rest.get("/a"),
