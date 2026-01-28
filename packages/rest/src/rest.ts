@@ -1,7 +1,7 @@
-import { createRESTBucketManager } from "./bucket.js";
+import { RESTBucketManager } from "./bucket.js";
 
 import type { OptionalKeysOf, ValueOf } from "type-fest";
-import { attachEventBus, type EventBus } from "@bakit/utils";
+import EventEmitter from "node:events";
 
 /**
  * A valid Discord API endpoint.
@@ -45,30 +45,6 @@ export type RESTRequestFn = <T = unknown>(
 	method: RESTMethod,
 	options?: RESTRequestOptions,
 ) => Promise<T>;
-
-export interface RESTSingleton {
-	request: RESTRequestFn;
-	get<T = unknown>(endpoint: RESTEndpoint, options?: RESTRequestOptions): Promise<T>;
-	head<T = unknown>(endpoint: RESTEndpoint, options?: RESTRequestOptions): Promise<T>;
-	delete<T = unknown>(endpoint: RESTEndpoint, options?: RESTRequestOptions): Promise<T>;
-	post<T = unknown, B = unknown>(endpoint: RESTEndpoint, options?: RESTRequestOptions<B>): Promise<T>;
-	put<T = unknown, B = unknown>(endpoint: RESTEndpoint, options?: RESTRequestOptions<B>): Promise<T>;
-	patch<T = unknown, B = unknown>(endpoint: RESTEndpoint, options?: RESTRequestOptions<B>): Promise<T>;
-}
-
-/**
- * High-level REST client interface.
- *
- * Provides typed helper methods for common HTTP verbs while routing
- * all requests through the internal rate limit bucket system.
- */
-export interface REST extends EventBus<RESTEvents>, RESTSingleton {
-	readonly options: RESTOptions;
-}
-
-export interface RESTProxy extends EventBus, RESTSingleton {
-	readonly options: RESTProxyOptions;
-}
 
 export interface RESTEvents {
 	request: [endpoint: RESTEndpoint, method: RESTMethod, options?: RESTRequestOptions];
@@ -125,50 +101,34 @@ export const DEFAULT_REST_OPTIONS = {
 	userAgent: `Bakit (https://github.com/louiszn/bakit, version)`,
 } as const satisfies Pick<RESTOptions, OptionalKeysOf<RESTOptions>>;
 
-/**
- * Create a REST client instance.
- *
- * All requests are routed through a rate limit bucket manager
- * to ensure compliance with Discord's REST rate limits.
- */
-export function createREST(options: RESTOptions): REST {
-	const opts = { ...DEFAULT_REST_OPTIONS, ...options };
+export class REST extends EventEmitter<RESTEvents> {
+	public options: RESTOptions;
 
-	const baseURL = new URL(`v${opts.version}/`, opts.baseURL).toString();
+	protected buckets: RESTBucketManager;
 
-	const base = {
-		...createRESTSingleton(request),
+	public constructor(options: RESTOptions) {
+		super();
 
-		get options() {
-			return options;
-		},
-	};
-	const self = attachEventBus<RESTEvents, typeof base>(base);
+		this.options = { ...DEFAULT_REST_OPTIONS, ...options };
 
-	const buckets = createRESTBucketManager(self);
+		this.buckets = new RESTBucketManager(this);
+	}
 
-	/**
-	 * Perform a raw REST request.
-	 *
-	 * The endpoint is normalized into a route shape which determines
-	 * the rate limit bucket used for this request.
-	 */
-	async function request<T = unknown>(
+	public get baseURL() {
+		return new URL(`v${this.options.version}/`, this.options.baseURL);
+	}
+
+	public async request<T = unknown>(
 		endpoint: RESTEndpoint,
 		method: RESTMethod,
-		reqOptions: RESTRequestOptions = {},
+		options: RESTRequestOptions = {},
 	): Promise<T> {
-		// Normalize the endpoint into a Discord route shape
 		const routeMeta = getRouteMeta(endpoint, method);
+		const bucket = this.buckets.use(routeMeta);
+		const url = new URL(endpoint.slice(1), this.baseURL);
 
-		// Get or create the corresponding rate limit bucket
-		const bucket = buckets.use(routeMeta);
-
-		// Resolve the full request URL
-		const url = new URL(endpoint.slice(1), baseURL);
-
-		if (reqOptions.query) {
-			for (const [key, value] of Object.entries(reqOptions.query)) {
+		if (options.query) {
+			for (const [key, value] of Object.entries(options.query)) {
 				if (value !== undefined) {
 					url.searchParams.append(key, String(value));
 				}
@@ -176,71 +136,114 @@ export function createREST(options: RESTOptions): REST {
 		}
 
 		const headers = new Headers({
-			...reqOptions?.headers,
-			Authorization: `Bot ${opts.token}`,
+			...options?.headers,
+			Authorization: `Bot ${this.options.token}`,
 			"Content-Type": "application/json",
-			"User-Agent": opts.userAgent ?? "DiscordBot (https://github.com/bakit, 1.0.0)",
+			"User-Agent": this.options.userAgent ?? "DiscordBot (https://github.com/bakit, 1.0.0)",
 		});
 
 		const init: RequestInit = {
-			...(reqOptions as Omit<RESTRequestOptions, "body">),
+			...(options as Omit<RESTRequestOptions, "body">),
 			method,
 			headers,
 		};
 
-		if (reqOptions?.body) {
-			init.body = JSON.stringify(reqOptions.body);
+		if (options?.body) {
+			init.body = JSON.stringify(options.body);
 		}
 
 		// Execute the request through the bucket queue
-		const res = await bucket.request(routeMeta, url.toString(), init, reqOptions.maxRetries);
+		const res = await bucket.request(routeMeta, url.toString(), init, options.maxRetries);
 
 		return res as T;
 	}
 
-	return self;
-}
-
-export function createRESTProxy(options: RESTProxyOptions): RESTProxy {
-	const base = {
-		...createRESTSingleton(request),
-
-		get options() {
-			return options;
-		},
-	};
-	const self = attachEventBus<RESTProxyEvents, typeof base>(base);
-
-	function request<T>(endpoint: RESTEndpoint, method: RESTMethod, resOptions?: RESTRequestOptions) {
-		self.emit("request", endpoint, method, resOptions);
-		return options.request<T>(endpoint, method, resOptions);
+	public get<T = unknown>(endpoint: RESTEndpoint, options?: RESTRequestOptions): Promise<T> {
+		return this.request(endpoint, "GET", options);
 	}
 
-	return self;
+	public head<T = unknown>(endpoint: RESTEndpoint, options?: RESTRequestOptions): Promise<T> {
+		return this.request(endpoint, "HEAD", options);
+	}
+
+	public delete<T = unknown>(endpoint: RESTEndpoint, options?: RESTRequestOptions): Promise<T> {
+		return this.request(endpoint, "DELETE", options);
+	}
+
+	public post<T = unknown, B = unknown>(endpoint: RESTEndpoint, options?: RESTRequestOptions<B>): Promise<T> {
+		return this.request(endpoint, "POST", options);
+	}
+
+	public put<T = unknown, B = unknown>(endpoint: RESTEndpoint, options?: RESTRequestOptions<B>): Promise<T> {
+		return this.request(endpoint, "PUT", options);
+	}
+
+	public patch<T = unknown, B = unknown>(endpoint: RESTEndpoint, options?: RESTRequestOptions<B>): Promise<T> {
+		return this.request(endpoint, "PATCH", options);
+	}
 }
 
-function createRESTSingleton(request: RESTRequestFn): RESTSingleton {
-	return {
-		request,
-		get<T>(endpoint: RESTEndpoint, reqOptions?: RESTRequestOptions) {
-			return request<T>(endpoint, RESTMethod.Get, reqOptions);
-		},
-		head<T>(endpoint: RESTEndpoint, reqOptions?: RESTRequestOptions) {
-			return request<T>(endpoint, RESTMethod.Head, reqOptions);
-		},
-		delete<T>(endpoint: RESTEndpoint, reqOptions?: RESTRequestOptions) {
-			return request<T>(endpoint, RESTMethod.Delete, reqOptions);
-		},
-		post<T>(endpoint: RESTEndpoint, reqOptions?: RESTRequestOptions) {
-			return request<T>(endpoint, RESTMethod.Post, reqOptions);
-		},
-		put<T>(endpoint: RESTEndpoint, reqOptions?: RESTRequestOptions) {
-			return request<T>(endpoint, RESTMethod.Put, reqOptions);
-		},
-		patch<T>(endpoint: RESTEndpoint, reqOptions?: RESTRequestOptions) {
-			return request<T>(endpoint, RESTMethod.Patch, reqOptions);
-		},
-	};
+export class RESTProxy extends EventEmitter<RESTProxyEvents> {
+	public constructor(public readonly options: RESTProxyOptions) {
+		super();
+	}
+
+	public request<T = unknown>(
+		endpoint: RESTEndpoint,
+		method: RESTMethod,
+		options: RESTRequestOptions = {},
+	): Promise<T> {
+		this.emit("request", endpoint, method, options);
+		return this.options.request(endpoint, method, options);
+	}
+
+	public get<T = unknown>(endpoint: RESTEndpoint, options?: RESTRequestOptions): Promise<T> {
+		return this.request(endpoint, "GET", options);
+	}
+
+	public head<T = unknown>(endpoint: RESTEndpoint, options?: RESTRequestOptions): Promise<T> {
+		return this.request(endpoint, "HEAD", options);
+	}
+
+	public delete<T = unknown>(endpoint: RESTEndpoint, options?: RESTRequestOptions): Promise<T> {
+		return this.request(endpoint, "DELETE", options);
+	}
+
+	public post<T = unknown, B = unknown>(endpoint: RESTEndpoint, options?: RESTRequestOptions<B>): Promise<T> {
+		return this.request(endpoint, "POST", options);
+	}
+
+	public put<T = unknown, B = unknown>(endpoint: RESTEndpoint, options?: RESTRequestOptions<B>): Promise<T> {
+		return this.request(endpoint, "PUT", options);
+	}
+
+	public patch<T = unknown, B = unknown>(endpoint: RESTEndpoint, options?: RESTRequestOptions<B>): Promise<T> {
+		return this.request(endpoint, "PATCH", options);
+	}
+}
+
+/**
+ * Create a REST client instance.
+ *
+ * All requests are routed through a rate limit bucket manager
+ * to ensure compliance with Discord's REST rate limits.
+ *
+ * @deprecated Use {@link REST} instead
+ */
+export function createREST(options: RESTOptions): REST {
+	return new REST(options);
+}
+
+/**
+ * Create a REST proxy instance.
+ *
+ * All requests are routed through a rate limit bucket manager
+ * to ensure compliance with Discord's REST rate limits.
+ *
+ * @deprecated Use {@link RESTProxy} instead
+ */
+export function createRESTProxy(options: RESTProxyOptions): RESTProxy {
+	return new RESTProxy(options);
 }
 
 /**

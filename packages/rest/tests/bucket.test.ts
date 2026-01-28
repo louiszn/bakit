@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { createREST, createRESTBucketManager, type RESTRouteMeta } from "@/index.js";
+import { REST, type RESTRouteMeta } from "@/index.js";
 
 // Global fetch mock
 const fetchMock = vi.fn();
@@ -39,8 +39,8 @@ describe("RESTBucketManager", () => {
 	});
 
 	it("reuses the same bucket for the same route + scope", () => {
-		const rest = createREST({ token: "TOKEN" });
-		const manager = createRESTBucketManager(rest);
+		const rest = new REST({ token: "TOKEN" });
+		const manager = rest["buckets"];
 
 		const r = route("/users/:id");
 
@@ -51,8 +51,8 @@ describe("RESTBucketManager", () => {
 	});
 
 	it("creates different buckets for different scopes", () => {
-		const rest = createREST({ token: "TOKEN" });
-		const manager = createRESTBucketManager(rest);
+		const rest = new REST({ token: "TOKEN" });
+		const manager = rest["buckets"];
 
 		const a = manager.use(route("/users/:id", "a"));
 		const b = manager.use(route("/users/:id", "b"));
@@ -61,8 +61,8 @@ describe("RESTBucketManager", () => {
 	});
 
 	it("shares identified buckets across routes", () => {
-		const rest = createREST({ token: "TOKEN" });
-		const manager = createRESTBucketManager(rest);
+		const rest = new REST({ token: "TOKEN" });
+		const manager = rest["buckets"];
 
 		const r1 = route("/guilds/:id");
 		const r2 = route("/channels/:id");
@@ -82,8 +82,9 @@ describe("RESTBucket behavior", () => {
 	});
 
 	it("executes requests sequentially (concurrency = 1)", async () => {
-		const rest = createREST({ token: "TOKEN" });
-		const manager = createRESTBucketManager(rest);
+		const rest = new REST({ token: "TOKEN" });
+		const manager = rest["buckets"];
+
 		const bucket = manager.use(route("/test"));
 
 		const order: number[] = [];
@@ -101,8 +102,9 @@ describe("RESTBucket behavior", () => {
 	});
 
 	it("retries on 429 and eventually succeeds", async () => {
-		const rest = createREST({ token: "TOKEN" });
-		const manager = createRESTBucketManager(rest);
+		const rest = new REST({ token: "TOKEN" });
+		const manager = rest["buckets"];
+
 		const bucket = manager.use(route("/retry"));
 
 		fetchMock
@@ -134,8 +136,8 @@ describe("RESTBucket behavior", () => {
 	});
 
 	it("applies global rate limits across all buckets", async () => {
-		const rest = createREST({ token: "TOKEN" });
-		const manager = createRESTBucketManager(rest);
+		const rest = new REST({ token: "TOKEN" });
+		const manager = rest["buckets"];
 
 		const a = manager.use(route("/a"));
 		const b = manager.use(route("/b"));
@@ -166,8 +168,9 @@ describe("RESTBucket behavior", () => {
 	});
 
 	it("updates remaining and reset headers correctly", async () => {
-		const rest = createREST({ token: "TOKEN" });
-		const manager = createRESTBucketManager(rest);
+		const rest = new REST({ token: "TOKEN" });
+		const manager = rest["buckets"];
+
 		const bucket = manager.use(route("/limits"));
 
 		fetchMock.mockResolvedValueOnce(
@@ -189,8 +192,9 @@ describe("RESTBucket behavior", () => {
 	});
 
 	it("throws after too many 429 retries", async () => {
-		const rest = createREST({ token: "TOKEN" });
-		const manager = createRESTBucketManager(rest);
+		const rest = new REST({ token: "TOKEN" });
+		const manager = rest["buckets"];
+
 		const bucket = manager.use(route("/fail"));
 
 		fetchMock.mockResolvedValue(
