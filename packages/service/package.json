@@ -35,8 +35,6 @@
 	"packageManager": "pnpm@10.15.0",
 	"dependencies": {
 		"@bakit/utils": "workspace:^",
-		"p-queue": "^9.1.0",
-		"msgpackr": "^1.11.8",
 		"type-fest": "^4.41.0"
 	},
 	"devDependencies": {
