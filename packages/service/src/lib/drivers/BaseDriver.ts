@@ -1,6 +1,7 @@
 import EventEmitter from "node:events";
 
-export type Serializable = string | number | boolean | null | undefined;
+import type { Serializable } from "@/types/index.js";
+import type { Awaitable } from "@bakit/utils";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type EventMap<T> = Record<keyof T, any[]> | DefaultEventMap;
@@ -16,6 +17,7 @@ export interface BaseClientDriverEvents {
 export interface BaseServerDriverEvents {
 	listen: [];
 	close: [];
+	error: [error: Error];
 	message: [connection: unknown, message: Serializable];
 	clientConnect: [connection: unknown];
 	clientDisconnect: [connection: unknown];
@@ -36,7 +38,8 @@ export abstract class BaseClientDriver<
 		super(options);
 	}
 
-	abstract connect(): Promise<void>;
+	abstract send(message: Serializable): Awaitable<void>;
+	abstract connect(): Awaitable<void>;
 }
 
 export abstract class BaseServerDriver<
@@ -47,5 +50,7 @@ export abstract class BaseServerDriver<
 		super(options);
 	}
 
-	abstract listen(): Promise<void>;
+	abstract listen(): Awaitable<void>;
+	abstract send(client: unknown, message: Serializable): Awaitable<unknown>;
+	abstract broadcast(message: Serializable): Awaitable<unknown>;
 }

@@ -1,8 +1,10 @@
 import { createServer, Server, Socket } from "node:net";
 import { unlinkSync } from "node:fs";
-import { BaseServerDriver, type BaseServerDriverEvents, type Serializable } from "../BaseDriver.js";
-import { FrameCodec, type FrameCodecOptions } from "@/utils/FrameCodec.js";
+import { BaseServerDriver, type BaseServerDriverEvents } from "../BaseDriver.js";
+import { FrameCodec, type FrameCodecOptions } from "@/lib/FrameCodec.js";
 import { getIPCPath, isServerRunning } from "@/utils/ipc.js";
+
+import type { Serializable } from "@/types/message.js";
 
 export interface IPCServerOptions {
 	id: string;
