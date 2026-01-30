@@ -1,9 +1,11 @@
 import { createConnection, Socket } from "node:net";
 
-import { BaseClientDriver, type BaseClientDriverEvents, type Serializable } from "../BaseDriver.js";
-import { FrameCodec, type FrameCodecOptions } from "@/utils/FrameCodec.js";
+import { BaseClientDriver, type BaseClientDriverEvents } from "../BaseDriver.js";
+import { FrameCodec, type FrameCodecOptions } from "@/lib/FrameCodec.js";
 import { Queue } from "@bakit/utils";
 import { getIPCPath } from "@/utils/ipc.js";
+
+import type { Serializable } from "@/types/message.js";
 
 export interface IPCClientOptions {
 	id: string;
