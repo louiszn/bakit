@@ -1,3 +1,5 @@
+import type { Serializable } from "@/types/message.js";
+
 const SUPPORTED_LENGTH_BYTES = [1, 2, 4, 8] as const;
 
 export interface FrameCodecOptions {
@@ -167,5 +169,13 @@ export class FrameCodec {
 
 		// Return concatenated buffer (single allocation)
 		return Buffer.concat([header, payload]);
+	}
+
+	public static serialize(obj: Serializable): Buffer {
+		return Buffer.from(JSON.stringify(obj));
+	}
+
+	public static deserialize(buf: Buffer): Serializable {
+		return JSON.parse(buf.toString());
 	}
 }

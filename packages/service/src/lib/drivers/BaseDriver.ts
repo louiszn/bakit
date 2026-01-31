@@ -14,14 +14,14 @@ export interface BaseClientDriverEvents {
 	error: [error: Error];
 }
 
-export interface BaseServerDriverEvents {
+export interface BaseServerDriverEvents<Connection = unknown> {
 	listen: [];
 	close: [];
 	error: [error: Error];
-	message: [connection: unknown, message: Serializable];
-	clientConnect: [connection: unknown];
-	clientDisconnect: [connection: unknown];
-	clientError: [connection: unknown, error: Error];
+	message: [connection: Connection, message: Serializable];
+	connectionAdd: [connection: Connection];
+	connectionRemove: [connection: Connection];
+	connectionError: [connection: Connection, error: Error];
 }
 
 abstract class BaseDriver<Options extends object, Events extends EventMap<Events>> extends EventEmitter<Events> {
@@ -38,19 +38,28 @@ export abstract class BaseClientDriver<
 		super(options);
 	}
 
+	abstract readonly ready: boolean;
+
 	abstract send(message: Serializable): Awaitable<void>;
 	abstract connect(): Awaitable<void>;
+	abstract disconnect(): Awaitable<void>;
 }
 
 export abstract class BaseServerDriver<
 	Options extends object = object,
-	Events extends EventMap<Events> & BaseServerDriverEvents = BaseServerDriverEvents,
+	Connection = unknown,
+	Events extends EventMap<Events> & BaseServerDriverEvents<Connection> = BaseServerDriverEvents<Connection>,
 > extends BaseDriver<Options, Events> {
 	public constructor(options: Options) {
 		super(options);
 	}
 
+	declare readonly _connectionType: Connection;
+
+	abstract readonly connections: Set<Connection> | Map<unknown, Connection> | Connection[];
+
 	abstract listen(): Awaitable<void>;
-	abstract send(client: unknown, message: Serializable): Awaitable<unknown>;
+	abstract close(): Awaitable<void>;
+	abstract send(connection: Connection, message: Serializable): Awaitable<void>;
 	abstract broadcast(message: Serializable): Awaitable<unknown>;
 }

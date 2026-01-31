@@ -1,19 +1,33 @@
 import EventEmitter from "node:events";
 
-import { isPlainObject } from "@bakit/utils";
+import { instanceToObject, isPlainObject } from "@bakit/utils";
 
 import type { BaseServerDriver } from "../drivers/BaseDriver.js";
-import type { RPCRequest, RPCResponse, Serializable } from "@/types/message.js";
+import type { RPCRequest, RPCResponse, RPCResponseError, Serializable } from "@/types/message.js";
 
-export type RPCHandler = (...args: Serializable[]) => Promise<Serializable>;
+export type RPCHandler = (...args: Serializable[]) => Promise<Serializable | Error>;
 
-export class TransportServer<D extends BaseServerDriver> extends EventEmitter {
+export interface TransportServerEvents<D extends BaseServerDriver> {
+	listen: [];
+	close: [];
+	error: [error: Error];
+	connectionAdd: [connection: D["_connectionType"]];
+	connectionRemove: [connection: D["_connectionType"]];
+	connectionError: [connection: D["_connectionType"], error: Error];
+	message: [connection: D["_connectionType"], message: Serializable];
+}
+
+export class TransportServer<D extends BaseServerDriver> extends EventEmitter<TransportServerEvents<D>> {
 	private handlers = new Map<string, RPCHandler>();
 
 	public constructor(public readonly driver: D) {
 		super();
 
 		this.setupDriverListeners();
+	}
+
+	get connections() {
+		return this.driver.connections as D["connections"];
 	}
 
 	public handle(method: string, handler: RPCHandler): void {
@@ -24,45 +38,61 @@ export class TransportServer<D extends BaseServerDriver> extends EventEmitter {
 		this.handlers.set(method, handler);
 	}
 
+	public listen() {
+		return this.driver.listen() as ReturnType<D["listen"]>;
+	}
+
+	public close() {
+		return this.driver.close() as ReturnType<D["close"]>;
+	}
+
+	public broadcast(message: Serializable) {
+		return this.driver.broadcast(message) as ReturnType<D["broadcast"]>;
+	}
+
 	private setupDriverListeners(): void {
 		this.driver.on("listen", () => this.emit("listen"));
 		this.driver.on("close", () => this.emit("close"));
 		this.driver.on("error", (err) => this.emit("error", err));
-		this.driver.on("clientConnect", (client) => this.emit("clientConnect", client));
-		this.driver.on("clientDisconnect", (client) => this.emit("clientDisconnect", client));
-		this.driver.on("message", (client, msg) => this.handleMessage(client, msg));
+		this.driver.on("connectionAdd", (conn) => this.emit("connectionAdd", conn));
+		this.driver.on("connectionRemove", (conn) => this.emit("connectionRemove", conn));
+		this.driver.on("connectionError", (conn, err) => this.emit("connectionError", conn, err));
+		this.driver.on("message", (conn, msg) => this.handleMessage(conn, msg));
 	}
 
-	private async handleMessage(client: unknown, msg: Serializable): Promise<void> {
-		if (!this.isRequestMessage(msg)) {
+	private async handleMessage(connection: unknown, message: Serializable): Promise<void> {
+		this.emit("message", connection, message);
+
+		if (!this.isRequestMessage(message)) {
 			return;
 		}
 
-		const handler = this.handlers.get(msg.method);
+		const handler = this.handlers.get(message.method);
 
 		const sendResponse = (result: Serializable, error?: Error): void => {
-			const response: Serializable = {
+			const response: RPCResponse = {
 				type: "response",
-				id: msg.id,
+				id: message.id,
 				result: error ? undefined : result,
 				error: error instanceof Error ? this.serializeError(error) : undefined,
-			} satisfies RPCResponse;
+			};
 
-			Promise.resolve(this.driver.send(client, response)).catch((err) => {
-				this.emit("error", new Error(`Failed to send response to ${msg.method}: ${err.message}`));
+			Promise.resolve(this.driver.send(connection, response as unknown as Serializable)).catch((err) => {
+				this.emit("error", new Error(`Failed to send response to ${message.method}: ${err.message}`));
 			});
 		};
 
 		if (!handler) {
-			sendResponse(undefined, new Error(`Unknown method: ${msg.method}`));
+			sendResponse(undefined, new Error(`Unknown method: ${message.method}`));
 			return;
 		}
 
-		try {
-			const result = await handler(...msg.args);
+		const result = await handler(...message.args);
+
+		if (result instanceof Error) {
+			sendResponse(undefined, result);
+		} else {
 			sendResponse(result);
-		} catch (err) {
-			sendResponse(undefined, err as Error);
 		}
 	}
 
@@ -79,12 +109,12 @@ export class TransportServer<D extends BaseServerDriver> extends EventEmitter {
 		return hasType && hasId && hasMethod && hasArgs;
 	}
 
-	private serializeError(err: Error): RPCResponse["error"] {
-		return {
-			message: err.message,
-			stack: err.stack,
-			code: "code" in err ? (err.code as string) : undefined,
-		};
+	private serializeError(err: Error): RPCResponseError {
+		const error = instanceToObject(err);
+
+		return Object.assign(error, {
+			constructorName: err.constructor.name,
+		});
 	}
 }
 
