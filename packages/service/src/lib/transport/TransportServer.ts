@@ -112,6 +112,7 @@ export class TransportServer<D extends BaseServerDriver> extends EventEmitter<Tr
 	}
 }
 
-export function createTransportServer<D extends BaseServerDriver>(driver: D) {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function createTransportServer<D extends BaseServerDriver<object, any>>(driver: D) {
 	return new TransportServer(driver);
 }
