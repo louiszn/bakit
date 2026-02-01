@@ -1,16 +1,19 @@
 import EventEmitter from "node:events";
+import { randomUUID } from "node:crypto";
 
 import { Collection, isPlainObject } from "@bakit/utils";
 
+import { createDynamicRPCError } from "@/utils/rpcError.js";
+
 import type { BaseClientDriver } from "../drivers/BaseDriver.js";
 import type { RPCRequest, RPCResponse, RPCResponseError, Serializable } from "@/types/message.js";
-import { randomUUID } from "node:crypto";
 
 interface PendingRequest {
 	resolve: (value: unknown) => void;
 	reject: (reason: Error) => void;
 	timeout: NodeJS.Timeout;
 	method: string;
+	clientStack: string;
 }
 
 export interface TransportClientEvents {
@@ -48,6 +51,7 @@ export class TransportClient<D extends BaseClientDriver> extends EventEmitter<Tr
 		}
 
 		const id = randomUUID();
+		const clientStack = this.captureCallStack();
 
 		return new Promise<Result>((resolve, reject) => {
 			const timeout = setTimeout(() => {
@@ -60,16 +64,17 @@ export class TransportClient<D extends BaseClientDriver> extends EventEmitter<Tr
 				reject,
 				timeout,
 				method,
+				clientStack,
 			});
 
-			const message: Serializable = {
-				type: "request",
-				id,
-				method,
-				args,
-			} satisfies RPCRequest;
-
-			Promise.resolve(this.driver.send(message)).catch((err) => {
+			Promise.resolve(
+				this.driver.send({
+					type: "request",
+					id,
+					method,
+					args,
+				} satisfies RPCRequest),
+			).catch((err) => {
 				clearTimeout(timeout);
 				this.pending.delete(id);
 				reject(err);
@@ -105,11 +110,32 @@ export class TransportClient<D extends BaseClientDriver> extends EventEmitter<Tr
 		this.pending.delete(message.id);
 
 		if (message.error) {
-			const err = createDynamicTransportError(message.error);
-			pending.reject(err);
+			pending.reject(this.hydrateError(message.error, pending.clientStack));
 		} else {
 			pending.resolve(message.result);
 		}
+	}
+
+	private hydrateError(errorData: RPCResponseError, callerStack: string): Error {
+		const err = createDynamicRPCError(errorData);
+
+		const serverStack = err.stack?.split("\n").slice(1).join("\n") ?? "";
+		const separator = "\n--- Error originated on RPC server ---\n";
+
+		err.stack = `${err}\n${callerStack}${separator}${serverStack}`;
+
+		return err;
+	}
+
+	private captureCallStack(): string {
+		const dummy = new Error();
+
+		if (!dummy.stack) {
+			return "";
+		}
+
+		// Remove first two lines: "Error" + this.captureCallStack frame
+		return dummy.stack.split("\n").slice(2).join("\n");
 	}
 
 	private isResponseMessage(message: unknown): message is RPCResponse {
@@ -124,21 +150,6 @@ export class TransportClient<D extends BaseClientDriver> extends EventEmitter<Tr
 
 		return hasType && hasId && hasResult !== hasError;
 	}
-}
-
-function createDynamicTransportError(error: RPCResponseError): Error {
-	const DynamicError = {
-		[error.constructorName]: class extends Error {
-			constructor(message: string) {
-				super(message);
-			}
-		},
-	}[error.constructorName]!;
-
-	const err = new DynamicError(error.message);
-	Object.assign(err, error);
-
-	return err;
 }
 
 export function createTransportClient<D extends BaseClientDriver>(driver: D) {

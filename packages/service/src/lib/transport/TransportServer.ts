@@ -1,9 +1,11 @@
 import EventEmitter from "node:events";
 
-import { instanceToObject, isPlainObject } from "@bakit/utils";
+import { isPlainObject } from "@bakit/utils";
+
+import { serializeRPCError } from "@/utils/rpcError.js";
 
 import type { BaseServerDriver } from "../drivers/BaseDriver.js";
-import type { RPCRequest, RPCResponse, RPCResponseError, Serializable } from "@/types/message.js";
+import type { RPCRequest, RPCResponse, Serializable } from "@/types/message.js";
 
 export type RPCHandler = (...args: Serializable[]) => Promise<Serializable | Error>;
 
@@ -74,7 +76,7 @@ export class TransportServer<D extends BaseServerDriver> extends EventEmitter<Tr
 				type: "response",
 				id: message.id,
 				result: error ? undefined : result,
-				error: error instanceof Error ? this.serializeError(error) : undefined,
+				error: error instanceof Error ? serializeRPCError(error) : undefined,
 			};
 
 			Promise.resolve(this.driver.send(connection, response as unknown as Serializable)).catch((err) => {
@@ -107,14 +109,6 @@ export class TransportServer<D extends BaseServerDriver> extends EventEmitter<Tr
 		const hasArgs = "args" in message && Array.isArray(message["args"]);
 
 		return hasType && hasId && hasMethod && hasArgs;
-	}
-
-	private serializeError(err: Error): RPCResponseError {
-		const error = instanceToObject(err);
-
-		return Object.assign(error, {
-			constructorName: err.constructor.name,
-		});
 	}
 }
 
