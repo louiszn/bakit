@@ -18,5 +18,15 @@ export interface RPCResponse {
 	type: "response";
 	id: string;
 	result?: Serializable;
-	error?: { message: string; stack?: string; code?: string };
+	error?: RPCResponseError;
+}
+
+export interface RPCResponseError {
+	message: string;
+	name: string;
+	constructorName: string;
+	stack?: string;
+	cause?: RPCResponseError;
+	errors?: RPCResponseError[]; // For AggregateError
+	[key: string]: unknown;
 }

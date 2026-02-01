@@ -4,5 +4,6 @@ export * from "./object.js";
 
 export { Collection, type ReadonlyCollection } from "@discordjs/collection";
 export { default as Queue, type Options as QueueOptions, type QueueAddOptions } from "p-queue";
+export { default as glob } from "tiny-glob";
 
 export type * from "./types/index.js";
