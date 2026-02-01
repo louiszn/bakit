@@ -152,6 +152,7 @@ export class TransportClient<D extends BaseClientDriver> extends EventEmitter<Tr
 	}
 }
 
-export function createTransportClient<D extends BaseClientDriver>(driver: D) {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function createTransportClient<D extends BaseClientDriver<object, any>>(driver: D) {
 	return new TransportClient(driver);
 }
