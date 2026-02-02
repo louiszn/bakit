@@ -199,7 +199,7 @@ export class Service {
 	}
 }
 
-export async function createService(options: ServiceOptions) {
+export function createService(options: ServiceOptions) {
 	const service = new Service(options);
 	return service;
 }
