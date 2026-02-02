@@ -2,7 +2,8 @@
 	"extends": "../../tsconfig.base.json",
 	"compilerOptions": {
 		"paths": {
-			"@/*": ["./src/*"]
+			"@/*": ["./src/*"],
+			"@bakit/service": ["./src/index.ts"]
 		}
 	},
 	"include": ["src/**/*.ts", "tests/**/*.ts", "example/**/*.ts", "tsup.config.ts", "vitest.config.ts"]
