@@ -1,5 +1,16 @@
 # @bakit/utils
 
+## 2.2.0
+
+### Minor Changes
+
+- @bakit/service:
+  - Refactored concept and code structure
+
+  @bakit/utils:
+  - Added `instanceToObject`
+  - Re-exported `tiny-glob`
+
 ## 2.1.0
 
 ### Minor Changes

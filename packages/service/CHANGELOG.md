@@ -1,5 +1,21 @@
 # @bakit/service
 
+## 4.0.0
+
+### Major Changes
+
+- @bakit/service:
+  - Refactored concept and code structure
+
+  @bakit/utils:
+  - Added `instanceToObject`
+  - Re-exported `tiny-glob`
+
+### Patch Changes
+
+- Updated dependencies
+  - @bakit/utils@2.2.0
+
 ## 3.2.1
 
 ### Patch Changes
