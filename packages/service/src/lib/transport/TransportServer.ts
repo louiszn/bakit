@@ -84,8 +84,8 @@ export class TransportServer<D extends BaseServerDriver> extends EventEmitter<Tr
 			});
 		};
 
-		if (!handler) {
-			sendResponse(undefined, new Error(`Unknown method: ${message.method}`));
+		if (!handler || typeof handler !== "function") {
+			sendResponse(undefined, new Error(`Unknown or invalid method: ${message.method}`));
 			return;
 		}
 
