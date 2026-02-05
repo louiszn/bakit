@@ -1,13 +1,17 @@
 import EventEmitter from "node:events";
 import { fork, type ChildProcess } from "node:child_process";
 import { randomUUID } from "node:crypto";
-import { resolve } from "node:path";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 
 import type { Cluster, ClusterEvents } from "./Cluster.js";
 import type { GatewaySendPayload } from "discord-api-types/v10";
 import type { ShardingManager } from "../ShardingManager.js";
 
 const EVAL_TIMEOUT = 30_000;
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 export type ClusterIPCDispatchPayload<E extends keyof ClusterEvents = keyof ClusterEvents> = {
 	op: "dispatch";
@@ -98,7 +102,6 @@ export interface ClusterProcessOptions {
 }
 
 export class ClusterProcess extends EventEmitter<ClusterEvents> {
-	public readonly id: string;
 	public readonly process: ChildProcess;
 
 	#pendingEvals = new Map<
@@ -112,15 +115,14 @@ export class ClusterProcess extends EventEmitter<ClusterEvents> {
 
 	public constructor(
 		public readonly manager: ShardingManager,
+		public readonly id: number,
 		options: ClusterProcessOptions = {},
 	) {
 		super();
 		this.setMaxListeners(0);
 
-		this.id = randomUUID();
+		const entry = resolve(__dirname, "cluster.js");
 
-		// Defer entry resolution to allow mocking in tests
-		const entry = resolve(process.cwd(), "cluster.js");
 		this.process = fork(entry, {
 			env: options.env,
 			execArgv: options.execArgv,
@@ -147,13 +149,7 @@ export class ClusterProcess extends EventEmitter<ClusterEvents> {
 		this.process.kill(signal);
 	}
 
-	/**
-	 * Evaluates a script or function on the cluster process
-	 * @param script Function to execute in the cluster context
-	 * @param options Options for the evaluation
-	 * @returns Promise resolving to the evaluation result
-	 */
-	public async eval<T>(fn: (cluster: Cluster) => T | Promise<T>): Promise<EvalResult<T>> {
+	public async eval<T, C = unknown>(fn: (cluster: Cluster, ctx: C) => T | Promise<T>, ctx?: C): Promise<EvalResult<T>> {
 		const nonce = randomUUID();
 
 		return new Promise((resolve, reject) => {
@@ -168,8 +164,17 @@ export class ClusterProcess extends EventEmitter<ClusterEvents> {
 				timeout: timeoutId,
 			});
 
+			let context: string;
+
+			try {
+				context = JSON.stringify(ctx ?? null);
+			} catch {
+				reject(new Error("Eval context is not serializable"));
+				return;
+			}
+
 			// Serialize function to string for IPC transmission
-			const script = `(${fn.toString()})(cluster)`;
+			const script = `(${fn.toString()})(cluster, ${context})`;
 
 			this.sendIPC({
 				op: "eval",
@@ -205,6 +210,13 @@ export class ClusterProcess extends EventEmitter<ClusterEvents> {
 		} catch (err) {
 			this.emit("error", err as Error);
 		}
+	}
+
+	public identifyShard(id: number): void {
+		this.sendIPC({
+			op: "identify",
+			d: id,
+		});
 	}
 
 	#bindProcessEvents(): void {
@@ -302,20 +314,18 @@ export class ClusterProcess extends EventEmitter<ClusterEvents> {
 		cluster.emit = function (this: Cluster, eventName, ...args) {
 			const result = superEmit(eventName, ...args);
 
-			if (process.connected) {
-				safeSend({
-					op: "dispatch",
-					t: eventName as keyof ClusterEvents,
-					d: args,
-				});
-			}
+			safeSend({
+				op: "dispatch",
+				t: eventName as keyof ClusterEvents,
+				d: args,
+			});
 
 			return result;
 		};
 
 		const messageHandler = async (message: ClusterIPCPayload) => {
 			if (isIdentifyPayload(message)) {
-				const shard = cluster.shards.get((message as ClusterIPCIdentifyPayload).d);
+				const shard = cluster.shards.get(message.d);
 				shard?.identify();
 				return;
 			}
