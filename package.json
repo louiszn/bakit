@@ -35,7 +35,7 @@
 		"semver": "^7.7.3",
 		"simple-git": "^3.30.0",
 		"tiny-glob": "^0.2.9",
-		"tsup": "8.5.1",
+		"tsup": "8.5.0",
 		"tsx": "^4.21.0",
 		"type-fest": "^4.41.0",
 		"typescript": "^5.9.3",
