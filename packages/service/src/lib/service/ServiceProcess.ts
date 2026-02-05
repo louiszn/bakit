@@ -9,6 +9,14 @@ import { sleep } from "@bakit/utils";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
+export interface ServiceProcessEvents {
+	stdout: [chunk: Buffer];
+	stderr: [chunk: Buffer];
+	spawn: [];
+	error: [err: Error];
+	exit: [code: number | null, signal: NodeJS.Signals | null];
+}
+
 export enum ServiceState {
 	Idle,
 	Starting,
@@ -18,7 +26,7 @@ export enum ServiceState {
 	Stopped,
 }
 
-export class ServiceProcess extends EventEmitter {
+export class ServiceProcess extends EventEmitter<ServiceProcessEvents> {
 	private child?: ChildProcess;
 	private spawnTimestamp = -1;
 
