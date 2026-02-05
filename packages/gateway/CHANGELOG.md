@@ -1,5 +1,15 @@
 # @bakit/gateway
 
+## 3.0.0
+
+### Major Changes
+
+- - Refactor factory API to class-based API
+  - Reimplement `Shard`
+  - Reimplement `worker` -> `Cluster`
+  - Reimplement `GatewayManager` -> `ShardingManager`
+  - Add `ClusterProcess` as an interface to interact with `Cluster` as child process
+
 ## 2.1.9
 
 ### Patch Changes
