@@ -15,6 +15,10 @@ import {
 	type GatewaySendPayload,
 } from "discord-api-types/v10";
 
+const MIN_HEARTBEAT_INTERVAL = 1_000;
+const MAX_HEARTBEAT_INTERVAL = 60_000;
+const SAFE_HEARTBEAT_INTERVAL = 45_000;
+
 export enum ShardState {
 	Idle,
 	Connecting,
@@ -460,6 +464,10 @@ export class Shard extends EventEmitter<ShardEvents> {
 		if (this.#heartbeatInterval) {
 			clearInterval(this.#heartbeatInterval);
 			this.#heartbeatInterval = undefined;
+		}
+
+		if (interval < MIN_HEARTBEAT_INTERVAL || interval > MAX_HEARTBEAT_INTERVAL) {
+			interval = SAFE_HEARTBEAT_INTERVAL;
 		}
 
 		const jitter = randomInt(0, 10) / 100;
