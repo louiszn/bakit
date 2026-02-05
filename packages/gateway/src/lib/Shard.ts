@@ -1,6 +1,7 @@
 import EventEmitter from "node:events";
 import { createInflate, type Inflate, constants as zlibConstants } from "node:zlib";
 import { TextDecoder } from "node:util";
+import { randomInt } from "node:crypto";
 
 import WebSocket, { type RawData } from "ws";
 
@@ -281,8 +282,9 @@ export class Shard extends EventEmitter<ShardEvents> {
 	#onInflate(chunk: Buffer) {
 		this.#decompressBuffer.push(chunk);
 
+		const fullBuffer = Buffer.concat(this.#decompressBuffer);
+
 		try {
-			const fullBuffer = Buffer.concat(this.#decompressBuffer);
 			const text = this.#textDecoder.decode(fullBuffer);
 
 			const payload = JSON.parse(text);
@@ -291,8 +293,6 @@ export class Shard extends EventEmitter<ShardEvents> {
 			this.#decompressBuffer = [];
 		} catch (error) {
 			if (error instanceof SyntaxError) {
-				// Check if this looks like truncated JSON
-				const fullBuffer = Buffer.concat(this.#decompressBuffer);
 				const text = this.#textDecoder.decode(fullBuffer);
 
 				if (text.includes("{") && !isValidJSON(text)) {
@@ -462,7 +462,7 @@ export class Shard extends EventEmitter<ShardEvents> {
 			this.#heartbeatInterval = undefined;
 		}
 
-		const jitter = Math.random();
+		const jitter = randomInt(0, 10) / 100;
 		const firstDelay = Math.floor(interval * jitter);
 
 		this.emit("debug", `Starting heartbeat (interval=${interval}ms, jitter=${firstDelay}ms)`);

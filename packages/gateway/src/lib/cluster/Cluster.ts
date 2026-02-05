@@ -1,13 +1,24 @@
 import EventEmitter from "node:events";
 import { Collection } from "@bakit/utils";
 
-import { Shard, type ShardOptions } from "../Shard.js";
+import { Shard } from "../Shard.js";
 
-import type { GatewayDispatchPayload, GatewayReadyDispatchData, GatewaySendPayload } from "discord-api-types/v10";
+import type { GatewayDispatchPayload, GatewayReceivePayload, GatewaySendPayload } from "discord-api-types/v10";
+
+export interface ClusterOptions {
+	token: string;
+	intents: bigint | number;
+	shards: number[];
+	total: number;
+	gateway: {
+		baseURL: string;
+		version: number;
+	};
+}
 
 export interface ClusterEvents {
 	shardAdd: [id: number];
-	shardReady: [id: number, data: GatewayReadyDispatchData];
+	shardReady: [id: number];
 	shardDisconnect: [id: number, code: number];
 	shardResume: [id: number];
 	shardError: [id: number, error: Error];
@@ -15,7 +26,9 @@ export interface ClusterEvents {
 
 	debug: [message: string];
 
-	dispatch: [id: number, payload: GatewayDispatchPayload];
+	dispatch: [shardId: number, payload: GatewayDispatchPayload];
+	raw: [shardId: number, payload: GatewayReceivePayload];
+
 	ready: [];
 	error: [error: Error];
 }
@@ -28,7 +41,7 @@ export class Cluster extends EventEmitter<ClusterEvents> {
 
 	public constructor(
 		public readonly id: number,
-		public readonly options: ShardOptions,
+		public readonly options: ClusterOptions,
 	) {
 		super();
 	}
@@ -38,7 +51,7 @@ export class Cluster extends EventEmitter<ClusterEvents> {
 	}
 
 	public get ready() {
-		return this.#readyCount === this.options.total;
+		return this.#readyCount === this.options.shards.length;
 	}
 
 	public async spawn(): Promise<void> {
@@ -48,9 +61,9 @@ export class Cluster extends EventEmitter<ClusterEvents> {
 
 		this.#starting = true;
 
-		this.emit("debug", `Spawning ${this.options.total} shards...`);
+		this.emit("debug", `Spawning ${this.options.shards.length} shards...`);
 
-		for (let i = 0; i < this.options.total; i++) {
+		for (const i of this.options.shards) {
 			await this.#spawnShard(i);
 		}
 
@@ -93,7 +106,12 @@ export class Cluster extends EventEmitter<ClusterEvents> {
 	}
 
 	async #spawnShard(id: number) {
-		const shard = new Shard(id, this.options);
+		const shard = new Shard(id, {
+			token: this.options.token,
+			intents: this.options.intents,
+			total: this.options.total,
+			gateway: this.options.gateway,
+		});
 
 		this.#bindShardEvents(shard);
 
@@ -106,12 +124,12 @@ export class Cluster extends EventEmitter<ClusterEvents> {
 	#bindShardEvents(shard: Shard) {
 		const id = shard.id;
 
-		shard.on("ready", (data) => {
+		shard.on("ready", () => {
 			this.#readyCount++;
 
 			this.emit("debug", `Shard ${id} ready`);
 
-			this.emit("shardReady", id, data);
+			this.emit("shardReady", id);
 
 			if (this.ready) {
 				this.emit("ready");
@@ -134,11 +152,15 @@ export class Cluster extends EventEmitter<ClusterEvents> {
 			this.emit("shardError", id, err);
 		});
 
+		shard.on("raw", (payload) => {
+			this.emit("raw", id, payload);
+		});
+
 		shard.on("dispatch", (payload) => {
 			this.emit("dispatch", id, payload);
 		});
 
-		shard.on("needIdentify", async () => {
+		shard.on("needIdentify", () => {
 			this.emit("needIdentify", id);
 		});
 
