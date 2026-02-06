@@ -4,7 +4,7 @@ export function makeConfig(...options: Partial<Options>[]) {
 	const isProduction = process.env["NODE_ENV"] === "production";
 
 	const makeDefault = (opts: Partial<Options>): Options => ({
-		format: "esm",
+		format: ["cjs", "esm"],
 		sourcemap: !isProduction,
 		dts: true,
 		clean: true,

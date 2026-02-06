@@ -23,4 +23,4 @@ const cluster = new Cluster(Number(BAKIT_CLUSTER_ID), {
 
 ClusterProcess.bindProcess(cluster);
 
-await cluster.spawn();
+cluster.spawn();
