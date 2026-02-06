@@ -1,5 +1,24 @@
 # @bakit/rest
 
+## 3.0.1
+
+### Patch Changes
+
+- @bakit/utils:
+  - Add `isCommonJS` and `isESM` functions
+
+  @bakit/gateway:
+  - Add CommonJS support
+
+  @bakit/service:
+  - Add CommonJS support
+
+  @bakit/rest:
+  - Add CommonJS support
+
+- Updated dependencies
+  - @bakit/utils@2.3.0
+
 ## 3.0.0
 
 ### Major Changes

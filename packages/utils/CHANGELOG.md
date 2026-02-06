@@ -1,5 +1,21 @@
 # @bakit/utils
 
+## 2.3.0
+
+### Minor Changes
+
+- @bakit/utils:
+  - Add `isCommonJS` and `isESM` functions
+
+  @bakit/gateway:
+  - Add CommonJS support
+
+  @bakit/service:
+  - Add CommonJS support
+
+  @bakit/rest:
+  - Add CommonJS support
+
 ## 2.2.0
 
 ### Minor Changes
