@@ -4,7 +4,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { getServiceName } from "./Service.js";
-import { sleep } from "@bakit/utils";
+import { isCommonJS, sleep } from "@bakit/utils";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -108,7 +108,7 @@ export class ServiceProcess extends EventEmitter<ServiceProcessEvents> {
 
 		this._state = ServiceState.Starting;
 
-		const file = join(__dirname, "service.js");
+		const file = join(__dirname, isCommonJS() ? "service.cjs" : "service.js");
 
 		this.child = fork(file, [], {
 			env: {
