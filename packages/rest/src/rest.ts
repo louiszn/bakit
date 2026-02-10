@@ -46,14 +46,26 @@ export type RESTRequestFn = <T = unknown>(
 	options?: RESTRequestOptions,
 ) => Promise<T>;
 
-export interface RESTEvents {
+export interface BaseRESTEvents {
 	request: [endpoint: RESTEndpoint, method: RESTMethod, options?: RESTRequestOptions];
+}
+
+export interface RESTEvents extends BaseRESTEvents {
 	rateLimit: [metadata: RESTRouteMeta, retryAfter: number];
 	globalRateLimit: [retryAfter: number];
 }
 
-export interface RESTProxyEvents {
-	request: [endpoint: RESTEndpoint, method: RESTMethod, options?: RESTRequestOptions];
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
+export interface RESTAdapterEvents extends BaseRESTEvents {}
+
+export interface RESTLike extends EventEmitter<RESTEvents> {
+	request<T = unknown>(endpoint: RESTEndpoint, method: RESTMethod, options?: RESTRequestOptions): Promise<T>;
+	get<T = unknown>(endpoint: RESTEndpoint, options?: RESTRequestOptions): Promise<T>;
+	head<T = unknown>(endpoint: RESTEndpoint, options?: RESTRequestOptions): Promise<T>;
+	delete<T = unknown>(endpoint: RESTEndpoint, options?: RESTRequestOptions): Promise<T>;
+	post<T = unknown>(endpoint: RESTEndpoint, options?: RESTRequestOptions): Promise<T>;
+	put<T = unknown>(endpoint: RESTEndpoint, options?: RESTRequestOptions): Promise<T>;
+	patch<T = unknown>(endpoint: RESTEndpoint, options?: RESTRequestOptions): Promise<T>;
 }
 
 /**
@@ -101,7 +113,7 @@ export const DEFAULT_REST_OPTIONS = {
 	userAgent: `Bakit (https://github.com/louiszn/bakit, version)`,
 } as const satisfies Pick<RESTOptions, OptionalKeysOf<RESTOptions>>;
 
-export class REST extends EventEmitter<RESTEvents> {
+export class REST extends EventEmitter<RESTEvents> implements RESTLike {
 	public options: RESTOptions;
 
 	protected buckets: RESTBucketManager;
@@ -183,7 +195,7 @@ export class REST extends EventEmitter<RESTEvents> {
 	}
 }
 
-export class RESTProxy extends EventEmitter<RESTProxyEvents> {
+export class RESTAdapter extends EventEmitter<RESTAdapterEvents> implements RESTLike {
 	public constructor(public readonly options: RESTProxyOptions) {
 		super();
 	}
@@ -227,23 +239,18 @@ export class RESTProxy extends EventEmitter<RESTProxyEvents> {
  *
  * All requests are routed through a rate limit bucket manager
  * to ensure compliance with Discord's REST rate limits.
- *
- * @deprecated Use {@link REST} instead
  */
 export function createREST(options: RESTOptions): REST {
 	return new REST(options);
 }
 
 /**
- * Create a REST proxy instance.
+ * A thin adapter around a user-provided REST request implementation.
  *
- * All requests are routed through a rate limit bucket manager
- * to ensure compliance with Discord's REST rate limits.
- *
- * @deprecated Use {@link RESTProxy} instead
+ * Use {@link REST} if you want a fully managed Discord REST client.
  */
-export function createRESTProxy(options: RESTProxyOptions): RESTProxy {
-	return new RESTProxy(options);
+export function createRESTAdapter(options: RESTProxyOptions): RESTAdapter {
+	return new RESTAdapter(options);
 }
 
 /**
