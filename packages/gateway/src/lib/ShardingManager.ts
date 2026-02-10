@@ -99,13 +99,9 @@ export class ShardingManager extends EventEmitter<ShardingManagerEvents> {
 
 		this.emit("debug", `Spawning ${totalClusters} clusters (${totalShards} total shards)...`);
 
-		const promises: Promise<void>[] = [];
-
 		for (let i = 0; i < totalClusters; i++) {
-			promises.push(this.#spawnCluster(i));
+			this.#spawnCluster(i);
 		}
-
-		await Promise.all(promises);
 
 		this.emit("debug", "All clusters spawned");
 	}
@@ -140,6 +136,16 @@ export class ShardingManager extends EventEmitter<ShardingManagerEvents> {
 		return Promise.all(promises);
 	}
 
+	public send(shardId: number, payload: GatewaySendPayload) {
+		const cluster = this.clusters.find((cluster) => cluster.shards.has(shardId));
+
+		if (!cluster) {
+			throw new Error(`Shard ${shardId} not found`);
+		}
+
+		cluster.send(payload);
+	}
+
 	protected requestIdentify(cluster: ClusterProcess, shardId: number): void {
 		this.#identifyQueue?.add(() => cluster.identifyShard(shardId));
 	}
@@ -151,7 +157,7 @@ export class ShardingManager extends EventEmitter<ShardingManagerEvents> {
 		return Array.from({ length: end - start }, (_, i) => start + i);
 	}
 
-	async #spawnCluster(id: number): Promise<void> {
+	#spawnCluster(id: number) {
 		const shardIds = this.#getShardIdsForCluster(id);
 		const firstShardId = shardIds[0];
 		const lastShardId = shardIds[shardIds.length - 1];

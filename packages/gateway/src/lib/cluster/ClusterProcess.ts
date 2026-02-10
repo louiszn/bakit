@@ -113,6 +113,7 @@ export class ClusterProcess extends EventEmitter<ClusterEvents> {
 			timeout?: NodeJS.Timeout;
 		}
 	>();
+	#shards: Set<number> = new Set();
 
 	public constructor(
 		public readonly manager: ShardingManager,
@@ -131,6 +132,10 @@ export class ClusterProcess extends EventEmitter<ClusterEvents> {
 		});
 
 		this.#bindProcessEvents();
+	}
+
+	public get shards(): Set<number> {
+		return new Set(this.#shards);
 	}
 
 	public get killed(): boolean {
@@ -241,7 +246,7 @@ export class ClusterProcess extends EventEmitter<ClusterEvents> {
 		}
 
 		if (isDispatchPayload(message)) {
-			this.emit(message.t, ...message.d);
+			this.#handleDispatchPayload(message);
 			return;
 		}
 
@@ -249,6 +254,14 @@ export class ClusterProcess extends EventEmitter<ClusterEvents> {
 			this.#handleEvalResponse(message);
 			return;
 		}
+	}
+
+	#handleDispatchPayload(payload: ClusterIPCDispatchPayload): void {
+		if (payload.t === "shardAdd") {
+			this.#shards.add((payload.d as number[])[0]!);
+		}
+
+		this.emit(payload.t, ...payload.d);
 	}
 
 	#handleEvalResponse(payload: ClusterIPCEvalResponsePayload): void {
