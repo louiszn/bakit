@@ -1,7 +1,7 @@
 import EventEmitter from "node:events";
 
 import { Collection, Queue } from "@bakit/utils";
-import { REST, type RESTProxy } from "@bakit/rest";
+import { REST, type RESTLike } from "@bakit/rest";
 
 import { ClusterProcess, type EvalResult } from "./cluster/ClusterProcess.js";
 
@@ -38,7 +38,7 @@ export interface ShardingManagerEvents {
 export class ShardingManager extends EventEmitter<ShardingManagerEvents> {
 	public readonly clusters = new Collection<number, ClusterProcess>();
 	public readonly options: Required<ShardingManagerOptions>;
-	public readonly rest: REST | RESTProxy;
+	public readonly rest: RESTLike;
 
 	#gatewayInfo?: APIGatewayBotInfo;
 
@@ -46,7 +46,7 @@ export class ShardingManager extends EventEmitter<ShardingManagerEvents> {
 	#readyCount = 0;
 	#identifyQueue: Queue | undefined;
 
-	public constructor(options: ShardingManagerOptions, rest?: REST | RESTProxy) {
+	public constructor(options: ShardingManagerOptions, rest?: RESTLike) {
 		super();
 		this.setMaxListeners(0);
 
