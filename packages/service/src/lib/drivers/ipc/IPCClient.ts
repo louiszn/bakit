@@ -3,7 +3,7 @@ import { createConnection, Socket } from "node:net";
 import { BaseClientDriver, type BaseClientDriverEvents } from "../BaseDriver.js";
 import { FrameCodec, type FrameCodecOptions } from "@/lib/FrameCodec.js";
 import { Queue } from "@bakit/utils";
-import { getIPCPath } from "@/utils/ipc.js";
+import { getIPCPath } from "@/lib/utils/ipc.js";
 
 import type { Serializable } from "@/types/message.js";
 

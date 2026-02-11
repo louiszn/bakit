@@ -3,7 +3,7 @@ import { randomUUID } from "node:crypto";
 
 import { Collection, isPlainObject } from "@bakit/utils";
 
-import { createDynamicRPCError } from "@/utils/rpcError.js";
+import { createDynamicRPCError } from "@/lib/utils/rpcError.js";
 
 import type { BaseClientDriver } from "../drivers/BaseDriver.js";
 import type { RPCRequest, RPCResponse, RPCResponseError, Serializable } from "@/types/message.js";
