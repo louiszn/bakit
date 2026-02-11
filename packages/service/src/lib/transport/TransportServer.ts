@@ -2,7 +2,7 @@ import EventEmitter from "node:events";
 
 import { isPlainObject } from "@bakit/utils";
 
-import { serializeRPCError } from "@/utils/rpcError.js";
+import { serializeRPCError } from "@/lib/utils/rpcError.js";
 
 import type { BaseServerDriver } from "../drivers/BaseDriver.js";
 import type { RPCRequest, RPCResponse, Serializable } from "@/types/message.js";

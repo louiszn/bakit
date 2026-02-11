@@ -2,7 +2,7 @@ import { createServer, Server, Socket } from "node:net";
 import { unlinkSync } from "node:fs";
 import { BaseServerDriver, type BaseServerDriverEvents } from "../BaseDriver.js";
 import { FrameCodec, type FrameCodecOptions } from "@/lib/FrameCodec.js";
-import { getIPCPath, isServerRunning } from "@/utils/ipc.js";
+import { getIPCPath, isServerRunning } from "@/lib/utils/ipc.js";
 
 import type { Serializable } from "@/types/message.js";
 import { IPCConnection } from "./IPCConnection.js";
