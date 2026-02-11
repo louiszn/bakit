@@ -78,7 +78,7 @@ export class ShardingManager extends EventEmitter<ShardingManagerEvents> {
 	}
 
 	public get ready() {
-		return this.#readyCount === this.totalClusters;
+		return this.totalClusters > 0 && this.#readyCount === this.totalClusters;
 	}
 
 	public async spawn(): Promise<void> {
