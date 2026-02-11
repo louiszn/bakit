@@ -1,21 +1,22 @@
 import EventEmitter from "node:events";
 
 import { ShardingManager, type ShardingManagerOptions } from "@bakit/gateway";
-import { type RESTLike, REST } from "@bakit/rest";
+import { REST, type RESTLike } from "@bakit/rest";
+import { Collection } from "@bakit/utils";
+
 import { GatewayDispatchEvents, type GatewayDispatchPayload, type GatewayReceivePayload } from "discord-api-types/v10";
 
-import { Message } from "./structures/Message.js";
-import { User } from "./structures/User.js";
-import { ClientHelper } from "./ClientHelper.js";
+import { Message } from "../structures/Message.js";
+import { User } from "../structures/User.js";
+import { Guild } from "../structures/Guild.js";
 
-export enum Partial {
-	Message,
-	User,
-}
+import { ClientHelper } from "./ClientHelper.js";
+import { Partial } from "./Partial.js";
+import { IntentsBitField, type IntentResolvable } from "../utils/IntentsBitField.js";
 
 export interface ClientOptions {
 	token: string;
-	intents: bigint | number;
+	intents: IntentResolvable | IntentsBitField;
 	sharding?: ClientShardingOptions;
 	partials?: Partial[];
 }
@@ -32,14 +33,26 @@ export interface ClientEvents {
 	messageCreate: [message: Message];
 	messageUpdate: [message: Message];
 	messageDelete: [message: { id: string; channelId: string; guildId?: string }];
+
+	userUpdate: [user: User];
+
+	guildCreate: [guild: Guild];
+	guildAvailable: [guild: Guild];
+	guildUpdate: [guild: Guild];
+	guildDelete: [guild: Guild];
 }
 
 export class Client extends EventEmitter<ClientEvents> {
-	public readonly options: Omit<Required<ClientOptions>, "partials"> & { partials: Set<Partial> };
+	public readonly options: Omit<Required<ClientOptions>, "partials" | "intents"> & {
+		partials: Set<Partial>;
+		intents: IntentsBitField;
+	};
 
 	public readonly shards: ShardingManager;
 	public readonly rest: RESTLike;
 	public readonly helper: ClientHelper;
+
+	public readonly guilds = new Collection<string, Guild>();
 
 	#user?: User;
 	#ready = false;
@@ -47,13 +60,16 @@ export class Client extends EventEmitter<ClientEvents> {
 	public constructor(options: ClientOptions, rest?: RESTLike) {
 		super();
 
+		const intents = options.intents instanceof IntentsBitField ? options.intents : new IntentsBitField(options.intents);
+		const sharding = {
+			shardsPerCluster: options.sharding?.shardsPerCluster ?? 1,
+			totalShards: options.sharding?.totalShards ?? 1,
+		};
+
 		this.options = {
 			token: options.token,
-			intents: options.intents,
-			sharding: {
-				shardsPerCluster: options.sharding?.shardsPerCluster ?? 1,
-				totalShards: options.sharding?.totalShards ?? 1,
-			},
+			intents,
+			sharding,
 			partials: new Set(options.partials ?? []),
 		};
 
@@ -62,8 +78,8 @@ export class Client extends EventEmitter<ClientEvents> {
 		this.shards = new ShardingManager(
 			{
 				...this.options.sharding,
-				token: options.token,
-				intents: options.intents,
+				token: this.options.token,
+				intents: this.options.intents.toBigInt(),
 			},
 			rest,
 		);
@@ -161,6 +177,54 @@ export class Client extends EventEmitter<ClientEvents> {
 					this.#user = new User(this, payload.d);
 				}
 
+				this.emit("userUpdate", new User(this, payload.d));
+
+				break;
+			}
+
+			case GatewayDispatchEvents.GuildCreate: {
+				let guild = this.guilds.get(payload.d.id);
+
+				if (guild) {
+					guild["_patch"](payload.d);
+				} else {
+					guild = new Guild(this, payload.d);
+				}
+
+				this.guilds.set(payload.d.id, guild);
+
+				if (payload.d.unavailable) {
+					this.emit("guildCreate", guild);
+				} else {
+					this.emit("guildAvailable", guild);
+				}
+
+				break;
+			}
+
+			case GatewayDispatchEvents.GuildDelete: {
+				const guild = this.guilds.get(payload.d.id);
+
+				if (!guild) {
+					return;
+				}
+
+				this.guilds.delete(payload.d.id);
+				this.emit("guildDelete", guild);
+				break;
+			}
+
+			case GatewayDispatchEvents.GuildUpdate: {
+				let guild = this.guilds.get(payload.d.id);
+
+				if (guild) {
+					guild["_patch"](payload.d);
+				} else {
+					guild = new Guild(this, payload.d);
+					this.guilds.set(payload.d.id, guild);
+				}
+
+				this.emit("guildUpdate", guild);
 				break;
 			}
 		}

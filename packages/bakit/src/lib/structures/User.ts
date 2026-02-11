@@ -1,7 +1,7 @@
 import { getSnowflakeDate } from "@bakit/utils";
 import { BaseStructure } from "./BaseStructure.js";
 
-import type { Client } from "../Client.js";
+import type { Client } from "../client/Client.js";
 import type { APIUser, GatewayReadyDispatchData } from "discord-api-types/v10";
 
 export type UserPayload = APIUser | GatewayReadyDispatchData["user"];
@@ -26,13 +26,21 @@ export class User extends BaseStructure {
 		return this.#data.discriminator;
 	}
 
+	public get globalName() {
+		return this.#data.global_name;
+	}
+
 	public get tag() {
 		const hasDiscriminator = this.discriminator !== "0" && this.discriminator !== "0000";
 		return hasDiscriminator ? `${this.username}#${this.discriminator}` : this.username;
 	}
 
+	public get displayName() {
+		return this.globalName ?? this.tag;
+	}
+
 	public get avatar() {
-		return this.#data.avatar;
+		return this.#data.avatar ?? undefined;
 	}
 
 	public get bot() {
@@ -76,7 +84,7 @@ export class User extends BaseStructure {
 	}
 
 	public get accentColor() {
-		return this.#data.accent_color;
+		return this.#data.accent_color ?? undefined;
 	}
 
 	public get createdAt() {
@@ -88,7 +96,47 @@ export class User extends BaseStructure {
 	}
 
 	public get hexAccentColor() {
-		return this.accentColor ? `#${this.accentColor.toString(16).padStart(6, "0")}` : undefined;
+		return this.accentColor !== undefined ? `#${this.accentColor.toString(16).padStart(6, "0")}` : undefined;
+	}
+
+	public get defaultAvatarURL() {
+		// For users on the new username system, index will be (user_id >> 22) % 6.
+		// For users on the legacy username system, index will be discriminator % 5.
+		const hasDiscriminator = this.discriminator !== "0" && this.discriminator !== "0000";
+		const index = hasDiscriminator ? BigInt(this.discriminator) % 5n : (BigInt(this.id) >> 22n) % 6n;
+
+		return `https://cdn.discordapp.com/embed/avatars/${index}.png`;
+	}
+
+	public getAvatarURL(options?: { size?: number; extension?: "png" | "jpg" | "webp" | "gif" }): string | undefined {
+		if (!this.avatar) {
+			return undefined;
+		}
+
+		const isAnimated = this.avatar.startsWith("a_");
+		const ext = options?.extension ?? (isAnimated ? "gif" : "png");
+
+		const size = options?.size ? `?size=${options.size}` : "";
+
+		return `https://cdn.discordapp.com/avatars/${this.id}/${this.avatar}.${ext}${size}`;
+	}
+
+	public getDisplayAvatarURL(options?: { size?: number; extension?: "png" | "jpg" | "webp" | "gif" }) {
+		return this.getAvatarURL(options) ?? this.defaultAvatarURL;
+	}
+
+	public equals(other: User | string) {
+		if (typeof other === "string") {
+			return other === this.id;
+		}
+
+		return (
+			other.id === this.id &&
+			other.username === this.username &&
+			other.discriminator === this.discriminator &&
+			other.bot === this.bot &&
+			other.createdTimestamp === this.createdTimestamp
+		);
 	}
 
 	public override toJSON() {

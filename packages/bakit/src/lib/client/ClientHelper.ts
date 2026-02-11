@@ -1,8 +1,10 @@
 import { Routes } from "discord-api-types/v10";
-import { Message } from "./structures/Message.js";
-import type { Client } from "./Client.js";
 
-import type { APIAllowedMentions, APIEmbed, APIMessageReference, APIMessage } from "discord-api-types/v10";
+import { Message } from "../structures/Message.js";
+import { Guild } from "../structures/Guild.js";
+
+import type { Client } from "./Client.js";
+import type { APIAllowedMentions, APIEmbed, APIMessageReference, APIMessage, APIGuild } from "discord-api-types/v10";
 
 export interface MessageCreateOptions {
 	content?: string;
@@ -52,6 +54,11 @@ export class ClientHelper {
 				message_id: messageId,
 			},
 		});
+	}
+
+	public async fetchGuild(guildId: string) {
+		const data = await this.client.rest.get<APIGuild>(Routes.guild(guildId));
+		return new Guild(this.client, data);
 	}
 
 	public static toAPICreateMessagePayload(options: MessageCreateOptions) {

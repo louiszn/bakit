@@ -1,4 +1,4 @@
-import type { Client } from "../Client.js";
+import type { Client } from "../client/Client.js";
 
 export class BaseStructure {
 	declare public client: Client;
