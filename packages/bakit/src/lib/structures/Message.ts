@@ -1,13 +1,13 @@
 import { BaseStructure } from "./BaseStructure.js";
 import { User } from "./User.js";
 
-import type { Client } from "../Client.js";
+import type { Client } from "../client/Client.js";
 import type {
 	APIMessage,
 	GatewayMessageCreateDispatchData,
 	GatewayMessageUpdateDispatchData,
 } from "discord-api-types/v10";
-import type { MessageReplyOptions } from "../ClientHelper.js";
+import type { MessageReplyOptions } from "../client/ClientHelper.js";
 
 export type MessagePayload = APIMessage | GatewayMessageCreateDispatchData | GatewayMessageUpdateDispatchData;
 
@@ -38,6 +38,10 @@ export class Message extends BaseStructure {
 
 	public get guildId() {
 		return "guild_id" in this.#data ? this.#data.guild_id : undefined;
+	}
+
+	public get guild() {
+		return this.guildId ? this.client.guilds.get(this.guildId) : undefined;
 	}
 
 	public get author() {
@@ -74,6 +78,10 @@ export class Message extends BaseStructure {
 
 	public async reply(options: MessageReplyOptions) {
 		return this.client.helper.replyMessage(this.channelId, this.id, options);
+	}
+
+	public async sendToChannel(options: MessageReplyOptions) {
+		return this.client.helper.createMessage(this.channelId, options);
 	}
 
 	public override toJSON() {
