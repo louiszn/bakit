@@ -50,10 +50,12 @@
 		"@bakit/rest": "workspace:^",
 		"@bakit/service": "workspace:^",
 		"@bakit/utils": "workspace:^",
+		"@discordjs/collection": "^2.1.1",
 		"commander": "^14.0.3",
 		"discord-api-types": "^0.38.38",
 		"dotenv": "^17.2.3",
 		"tiny-glob": "^0.2.9",
+		"tiny-mixin": "^1.1.1",
 		"type-fest": "^4.41.0"
 	}
 }

@@ -2,7 +2,7 @@ import EventEmitter from "node:events";
 
 import { ShardingManager, type ShardingManagerOptions } from "@bakit/gateway";
 import { REST, type RESTLike } from "@bakit/rest";
-import { Collection } from "@bakit/utils";
+import { Collection } from "@discordjs/collection";
 
 import { GatewayDispatchEvents, type GatewayDispatchPayload, type GatewayReceivePayload } from "discord-api-types/v10";
 
@@ -13,6 +13,9 @@ import { Guild } from "../structures/Guild.js";
 import { ClientHelper } from "./ClientHelper.js";
 import { Partial } from "./Partial.js";
 import { IntentsBitField, type IntentResolvable } from "../utils/IntentsBitField.js";
+import { createChannel } from "../utils/channel.js";
+
+import type { Channel } from "../structures/index.js";
 
 export interface ClientOptions {
 	token: string;
@@ -40,6 +43,10 @@ export interface ClientEvents {
 	guildAvailable: [guild: Guild];
 	guildUpdate: [guild: Guild];
 	guildDelete: [guild: Guild];
+
+	channelCreate: [channel: Channel];
+	channelUpdate: [channel: Channel];
+	channelDelete: [channel: Channel];
 }
 
 export class Client extends EventEmitter<ClientEvents> {
@@ -218,13 +225,74 @@ export class Client extends EventEmitter<ClientEvents> {
 				let guild = this.guilds.get(payload.d.id);
 
 				if (guild) {
-					guild["_patch"](payload.d);
+					guild._patch(payload.d);
 				} else {
 					guild = new Guild(this, payload.d);
 					this.guilds.set(payload.d.id, guild);
 				}
 
 				this.emit("guildUpdate", guild);
+				break;
+			}
+
+			case GatewayDispatchEvents.ChannelCreate: {
+				const channel = createChannel(this, payload.d);
+
+				if (!channel) {
+					return;
+				}
+
+				if (channel.inGuild()) {
+					channel.guild.channels.set(channel.id, channel);
+				}
+
+				this.emit("channelCreate", channel);
+
+				break;
+			}
+
+			case GatewayDispatchEvents.ChannelUpdate: {
+				const guild = this.guilds.get(payload.d.guild_id);
+
+				if (!guild) {
+					return;
+				}
+
+				let channel: Channel | null | undefined = guild.channels.get(payload.d.id);
+
+				if (!channel) {
+					channel = createChannel(this, payload.d);
+
+					if (!channel) {
+						return;
+					}
+
+					guild.channels.set(payload.d.id, channel);
+				} else {
+					channel._patch(payload.d);
+				}
+
+				this.emit("channelUpdate", channel);
+
+				break;
+			}
+
+			case GatewayDispatchEvents.ChannelDelete: {
+				const guild = this.guilds.get(payload.d.guild_id);
+
+				if (!guild) {
+					return;
+				}
+
+				const channel = guild.channels.get(payload.d.id);
+
+				if (!channel) {
+					return;
+				}
+
+				guild.channels.delete(payload.d.id);
+				this.emit("channelDelete", channel);
+
 				break;
 			}
 		}

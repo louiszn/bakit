@@ -113,6 +113,9 @@ importers:
       '@bakit/utils':
         specifier: workspace:^
         version: link:../utils
+      '@discordjs/collection':
+        specifier: ^2.1.1
+        version: 2.1.1
       commander:
         specifier: ^14.0.3
         version: 14.0.3
@@ -125,6 +128,9 @@ importers:
       tiny-glob:
         specifier: ^0.2.9
         version: 0.2.9
+      tiny-mixin:
+        specifier: ^1.1.1
+        version: 1.1.1
       type-fest:
         specifier: ^4.41.0
         version: 4.41.0
@@ -141,9 +147,15 @@ importers:
       '@bakit/utils':
         specifier: workspace:^
         version: link:../utils
+      '@discordjs/collection':
+        specifier: ^2.1.1
+        version: 2.1.1
       discord-api-types:
         specifier: ^0.38.38
         version: 0.38.38
+      p-queue:
+        specifier: ^9.1.0
+        version: 9.1.0
       type-fest:
         specifier: ^4.41.0
         version: 4.41.0
@@ -160,9 +172,15 @@ importers:
       '@bakit/utils':
         specifier: workspace:^
         version: link:../utils
+      '@discordjs/collection':
+        specifier: ^2.1.1
+        version: 2.1.1
       discord-api-types:
         specifier: ^0.38.38
         version: 0.38.38
+      p-queue:
+        specifier: ^9.1.0
+        version: 9.1.0
       type-fest:
         specifier: ^4.41.0
         version: 4.41.0
@@ -172,6 +190,15 @@ importers:
       '@bakit/utils':
         specifier: workspace:^
         version: link:../utils
+      '@discordjs/collection':
+        specifier: ^2.1.1
+        version: 2.1.1
+      p-queue:
+        specifier: ^9.1.0
+        version: 9.1.0
+      tiny-glob:
+        specifier: ^0.2.9
+        version: 0.2.9
       type-fest:
         specifier: ^4.41.0
         version: 4.41.0
@@ -188,12 +215,6 @@ importers:
       '@discordjs/collection':
         specifier: ^2.1.1
         version: 2.1.1
-      p-queue:
-        specifier: ^9.1.0
-        version: 9.1.0
-      tiny-glob:
-        specifier: ^0.2.9
-        version: 0.2.9
       type-fest:
         specifier: ^4.41.0
         version: 4.41.0
@@ -2258,6 +2279,9 @@ packages:
 
   tiny-glob@0.2.9:
     resolution: {integrity: sha512-g/55ssRPUjShh+xkfx9UPDXqhckHEsHr4Vd9zX55oSdGZc/MD0m3sferOkwWtp98bv+kcVfEHtRJgBVJzelrzg==}
+
+  tiny-mixin@1.1.1:
+    resolution: {integrity: sha512-IQbd/XFtoK1bUKFArerJ4peF91tQll3VKoGjWQomW19K5J3AOsGwpMc2pFOTQYGsYAXpRCyFWbEmpawgLpn6Jg==}
 
   tinybench@2.9.0:
     resolution: {integrity: sha512-0+DUvqWMValLmha6lr4kD8iAMK1HzV0/aKnCtWb9v9641TnP/MFb7Pc2bxoxQjTXAErryXVgUOfv2YqNllqGeg==}
@@ -4618,6 +4642,8 @@ snapshots:
     dependencies:
       globalyzer: 0.1.0
       globrex: 0.1.2
+
+  tiny-mixin@1.1.1: {}
 
   tinybench@2.9.0: {}
 

@@ -1,8 +1,8 @@
 import { createConnection, Socket } from "node:net";
+import PQueue from "p-queue";
 
 import { BaseClientDriver, type BaseClientDriverEvents } from "../BaseDriver.js";
 import { FrameCodec, type FrameCodecOptions } from "@/lib/FrameCodec.js";
-import { Queue } from "@bakit/utils";
 import { getIPCPath } from "@/lib/utils/ipc.js";
 
 import type { Serializable } from "@/types/message.js";
@@ -58,7 +58,7 @@ export class IPCClient extends BaseClientDriver<IPCClientOptions, IPCClientEvent
 	private reconnectAttempt = 0;
 	private isIntentionalClose = false;
 
-	private queue = new Queue({
+	private queue = new PQueue({
 		concurrency: 1,
 		autoStart: false,
 	});

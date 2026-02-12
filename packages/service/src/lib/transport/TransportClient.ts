@@ -1,7 +1,8 @@
 import EventEmitter from "node:events";
 import { randomUUID } from "node:crypto";
 
-import { Collection, isPlainObject } from "@bakit/utils";
+import { isPlainObject } from "@bakit/utils";
+import { Collection } from "@discordjs/collection";
 
 import { createDynamicRPCError } from "@/lib/utils/rpcError.js";
 

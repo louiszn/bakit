@@ -1,5 +1,5 @@
 import EventEmitter from "node:events";
-import { Collection } from "@bakit/utils";
+import { Collection } from "@discordjs/collection";
 
 import { Shard } from "../Shard.js";
 
