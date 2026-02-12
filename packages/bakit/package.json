@@ -1,7 +1,7 @@
 {
 	"name": "bakit",
-	"version": "2.2.4",
-	"description": "A framework for discordeno",
+	"version": "3.0.0",
+	"description": "A modern, full-stack Discord API wrapper and framework",
 	"type": "module",
 	"exports": {
 		".": {

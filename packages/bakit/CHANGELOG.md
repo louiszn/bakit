@@ -1,5 +1,24 @@
 # bakit
 
+## 3.0.0
+
+### Major Changes
+
+- @bakit/utils:
+  - Remove re-exporting packages
+
+  bakit:
+  - Implement Client with basic event handling
+  - Implement basic API structures
+
+### Patch Changes
+
+- Updated dependencies
+  - @bakit/utils@3.0.0
+  - @bakit/gateway@3.0.2
+  - @bakit/service@4.0.2
+  - @bakit/rest@3.0.2
+
 ## 2.2.4
 
 ### Patch Changes

@@ -1,5 +1,19 @@
 # @bakit/rest
 
+## 3.0.2
+
+### Patch Changes
+
+- @bakit/utils:
+  - Remove re-exporting packages
+
+  bakit:
+  - Implement Client with basic event handling
+  - Implement basic API structures
+
+- Updated dependencies
+  - @bakit/utils@3.0.0
+
 ## 3.0.1
 
 ### Patch Changes
