@@ -1,4 +1,4 @@
-import type { FunctionLike, Promisify } from "./types/index.js";
+import type { FunctionLike, Promisify } from "@/types/index.js";
 
 /**
  * Promisify a value.

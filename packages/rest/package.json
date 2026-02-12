@@ -41,7 +41,9 @@
 	"packageManager": "pnpm@10.15.0",
 	"dependencies": {
 		"@bakit/utils": "workspace:^",
+		"@discordjs/collection": "^2.1.1",
 		"discord-api-types": "^0.38.38",
+		"p-queue": "^9.1.0",
 		"type-fest": "^4.41.0"
 	}
 }

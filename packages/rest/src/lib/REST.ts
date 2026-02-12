@@ -1,7 +1,8 @@
-import { RESTBucketManager } from "./bucket.js";
+import EventEmitter from "node:events";
+
+import { RESTBucketManager } from "./bucket/RESTBucketManager.js";
 
 import type { OptionalKeysOf, ValueOf } from "type-fest";
-import EventEmitter from "node:events";
 
 /**
  * A valid Discord API endpoint.

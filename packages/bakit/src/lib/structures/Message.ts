@@ -8,36 +8,42 @@ import type {
 	GatewayMessageUpdateDispatchData,
 } from "discord-api-types/v10";
 import type { MessageReplyOptions } from "../client/ClientHelper.js";
+import type { TextBasedChannel } from "./channel/BaseChannel.js";
 
 export type MessagePayload = APIMessage | GatewayMessageCreateDispatchData | GatewayMessageUpdateDispatchData;
 
 export class Message extends BaseStructure {
-	#data: MessagePayload;
-	#user?: User;
+	protected cachedAuthor?: User;
 
-	public constructor(client: Client, data: MessagePayload) {
+	public constructor(
+		client: Client,
+		public data: MessagePayload,
+	) {
 		super(client);
-		this.#data = data;
 	}
 
 	public get partial() {
-		return typeof this.#data.content !== "string" || typeof this.#data.author !== "object";
+		return typeof this.data.content !== "string" || typeof this.data.author !== "object";
 	}
 
 	public get content() {
-		return this.#data.content;
+		return this.data.content;
 	}
 
 	public get id() {
-		return this.#data.id;
+		return this.data.id;
 	}
 
 	public get channelId() {
-		return this.#data.channel_id;
+		return this.data.channel_id;
+	}
+
+	public get channel(): TextBasedChannel {
+		return this.guild!.channels.get(this.channelId)! as TextBasedChannel;
 	}
 
 	public get guildId() {
-		return "guild_id" in this.#data ? this.#data.guild_id : undefined;
+		return "guild_id" in this.data ? this.data.guild_id : undefined;
 	}
 
 	public get guild() {
@@ -45,16 +51,16 @@ export class Message extends BaseStructure {
 	}
 
 	public get author() {
-		this.#user ??= new User(this.client, this.#data.author);
-		return this.#user;
+		this.cachedAuthor ??= new User(this.client, this.data.author);
+		return this.cachedAuthor;
 	}
 
 	public get createdAt() {
-		return new Date(this.#data.timestamp);
+		return new Date(this.data.timestamp);
 	}
 
 	public get editedAt() {
-		return this.#data.edited_timestamp ? new Date(this.#data.edited_timestamp) : undefined;
+		return this.data.edited_timestamp ? new Date(this.data.edited_timestamp) : undefined;
 	}
 
 	public get createdTimestamp() {
@@ -71,8 +77,8 @@ export class Message extends BaseStructure {
 
 	public async fetch(): Promise<Message> {
 		const message = await this.client.helper.fetchMessage(this.channelId, this.id);
-		this.#data = message.#data;
-		this.#user = message.#user;
+		this.data = message.data;
+		this.cachedAuthor = message.cachedAuthor;
 		return this;
 	}
 
@@ -85,10 +91,10 @@ export class Message extends BaseStructure {
 	}
 
 	public override toJSON() {
-		return this.#data;
+		return this.data;
 	}
 
 	public override toString() {
-		return this.#data.content;
+		return this.data.content;
 	}
 }

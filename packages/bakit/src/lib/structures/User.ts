@@ -7,27 +7,27 @@ import type { APIUser, GatewayReadyDispatchData } from "discord-api-types/v10";
 export type UserPayload = APIUser | GatewayReadyDispatchData["user"];
 
 export class User extends BaseStructure {
-	#data: UserPayload;
-
-	public constructor(client: Client, user: UserPayload) {
+	public constructor(
+		client: Client,
+		public data: UserPayload,
+	) {
 		super(client);
-		this.#data = user;
 	}
 
 	public get id() {
-		return this.#data.id;
+		return this.data.id;
 	}
 
 	public get username() {
-		return this.#data.username;
+		return this.data.username;
 	}
 
 	public get discriminator() {
-		return this.#data.discriminator;
+		return this.data.discriminator;
 	}
 
 	public get globalName() {
-		return this.#data.global_name;
+		return this.data.global_name;
 	}
 
 	public get tag() {
@@ -40,51 +40,51 @@ export class User extends BaseStructure {
 	}
 
 	public get avatar() {
-		return this.#data.avatar ?? undefined;
+		return this.data.avatar ?? undefined;
 	}
 
 	public get bot() {
-		return !!this.#data.bot;
+		return !!this.data.bot;
 	}
 
 	public get system() {
-		return !!this.#data.system;
+		return !!this.data.system;
 	}
 
 	public get mfaEnabled() {
-		return this.#data.mfa_enabled;
+		return this.data.mfa_enabled;
 	}
 
 	public get locale() {
-		return this.#data.locale;
+		return this.data.locale;
 	}
 
 	public get verified() {
-		return this.#data.verified;
+		return this.data.verified;
 	}
 
 	public get email() {
-		return this.#data.email;
+		return this.data.email;
 	}
 
 	public get flags() {
-		return this.#data.flags;
+		return this.data.flags;
 	}
 
 	public get premiumType() {
-		return this.#data.premium_type;
+		return this.data.premium_type;
 	}
 
 	public get publicFlags() {
-		return this.#data.public_flags;
+		return this.data.public_flags;
 	}
 
 	public get banner() {
-		return this.#data.banner;
+		return this.data.banner;
 	}
 
 	public get accentColor() {
-		return this.#data.accent_color ?? undefined;
+		return this.data.accent_color ?? undefined;
 	}
 
 	public get createdAt() {
@@ -140,7 +140,7 @@ export class User extends BaseStructure {
 	}
 
 	public override toJSON() {
-		return this.#data;
+		return this.data;
 	}
 
 	public override toString() {

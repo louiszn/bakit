@@ -1,5 +1,7 @@
 import { normalize, relative, resolve, sep } from "node:path";
-import { glob, type FunctionLike, type Promisify } from "@bakit/utils";
+import { type FunctionLike, type Promisify } from "@bakit/utils";
+
+import glob from "tiny-glob";
 
 import {
 	BaseClientDriver,

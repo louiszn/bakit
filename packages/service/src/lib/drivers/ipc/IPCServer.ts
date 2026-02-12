@@ -1,12 +1,15 @@
 import { createServer, Server, Socket } from "node:net";
 import { unlinkSync } from "node:fs";
+import { Collection } from "@discordjs/collection";
+
 import { BaseServerDriver, type BaseServerDriverEvents } from "../BaseDriver.js";
 import { FrameCodec, type FrameCodecOptions } from "@/lib/FrameCodec.js";
 import { getIPCPath, isServerRunning } from "@/lib/utils/ipc.js";
 
-import type { Serializable } from "@/types/message.js";
 import { IPCConnection } from "./IPCConnection.js";
-import { Collection, type Awaitable } from "@bakit/utils";
+
+import type { Serializable } from "@/types/message.js";
+import type { Awaitable } from "@bakit/utils";
 
 export interface IPCServerOptions {
 	id: string;

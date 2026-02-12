@@ -1,6 +1,8 @@
 import EventEmitter from "node:events";
 
-import { Collection, Queue } from "@bakit/utils";
+import { Collection } from "@discordjs/collection";
+import PQueue from "p-queue";
+
 import { REST, type RESTLike } from "@bakit/rest";
 
 import { ClusterProcess, type EvalResult } from "./cluster/ClusterProcess.js";
@@ -44,7 +46,7 @@ export class ShardingManager extends EventEmitter<ShardingManagerEvents> {
 
 	#totalShards = 0;
 	#readyCount = 0;
-	#identifyQueue: Queue | undefined;
+	#identifyQueue: PQueue | undefined;
 
 	public constructor(options: ShardingManagerOptions, rest?: RESTLike) {
 		super();
@@ -89,7 +91,7 @@ export class ShardingManager extends EventEmitter<ShardingManagerEvents> {
 		this.#totalShards =
 			typeof this.options.totalShards === "number" ? this.options.totalShards : this.#gatewayInfo.shards;
 
-		this.#identifyQueue = new Queue({
+		this.#identifyQueue = new PQueue({
 			concurrency: limit.max_concurrency,
 			intervalCap: limit.max_concurrency,
 			interval: 5_000,
