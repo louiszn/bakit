@@ -23,7 +23,7 @@
 		"isolatedModules": true,
 		"noUncheckedSideEffectImports": true,
 		"moduleDetection": "force",
-		"skipLibCheck": false
+		"skipLibCheck": true
 	},
 	"exclude": ["node_modules", "dist"]
 }

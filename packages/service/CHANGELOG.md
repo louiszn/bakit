@@ -1,5 +1,13 @@
 # @bakit/service
 
+## 4.0.3
+
+### Patch Changes
+
+- Switch to tsdown as roller
+- Updated dependencies
+  - @bakit/utils@3.0.1
+
 ## 4.0.2
 
 ### Patch Changes

@@ -123,7 +123,7 @@ export class ClusterProcess extends EventEmitter<ClusterEvents> {
 		super();
 		this.setMaxListeners(0);
 
-		const entry = resolve(__dirname, isCommonJS() ? "cluster.cjs" : "cluster.js");
+		const entry = resolve(__dirname, isCommonJS() ? "cluster.cjs" : "cluster.mjs");
 
 		this.process = fork(entry, {
 			env: options.env,

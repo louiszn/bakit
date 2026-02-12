@@ -1,13 +1,13 @@
 {
 	"name": "bakit",
-	"version": "3.0.0",
+	"version": "3.0.1",
 	"description": "A modern, full-stack Discord API wrapper and framework",
 	"type": "module",
 	"exports": {
 		".": {
 			"import": {
-				"types": "./dist/index.d.ts",
-				"default": "./dist/index.js"
+				"types": "./dist/index.d.mts",
+				"default": "./dist/index.mjs"
 			},
 			"require": {
 				"types": "./dist/index.d.cts",
@@ -16,7 +16,7 @@
 		}
 	},
 	"scripts": {
-		"build": "tsup",
+		"build": "tsdown --config-loader unrun",
 		"type-check": "tsc --noEmit",
 		"test": "vitest run --pass-with-no-tests"
 	},

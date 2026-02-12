@@ -1,5 +1,16 @@
 # bakit
 
+## 3.0.1
+
+### Patch Changes
+
+- Switch to tsdown as roller
+- Updated dependencies
+  - @bakit/gateway@3.0.3
+  - @bakit/service@4.0.3
+  - @bakit/utils@3.0.1
+  - @bakit/rest@3.0.3
+
 ## 3.0.0
 
 ### Major Changes

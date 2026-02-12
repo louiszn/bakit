@@ -6,5 +6,5 @@
 			"@bakit/gateway": ["./src/index.ts"]
 		}
 	},
-	"include": ["src/**/*.ts", "tests/**/*.ts", "example/**/*.ts", "tsup.config.ts", "vitest.config.ts"]
+	"include": ["src/**/*.ts", "tests/**/*.ts", "example/**/*.ts", "tsdown.config.ts", "vitest.config.ts"]
 }

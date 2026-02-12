@@ -1,4 +1,4 @@
-import { makeConfig } from "../../tsup.config.js";
+import { makeConfig } from "../../tsdown.config.js";
 
 export default makeConfig(
 	{
