@@ -1,5 +1,16 @@
 # @bakit/utils
 
+## 3.0.0
+
+### Major Changes
+
+- @bakit/utils:
+  - Remove re-exporting packages
+
+  bakit:
+  - Implement Client with basic event handling
+  - Implement basic API structures
+
 ## 2.3.0
 
 ### Minor Changes

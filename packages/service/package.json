@@ -1,6 +1,6 @@
 {
 	"name": "@bakit/service",
-	"version": "4.0.1",
+	"version": "4.0.2",
 	"description": "Service manager for bakit framework",
 	"type": "module",
 	"exports": {
