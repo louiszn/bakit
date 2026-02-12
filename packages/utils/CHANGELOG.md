@@ -1,5 +1,11 @@
 # @bakit/utils
 
+## 3.0.1
+
+### Patch Changes
+
+- Switch to tsdown as roller
+
 ## 3.0.0
 
 ### Major Changes

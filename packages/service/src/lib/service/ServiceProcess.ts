@@ -108,7 +108,7 @@ export class ServiceProcess extends EventEmitter<ServiceProcessEvents> {
 
 		this._state = ServiceState.Starting;
 
-		const file = join(__dirname, isCommonJS() ? "service.cjs" : "service.js");
+		const file = join(__dirname, isCommonJS() ? "service.cjs" : "service.mjs");
 
 		this.child = fork(file, [], {
 			env: {
