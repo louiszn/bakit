@@ -1,10 +1,19 @@
-import { Routes } from "discord-api-types/v10";
+import { type APIUser, Routes } from "discord-api-types/v10";
 
 import { Message } from "../structures/Message.js";
 import { Guild } from "../structures/Guild.js";
 
 import type { Client } from "./Client.js";
-import type { APIAllowedMentions, APIEmbed, APIMessageReference, APIMessage, APIGuild } from "discord-api-types/v10";
+import type {
+	APIAllowedMentions,
+	APIEmbed,
+	APIMessageReference,
+	APIMessage,
+	APIGuild,
+	APIChannel,
+} from "discord-api-types/v10";
+import { createChannel } from "../utils/channel.js";
+import { User } from "../structures/User.js";
 
 export interface MessageCreateOptions {
 	content?: string;
@@ -31,19 +40,76 @@ export class ClientHelper {
 		});
 	}
 
-	public async fetchMessage(channelId: string, messageId: string) {
-		const data = await this.client.rest.get<APIMessage>(Routes.channelMessage(channelId, messageId));
-		return new Message(this.client, data);
+	public async fetchUser(userId: string, force = false): Promise<User> {
+		let user: User | undefined;
+
+		if (this.client.cache.isModuleEnabled("users")) {
+			user = await this.client.cache.users.get(userId);
+		}
+
+		if (!user || force) {
+			const data = await this.client.rest.get<APIUser>(Routes.user(userId));
+
+			if (this.client.cache.isModuleEnabled("users")) {
+				user = await this.client.cache.resolve(
+					this.client.cache.users,
+					userId,
+					() => new User(this.client, data),
+					(u) => u!._patch(data),
+				);
+			} else {
+				user = new User(this.client, data);
+			}
+		}
+
+		return user;
+	}
+
+	public async fetchMessage(channelId: string, messageId: string, force = false) {
+		let message: Message | undefined;
+
+		if (this.client.cache.isModuleEnabled("messages")) {
+			message = await this.client.cache.messages.get(messageId);
+		}
+
+		if (!message || force) {
+			const data = await this.client.rest.get<APIMessage>(Routes.channelMessage(channelId, messageId));
+
+			if (this.client.cache.isModuleEnabled("messages")) {
+				message = await this.client.cache.resolve(
+					this.client.cache.messages,
+					messageId,
+					() => new Message(this.client, data),
+					(m) => m._patch(data),
+				);
+			} else {
+				message = new Message(this.client, data);
+			}
+		}
+
+		return message;
 	}
 
 	public async deleteMessage(channelId: string, messageId: string) {
-		return this.client.rest.delete(Routes.channelMessage(channelId, messageId));
+		await this.client.rest.delete(Routes.channelMessage(channelId, messageId));
+
+		if (this.client.cache.isModuleEnabled("messages")) {
+			await this.client.cache.messages.delete(messageId);
+		}
 	}
 
 	public async createMessage(channelId: string, options: MessageCreateOptions) {
-		return this.client.rest.post<APIMessage>(Routes.channelMessages(channelId), {
+		const data = this.client.rest.post<APIMessage>(Routes.channelMessages(channelId), {
 			body: ClientHelper.toAPICreateMessagePayload(options),
 		});
+
+		const message = new Message(this.client, await data);
+
+		if (this.client.cache.isModuleEnabled("messages")) {
+			await this.client.cache.messages.set(message.id, message);
+		}
+
+		return message;
 	}
 
 	public async replyMessage(channelId: string, messageId: string, options: MessageReplyOptions) {
@@ -56,9 +122,38 @@ export class ClientHelper {
 		});
 	}
 
-	public async fetchGuild(guildId: string) {
-		const data = await this.client.rest.get<APIGuild>(Routes.guild(guildId));
-		return new Guild(this.client, data);
+	public async fetchGuild(guildId: string, force = false) {
+		let guild = this.client.cache.guilds.get(guildId);
+
+		if (!guild || force) {
+			const data = await this.client.rest.get<APIGuild>(Routes.guild(guildId));
+			guild = new Guild(this.client, data);
+
+			this.client.cache.guilds.set(guildId, guild);
+		}
+
+		return guild;
+	}
+
+	public async fetchChannel(channelId: string, force = false) {
+		let channel = this.client.cache.channels.get(channelId);
+
+		if (!channel || force) {
+			const data = await this.client.rest.get<APIChannel>(Routes.channel(channelId));
+			channel = createChannel(this.client, data) ?? undefined;
+
+			if (!channel) {
+				throw new Error(`Channel not found: ${channelId}`);
+			}
+
+			this.client.cache.channels.set(channelId, channel);
+
+			if (channel.inGuild()) {
+				channel.guild.channels.set(channelId, channel);
+			}
+		}
+
+		return channel;
 	}
 
 	public static toAPICreateMessagePayload(options: MessageCreateOptions) {

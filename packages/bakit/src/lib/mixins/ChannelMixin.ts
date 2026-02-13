@@ -44,7 +44,7 @@ export const GuildChannelMixin = createMixin(<T extends AbstractConstructor<Guil
 		}
 
 		public get guild() {
-			return this.client.guilds.get(this.guildId)!;
+			return this.client.cache.guilds.get(this.guildId)!;
 		}
 	}
 
