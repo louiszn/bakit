@@ -11,13 +11,15 @@ import type { Channel } from "./channel/BaseChannel.js";
 export type GuildPayload = APIGuild | GatewayGuildUpdateDispatchData | GatewayGuildCreateDispatchData;
 
 export class Guild extends BaseStructure {
-	private cachedChannels: Collection<string, Channel> | undefined;
+	public readonly channels = new Collection<string, Channel>();
 
 	public constructor(
 		client: Client,
 		public data: GuildPayload,
 	) {
 		super(client);
+
+		this.#initChannels();
 	}
 
 	public get id() {
@@ -48,28 +50,30 @@ export class Guild extends BaseStructure {
 		return this.data.verification_level;
 	}
 
-	public get channels() {
-		if (!this.cachedChannels) {
-			this.cachedChannels = new Collection();
-
-			if ("channels" in this.data) {
-				for (const data of this.data.channels) {
-					const channel = createChannel(this.client, data);
-
-					if (!channel) {
-						continue;
-					}
-
-					this.cachedChannels.set(channel.id, channel);
-				}
-			}
-		}
-
-		return this.cachedChannels;
-	}
-
 	public _patch(data: Partial<GuildPayload>) {
 		this.data = { ...this.data, ...data };
+		this.#initChannels();
+	}
+
+	#initChannels() {
+		if (!("channels" in this.data)) {
+			return;
+		}
+
+		for (const id of this.channels.keys()) {
+			this.client.cache.channels.delete(id);
+		}
+
+		this.channels.clear();
+
+		for (const channelData of this.data.channels) {
+			const channel = createChannel(this.client, channelData);
+
+			if (channel) {
+				this.channels.set(channel.id, channel);
+				this.client.cache.channels.set(channel.id, channel);
+			}
+		}
 	}
 
 	// public get roles() {

@@ -139,6 +139,10 @@ export class User extends BaseStructure {
 		);
 	}
 
+	public _patch(data: Partial<UserPayload>) {
+		this.data = { ...this.data, ...data };
+	}
+
 	public override toJSON() {
 		return this.data;
 	}

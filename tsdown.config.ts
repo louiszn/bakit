@@ -8,7 +8,6 @@ export function makeConfig(...options: Partial<UserConfig>[]) {
 		sourcemap: !isProduction,
 		dts: true,
 		clean: true,
-		minify: true,
 		outDir: "dist",
 		target: "es2022",
 		treeshake: true,

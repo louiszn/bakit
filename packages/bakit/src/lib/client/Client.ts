@@ -2,7 +2,6 @@ import EventEmitter from "node:events";
 
 import { ShardingManager, type ShardingManagerOptions } from "@bakit/gateway";
 import { REST, type RESTLike } from "@bakit/rest";
-import { Collection } from "@discordjs/collection";
 
 import { GatewayDispatchEvents, type GatewayDispatchPayload, type GatewayReceivePayload } from "discord-api-types/v10";
 
@@ -13,15 +12,19 @@ import { Guild } from "../structures/Guild.js";
 import { ClientHelper } from "./ClientHelper.js";
 import { Partial } from "./Partial.js";
 import { IntentsBitField, type IntentResolvable } from "../utils/IntentsBitField.js";
-import { createChannel } from "../utils/channel.js";
+import { ClientCacheManager, type ClientCacheManagerOptions } from "./ClientCacheManager.js";
+
+import { handlers } from "./dispatches/index.js";
 
 import type { Channel } from "../structures/index.js";
+import type { ClientGatewayDispatchHandler } from "./dispatches/registry.js";
 
 export interface ClientOptions {
 	token: string;
 	intents: IntentResolvable | IntentsBitField;
 	sharding?: ClientShardingOptions;
 	partials?: Partial[];
+	cache?: ClientCacheManagerOptions;
 }
 
 export type ClientShardingOptions = Omit<ShardingManagerOptions, "token" | "intents">;
@@ -35,7 +38,7 @@ export interface ClientEvents {
 
 	messageCreate: [message: Message];
 	messageUpdate: [message: Message];
-	messageDelete: [message: { id: string; channelId: string; guildId?: string }];
+	messageDelete: [message: Message];
 
 	userUpdate: [user: User];
 
@@ -59,7 +62,7 @@ export class Client extends EventEmitter<ClientEvents> {
 	public readonly rest: RESTLike;
 	public readonly helper: ClientHelper;
 
-	public readonly guilds = new Collection<string, Guild>();
+	public readonly cache: ClientCacheManager;
 
 	#user?: User;
 	#ready = false;
@@ -78,6 +81,7 @@ export class Client extends EventEmitter<ClientEvents> {
 			intents,
 			sharding,
 			partials: new Set(options.partials ?? []),
+			cache: options.cache ?? {},
 		};
 
 		this.rest = rest ?? new REST({ token: options.token });
@@ -90,6 +94,8 @@ export class Client extends EventEmitter<ClientEvents> {
 			},
 			rest,
 		);
+
+		this.cache = new ClientCacheManager(this.options.cache);
 
 		this.helper = new ClientHelper(this);
 
@@ -147,151 +153,12 @@ export class Client extends EventEmitter<ClientEvents> {
 				break;
 			}
 
-			case GatewayDispatchEvents.MessageCreate: {
-				const message = new Message(this, payload.d);
+			default: {
+				const handler = handlers[payload.t] as ClientGatewayDispatchHandler;
 
-				if (message.partial && !this.options.partials.has(Partial.Message)) {
-					return;
+				if (handler) {
+					await handler(this, payload);
 				}
-
-				this.emit("messageCreate", message);
-				break;
-			}
-
-			case GatewayDispatchEvents.MessageUpdate: {
-				const message = new Message(this, payload.d);
-
-				if (message.partial && !this.options.partials.has(Partial.Message)) {
-					return;
-				}
-
-				this.emit("messageUpdate", message);
-				break;
-			}
-
-			case GatewayDispatchEvents.MessageDelete: {
-				this.emit("messageDelete", {
-					id: payload.d.id,
-					channelId: payload.d.channel_id,
-					guildId: payload.d.guild_id,
-				});
-
-				break;
-			}
-
-			case GatewayDispatchEvents.UserUpdate: {
-				if (payload.d.id === this.#user?.id) {
-					this.#user = new User(this, payload.d);
-				}
-
-				this.emit("userUpdate", new User(this, payload.d));
-
-				break;
-			}
-
-			case GatewayDispatchEvents.GuildCreate: {
-				let guild = this.guilds.get(payload.d.id);
-
-				if (guild) {
-					guild["_patch"](payload.d);
-				} else {
-					guild = new Guild(this, payload.d);
-				}
-
-				this.guilds.set(payload.d.id, guild);
-
-				if (payload.d.unavailable) {
-					this.emit("guildCreate", guild);
-				} else {
-					this.emit("guildAvailable", guild);
-				}
-
-				break;
-			}
-
-			case GatewayDispatchEvents.GuildDelete: {
-				const guild = this.guilds.get(payload.d.id);
-
-				if (!guild) {
-					return;
-				}
-
-				this.guilds.delete(payload.d.id);
-				this.emit("guildDelete", guild);
-				break;
-			}
-
-			case GatewayDispatchEvents.GuildUpdate: {
-				let guild = this.guilds.get(payload.d.id);
-
-				if (guild) {
-					guild._patch(payload.d);
-				} else {
-					guild = new Guild(this, payload.d);
-					this.guilds.set(payload.d.id, guild);
-				}
-
-				this.emit("guildUpdate", guild);
-				break;
-			}
-
-			case GatewayDispatchEvents.ChannelCreate: {
-				const channel = createChannel(this, payload.d);
-
-				if (!channel) {
-					return;
-				}
-
-				if (channel.inGuild()) {
-					channel.guild.channels.set(channel.id, channel);
-				}
-
-				this.emit("channelCreate", channel);
-
-				break;
-			}
-
-			case GatewayDispatchEvents.ChannelUpdate: {
-				const guild = this.guilds.get(payload.d.guild_id);
-
-				if (!guild) {
-					return;
-				}
-
-				let channel: Channel | null | undefined = guild.channels.get(payload.d.id);
-
-				if (!channel) {
-					channel = createChannel(this, payload.d);
-
-					if (!channel) {
-						return;
-					}
-
-					guild.channels.set(payload.d.id, channel);
-				} else {
-					channel._patch(payload.d);
-				}
-
-				this.emit("channelUpdate", channel);
-
-				break;
-			}
-
-			case GatewayDispatchEvents.ChannelDelete: {
-				const guild = this.guilds.get(payload.d.guild_id);
-
-				if (!guild) {
-					return;
-				}
-
-				const channel = guild.channels.get(payload.d.id);
-
-				if (!channel) {
-					return;
-				}
-
-				guild.channels.delete(payload.d.id);
-				this.emit("channelDelete", channel);
 
 				break;
 			}
