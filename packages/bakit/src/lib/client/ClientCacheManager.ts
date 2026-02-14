@@ -110,7 +110,7 @@ export class ClientCacheManager {
 		return value;
 	}
 
-	resolveLocal<Value>(
+	public resolveLocal<Value>(
 		cache: LocalCacheAdapter<string, Value>,
 		id: string,
 		factory: () => Value,
