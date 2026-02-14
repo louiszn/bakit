@@ -1,5 +1,16 @@
 # @bakit/rest
 
+## 3.0.4
+
+### Patch Changes
+
+- bakit:
+  - Add cache layer
+  - Add `DMChannel` and enhance User
+
+  @bakit/rest:
+  - Add missing B template for body type
+
 ## 3.0.3
 
 ### Patch Changes
