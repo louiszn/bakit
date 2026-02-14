@@ -52,7 +52,7 @@ export interface ClientEvents {
 	channelDelete: [channel: Channel];
 }
 
-export class Client extends EventEmitter<ClientEvents> {
+export class Client<Ready extends boolean = boolean> extends EventEmitter<ClientEvents> {
 	public readonly options: Omit<Required<ClientOptions>, "partials" | "intents"> & {
 		partials: Set<Partial>;
 		intents: IntentsBitField;
@@ -102,8 +102,8 @@ export class Client extends EventEmitter<ClientEvents> {
 		this.#setupShardsListeners();
 	}
 
-	get user() {
-		return this.#user;
+	get user(): Ready extends true ? User : User | undefined {
+		return this.#user as Ready extends true ? User : User | undefined;
 	}
 
 	public async login() {

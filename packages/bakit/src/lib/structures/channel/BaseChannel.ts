@@ -1,16 +1,17 @@
 import { BaseStructure } from "../BaseStructure.js";
 
 import type { Client } from "../../client/Client.js";
-import type {
-	APIChannel,
-	APIChannelBase,
+import {
 	ChannelType,
-	GatewayChannelCreateDispatchData,
-	GatewayChannelUpdateDispatchData,
+	type APIChannel,
+	type APIChannelBase,
+	type GatewayChannelCreateDispatchData,
+	type GatewayChannelUpdateDispatchData,
 } from "discord-api-types/v10";
 
 import type { GuildTextChannel } from "./GuildTextChannel.js";
 import type { GuildVoiceChannel } from "./GuildVoiceChannel.js";
+import type { DMChannel } from "./DMChannel.js";
 
 export type BaseChannelPayload =
 	| APIChannelBase<ChannelType>
@@ -18,11 +19,11 @@ export type BaseChannelPayload =
 	| GatewayChannelUpdateDispatchData
 	| APIChannel;
 
-export type TextBasedChannel = GuildTextChannel | GuildVoiceChannel;
+export type TextBasedChannel = GuildTextChannel | GuildVoiceChannel | DMChannel;
 export type VoiceBasedChannel = GuildVoiceChannel;
 export type GuildChannel = GuildTextChannel | GuildVoiceChannel;
 
-export type Channel = TextBasedChannel | VoiceBasedChannel | GuildChannel;
+export type Channel = TextBasedChannel | VoiceBasedChannel | GuildChannel | BaseChannel<BaseChannelPayload>;
 
 export abstract class BaseChannel<D extends BaseChannelPayload> extends BaseStructure {
 	public constructor(
@@ -56,8 +57,16 @@ export abstract class BaseChannel<D extends BaseChannelPayload> extends BaseStru
 		return "join" in this;
 	}
 
+	public isDM(): this is DMChannel {
+		return this.type === ChannelType.DM;
+	}
+
 	public inGuild(): this is GuildChannel {
 		return "guild_id" in this.data;
+	}
+
+	public fetch(): Promise<this> {
+		return this.client.helper.fetchChannel<this>(this.id, true);
 	}
 
 	public _patch(data: Partial<D>) {

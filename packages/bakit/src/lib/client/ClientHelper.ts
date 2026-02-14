@@ -11,9 +11,14 @@ import type {
 	APIMessage,
 	APIGuild,
 	APIChannel,
+	APIDMChannel,
+	RESTPostAPICurrentUserCreateDMChannelJSONBody,
+	RESTPatchAPIChannelMessageJSONBody,
 } from "discord-api-types/v10";
 import { createChannel } from "../utils/channel.js";
 import { User } from "../structures/User.js";
+import type { Channel } from "../structures/index.js";
+import { DMChannel } from "../structures/channel/DMChannel.js";
 
 export interface MessageCreateOptions {
 	content?: string;
@@ -28,6 +33,7 @@ export interface MessageCreateOptions {
 }
 
 export type MessageReplyOptions = Omit<MessageCreateOptions, "messageReference">;
+export type MessageEditOptions = Omit<MessageCreateOptions, "messageReference">;
 
 export class ClientHelper {
 	declare public readonly client: Client;
@@ -65,6 +71,30 @@ export class ClientHelper {
 		return user;
 	}
 
+	public async createDM(userId: string, force = false): Promise<DMChannel> {
+		if (!force) {
+			const channel = this.client.cache.channels.find((c) => c.isDM() && c.recipientId === userId);
+
+			if (channel && channel.isDM()) {
+				return channel;
+			}
+		}
+
+		const data = await this.client.rest.post<APIDMChannel, RESTPostAPICurrentUserCreateDMChannelJSONBody>(
+			Routes.userChannels(),
+			{
+				body: { recipient_id: userId },
+			},
+		);
+
+		const channel = new DMChannel(this.client, data);
+
+		await channel.fetchRecipients();
+		this.client.cache.channels.set(channel.id, channel);
+
+		return channel;
+	}
+
 	public async fetchMessage(channelId: string, messageId: string, force = false) {
 		let message: Message | undefined;
 
@@ -98,7 +128,11 @@ export class ClientHelper {
 		}
 	}
 
-	public async createMessage(channelId: string, options: MessageCreateOptions) {
+	public async createMessage(channelId: string, options: MessageCreateOptions | string) {
+		if (typeof options === "string") {
+			options = { content: options };
+		}
+
 		const data = this.client.rest.post<APIMessage>(Routes.channelMessages(channelId), {
 			body: ClientHelper.toAPICreateMessagePayload(options),
 		});
@@ -107,6 +141,34 @@ export class ClientHelper {
 
 		if (this.client.cache.isModuleEnabled("messages")) {
 			await this.client.cache.messages.set(message.id, message);
+		}
+
+		return message;
+	}
+
+	public async editMessage(channelId: string, messageId: string, options: MessageEditOptions | string) {
+		if (typeof options === "string") {
+			options = { content: options };
+		}
+
+		const data = await this.client.rest.patch<APIMessage, RESTPatchAPIChannelMessageJSONBody>(
+			Routes.channelMessage(channelId, messageId),
+			{
+				body: ClientHelper.toAPICreateMessagePayload(options),
+			},
+		);
+
+		let message: Message;
+
+		if (this.client.cache.isModuleEnabled("messages")) {
+			message = await this.client.cache.resolve(
+				this.client.cache.messages,
+				messageId,
+				() => new Message(this.client, data),
+				(m) => m._patch(data),
+			);
+		} else {
+			message = new Message(this.client, data);
 		}
 
 		return message;
@@ -135,7 +197,7 @@ export class ClientHelper {
 		return guild;
 	}
 
-	public async fetchChannel(channelId: string, force = false) {
+	public async fetchChannel<C extends Channel>(channelId: string, force = false): Promise<C> {
 		let channel = this.client.cache.channels.get(channelId);
 
 		if (!channel || force) {
@@ -153,7 +215,7 @@ export class ClientHelper {
 			}
 		}
 
-		return channel;
+		return channel as C;
 	}
 
 	public static toAPICreateMessagePayload(options: MessageCreateOptions) {

@@ -3,6 +3,7 @@ import { BaseStructure } from "./BaseStructure.js";
 
 import type { Client } from "../client/Client.js";
 import type { APIUser, GatewayReadyDispatchData } from "discord-api-types/v10";
+import type { MessageCreateOptions } from "../client/ClientHelper.js";
 
 export type UserPayload = APIUser | GatewayReadyDispatchData["user"];
 
@@ -137,6 +138,15 @@ export class User extends BaseStructure {
 			other.bot === this.bot &&
 			other.createdTimestamp === this.createdTimestamp
 		);
+	}
+
+	public async createDM(force = false) {
+		return this.client.helper.createDM(this.id, force);
+	}
+
+	public async send(options: MessageCreateOptions | string) {
+		const dm = await this.createDM();
+		return await dm.send(options);
 	}
 
 	public _patch(data: Partial<UserPayload>) {
