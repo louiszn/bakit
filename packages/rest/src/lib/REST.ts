@@ -64,9 +64,9 @@ export interface RESTLike extends EventEmitter<RESTEvents> {
 	get<T = unknown>(endpoint: RESTEndpoint, options?: RESTRequestOptions): Promise<T>;
 	head<T = unknown>(endpoint: RESTEndpoint, options?: RESTRequestOptions): Promise<T>;
 	delete<T = unknown>(endpoint: RESTEndpoint, options?: RESTRequestOptions): Promise<T>;
-	post<T = unknown>(endpoint: RESTEndpoint, options?: RESTRequestOptions): Promise<T>;
-	put<T = unknown>(endpoint: RESTEndpoint, options?: RESTRequestOptions): Promise<T>;
-	patch<T = unknown>(endpoint: RESTEndpoint, options?: RESTRequestOptions): Promise<T>;
+	post<T = unknown, B = unknown>(endpoint: RESTEndpoint, options?: RESTRequestOptions<B>): Promise<T>;
+	put<T = unknown, B = unknown>(endpoint: RESTEndpoint, options?: RESTRequestOptions<B>): Promise<T>;
+	patch<T = unknown, B = unknown>(endpoint: RESTEndpoint, options?: RESTRequestOptions<B>): Promise<T>;
 }
 
 /**
