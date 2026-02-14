@@ -1,5 +1,21 @@
 # bakit
 
+## 3.1.0
+
+### Minor Changes
+
+- bakit:
+  - Add cache layer
+  - Add `DMChannel` and enhance User
+
+  @bakit/rest:
+  - Add missing B template for body type
+
+### Patch Changes
+
+- Updated dependencies
+  - @bakit/rest@3.0.4
+
 ## 3.0.1
 
 ### Patch Changes
