@@ -14,7 +14,7 @@ async function onCreateOrUpdate(client: Client, payload: GatewayChannelCreateDis
 		client.cache.channels,
 		payload.d.id,
 		() => createChannel(client, payload.d),
-		(c) => c?._patch(payload.d),
+		(c) => c?._patch(payload.d as never),
 	);
 
 	if (!channel) return;

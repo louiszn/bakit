@@ -1,14 +1,16 @@
 import { BaseStructure } from "./BaseStructure.js";
 import { User } from "./User.js";
+import { DMChannel } from "./channel/DMChannel.js";
 
 import type { Client } from "../client/Client.js";
-import type {
-	APIMessage,
-	GatewayMessageCreateDispatchData,
-	GatewayMessageUpdateDispatchData,
+import {
+	ChannelType,
+	type APIMessage,
+	type GatewayMessageCreateDispatchData,
+	type GatewayMessageUpdateDispatchData,
 } from "discord-api-types/v10";
-import type { MessageReplyOptions } from "../client/ClientHelper.js";
-import type { GuildChannel, TextBasedChannel } from "./channel/BaseChannel.js";
+import type { MessageEditOptions, MessageReplyOptions } from "../client/ClientHelper.js";
+import type { Channel, GuildChannel, TextBasedChannel } from "./channel/BaseChannel.js";
 import type { Guild } from "./Guild.js";
 
 export type MessagePayload = APIMessage | GatewayMessageCreateDispatchData | GatewayMessageUpdateDispatchData;
@@ -21,6 +23,7 @@ export class Message<InGuild extends boolean = boolean> extends BaseStructure {
 		public data: MessagePayload,
 	) {
 		super(client);
+		this.#ensureChannelCache();
 	}
 
 	public get partial() {
@@ -40,13 +43,7 @@ export class Message<InGuild extends boolean = boolean> extends BaseStructure {
 	}
 
 	public get channel(): InGuild extends true ? TextBasedChannel & GuildChannel : TextBasedChannel {
-		const channel = this.guild?.channels.get(this.channelId) ?? this.client.cache.channels.get(this.channelId);
-
-		if (!channel) {
-			throw new Error("Channel not found");
-		}
-
-		return channel;
+		return this.#ensureChannelCache() as InGuild extends true ? TextBasedChannel & GuildChannel : TextBasedChannel;
 	}
 
 	public get guildId(): InGuild extends true ? string : undefined {
@@ -154,6 +151,10 @@ export class Message<InGuild extends boolean = boolean> extends BaseStructure {
 		return this.client.helper.createMessage(this.channelId, options);
 	}
 
+	public async edit(options: MessageEditOptions | string) {
+		return this.client.helper.editMessage(this.channelId, this.id, options);
+	}
+
 	public async _patch(data: Partial<MessagePayload>) {
 		this.data = { ...this.data, ...data };
 
@@ -168,6 +169,34 @@ export class Message<InGuild extends boolean = boolean> extends BaseStructure {
 				this.#cachedAuthor?._patch(data.author);
 			}
 		}
+	}
+
+	#ensureChannelCache() {
+		const { client } = this;
+
+		let channel: Channel | undefined = client.cache.channels.get(this.channelId);
+
+		if (!channel) {
+			if (this.inGuild()) {
+				channel = this.guild!.channels.get(this.channelId);
+			} else {
+				channel = new DMChannel(client, {
+					id: this.channelId,
+					type: ChannelType.DM,
+					name: null,
+					recipients: [this.data.author, this.client.user.data],
+				});
+
+				console.log(channel);
+			}
+		}
+
+		if (!channel) {
+			throw new Error(`Channel not found: ${this.channelId}`);
+		}
+
+		client.cache.channels.set(this.channelId, channel);
+		return channel;
 	}
 
 	public override toJSON() {

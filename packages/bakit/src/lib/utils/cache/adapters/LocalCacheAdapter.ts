@@ -56,6 +56,16 @@ export class LocalCacheAdapter<Key, Value> extends BaseCacheAdapter<Key, Value> 
 		return this.get(key) !== undefined;
 	}
 
+	public find(filter: (data: Value) => boolean): Value | undefined {
+		for (const entry of this.collection.values()) {
+			if (filter(entry.value)) {
+				return entry.value;
+			}
+		}
+
+		return undefined;
+	}
+
 	public sweep(filter: (data: Value) => boolean): void {
 		for (const [key, entry] of this.collection) {
 			if (filter(entry.value)) {

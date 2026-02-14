@@ -18,7 +18,7 @@ type GuildChannelBase = BaseChannel<APIGuildChannel>;
 
 export const TextBasedChannelMixin = createMixin(<T extends AbstractConstructor<TextChannelBase>>(base: T) => {
 	abstract class TextBasedChannel extends base {
-		public send(options: MessageCreateOptions) {
+		public send(options: MessageCreateOptions | string) {
 			return this.client.helper.createMessage(this.id, options);
 		}
 	}
