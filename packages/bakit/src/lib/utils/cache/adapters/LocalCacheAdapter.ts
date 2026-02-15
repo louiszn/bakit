@@ -66,6 +66,16 @@ export class LocalCacheAdapter<Key, Value> extends BaseCacheAdapter<Key, Value> 
 		return undefined;
 	}
 
+	public forEach(callback: (value: Value, key: Key) => void): void {
+		for (const [key, entry] of this.collection) {
+			callback(entry.value, key);
+		}
+	}
+
+	public map<T>(callback: (value: Value, key: Key) => T): T[] {
+		return this.collection.map<T>((entry, key) => callback(entry.value, key));
+	}
+
 	public sweep(filter: (data: Value) => boolean): void {
 		for (const [key, entry] of this.collection) {
 			if (filter(entry.value)) {

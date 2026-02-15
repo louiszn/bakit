@@ -1,8 +1,8 @@
 import { Collection } from "@discordjs/collection";
-import type { Channel, Guild, Message } from "../structures/index.js";
-import type { User } from "../structures/User.js";
+import type { Channel, Guild, Message } from "../../structures/index.js";
+import type { User } from "../../structures/User.js";
 
-import { BaseCacheAdapter, HybridCache, LocalCacheAdapter } from "../utils/index.js";
+import { BaseCacheAdapter, HybridCache, LocalCacheAdapter } from "../../utils/index.js";
 
 export interface ClientCacheManagerOptions {
 	users?: ClientModuleCacheOptions<User> | boolean;

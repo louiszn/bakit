@@ -1,6 +1,5 @@
 import { BaseStructure } from "./BaseStructure.js";
 import { User } from "./User.js";
-import { DMChannel } from "./channel/DMChannel.js";
 
 import type { Client } from "../client/Client.js";
 import {
@@ -9,8 +8,8 @@ import {
 	type GatewayMessageCreateDispatchData,
 	type GatewayMessageUpdateDispatchData,
 } from "discord-api-types/v10";
-import type { MessageEditOptions, MessageReplyOptions } from "../client/ClientHelper.js";
-import type { Channel, GuildChannel, TextBasedChannel } from "./channel/BaseChannel.js";
+import type { MessageEditOptions, MessageReplyOptions } from "../managers/client/index.js";
+import type { GuildChannel, TextBasedChannel } from "./channel/BaseChannel.js";
 import type { Guild } from "./Guild.js";
 
 export type MessagePayload = APIMessage | GatewayMessageCreateDispatchData | GatewayMessageUpdateDispatchData;
@@ -27,7 +26,7 @@ export class Message<InGuild extends boolean = boolean> extends BaseStructure {
 	}
 
 	public get partial() {
-		return typeof this.data.content !== "string" || typeof this.data.author !== "object";
+		return typeof this.data.content !== "string" || typeof this.data.author !== "object" || this.channel === undefined;
 	}
 
 	public get content() {
@@ -143,16 +142,12 @@ export class Message<InGuild extends boolean = boolean> extends BaseStructure {
 		return this.client.helper.fetchUser(this.data.author.id, force);
 	}
 
-	public async reply(options: MessageReplyOptions) {
-		return this.client.helper.replyMessage(this.channelId, this.id, options);
+	public async reply(options: string | MessageReplyOptions) {
+		return this.client.channels.replyMessage(this.channelId, this.id, options);
 	}
 
-	public async sendToChannel(options: MessageReplyOptions) {
-		return this.client.helper.createMessage(this.channelId, options);
-	}
-
-	public async edit(options: MessageEditOptions | string) {
-		return this.client.helper.editMessage(this.channelId, this.id, options);
+	public async edit(options: string | MessageEditOptions) {
+		return this.client.channels.editMessage(this.channelId, this.id, options);
 	}
 
 	public async _patch(data: Partial<MessagePayload>) {
@@ -174,28 +169,30 @@ export class Message<InGuild extends boolean = boolean> extends BaseStructure {
 	#ensureChannelCache() {
 		const { client } = this;
 
-		let channel: Channel | undefined = client.cache.channels.get(this.channelId);
+		let channel = client.cache.channels.get(this.channelId) ?? this.guild?.channels.get(this.channelId);
 
 		if (!channel) {
-			if (this.inGuild()) {
-				channel = this.guild!.channels.get(this.channelId);
+			if (this.guildId) {
+				channel = this.client.channels.resolve({
+					id: this.channelId,
+					type: ChannelType.GuildText,
+				});
 			} else {
-				channel = new DMChannel(client, {
+				channel = this.client.channels.resolve({
 					id: this.channelId,
 					type: ChannelType.DM,
 					name: null,
-					recipients: [this.data.author, this.client.user.data],
+					recipients: [this.data.author],
 				});
-
-				console.log(channel);
 			}
+
+			if (!channel) {
+				throw new Error("Channel not found");
+			}
+
+			client.cache.channels.set(this.channelId, channel);
 		}
 
-		if (!channel) {
-			throw new Error(`Channel not found: ${this.channelId}`);
-		}
-
-		client.cache.channels.set(this.channelId, channel);
 		return channel;
 	}
 

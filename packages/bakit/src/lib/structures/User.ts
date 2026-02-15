@@ -3,7 +3,7 @@ import { BaseStructure } from "./BaseStructure.js";
 
 import type { Client } from "../client/Client.js";
 import type { APIUser, GatewayReadyDispatchData } from "discord-api-types/v10";
-import type { MessageCreateOptions } from "../client/ClientHelper.js";
+import type { MessageCreateOptions } from "../managers/client/ClientChannelManager.js";
 
 export type UserPayload = APIUser | GatewayReadyDispatchData["user"];
 

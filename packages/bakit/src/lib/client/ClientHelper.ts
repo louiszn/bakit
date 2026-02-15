@@ -5,35 +5,15 @@ import { Guild } from "../structures/Guild.js";
 
 import type { Client } from "./Client.js";
 import type {
-	APIAllowedMentions,
-	APIEmbed,
-	APIMessageReference,
 	APIMessage,
 	APIGuild,
-	APIChannel,
 	APIDMChannel,
 	RESTPostAPICurrentUserCreateDMChannelJSONBody,
-	RESTPatchAPIChannelMessageJSONBody,
 } from "discord-api-types/v10";
-import { createChannel } from "../utils/channel.js";
 import { User } from "../structures/User.js";
-import type { Channel } from "../structures/index.js";
 import { DMChannel } from "../structures/channel/DMChannel.js";
 
-export interface MessageCreateOptions {
-	content?: string;
-	tts?: boolean;
-
-	embeds?: APIEmbed[];
-
-	allowedMentions?: APIAllowedMentions;
-	messageReference?: APIMessageReference;
-
-	flags?: number;
-}
-
-export type MessageReplyOptions = Omit<MessageCreateOptions, "messageReference">;
-export type MessageEditOptions = Omit<MessageCreateOptions, "messageReference">;
+import type { Channel } from "../structures/index.js";
 
 export class ClientHelper {
 	declare public readonly client: Client;
@@ -128,62 +108,6 @@ export class ClientHelper {
 		}
 	}
 
-	public async createMessage(channelId: string, options: MessageCreateOptions | string) {
-		if (typeof options === "string") {
-			options = { content: options };
-		}
-
-		const data = this.client.rest.post<APIMessage>(Routes.channelMessages(channelId), {
-			body: ClientHelper.toAPICreateMessagePayload(options),
-		});
-
-		const message = new Message(this.client, await data);
-
-		if (this.client.cache.isModuleEnabled("messages")) {
-			await this.client.cache.messages.set(message.id, message);
-		}
-
-		return message;
-	}
-
-	public async editMessage(channelId: string, messageId: string, options: MessageEditOptions | string) {
-		if (typeof options === "string") {
-			options = { content: options };
-		}
-
-		const data = await this.client.rest.patch<APIMessage, RESTPatchAPIChannelMessageJSONBody>(
-			Routes.channelMessage(channelId, messageId),
-			{
-				body: ClientHelper.toAPICreateMessagePayload(options),
-			},
-		);
-
-		let message: Message;
-
-		if (this.client.cache.isModuleEnabled("messages")) {
-			message = await this.client.cache.resolve(
-				this.client.cache.messages,
-				messageId,
-				() => new Message(this.client, data),
-				(m) => m._patch(data),
-			);
-		} else {
-			message = new Message(this.client, data);
-		}
-
-		return message;
-	}
-
-	public async replyMessage(channelId: string, messageId: string, options: MessageReplyOptions) {
-		return this.createMessage(channelId, {
-			...options,
-			messageReference: {
-				channel_id: channelId,
-				message_id: messageId,
-			},
-		});
-	}
-
 	public async fetchGuild(guildId: string, force = false) {
 		let guild = this.client.cache.guilds.get(guildId);
 
@@ -197,35 +121,18 @@ export class ClientHelper {
 		return guild;
 	}
 
-	public async fetchChannel<C extends Channel>(channelId: string, force = false): Promise<C> {
-		let channel = this.client.cache.channels.get(channelId);
-
-		if (!channel || force) {
-			const data = await this.client.rest.get<APIChannel>(Routes.channel(channelId));
-			channel = createChannel(this.client, data) ?? undefined;
-
-			if (!channel) {
-				throw new Error(`Channel not found: ${channelId}`);
-			}
-
-			this.client.cache.channels.set(channelId, channel);
-
-			if (channel.inGuild()) {
-				channel.guild.channels.set(channelId, channel);
-			}
-		}
-
-		return channel as C;
+	public fetchChannel<C extends Channel>(channelId: string, force = false) {
+		return this.client.channels.fetch<C>(channelId, force);
 	}
 
-	public static toAPICreateMessagePayload(options: MessageCreateOptions) {
-		return {
-			content: options.content,
-			tts: options.tts,
-			embeds: options.embeds,
-			allowed_mentions: options.allowedMentions,
-			message_reference: options.messageReference,
-			flags: options.flags,
-		};
+	public async crosspostMessage(channelId: string, messageId: string) {
+		const data = await this.client.rest.post<APIMessage>(Routes.channelMessageCrosspost(channelId, messageId));
+		const message = new Message<true>(this.client, data);
+
+		if (this.client.cache.isModuleEnabled("messages")) {
+			await this.client.cache.messages.set(message.id, message);
+		}
+
+		return message;
 	}
 }

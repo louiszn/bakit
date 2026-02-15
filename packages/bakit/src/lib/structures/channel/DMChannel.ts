@@ -8,7 +8,7 @@ import { TextBasedChannelMixin } from "@/lib/mixins/ChannelMixin.js";
 import { Routes, type APIDMChannel, type RESTPostAPICurrentUserCreateDMChannelJSONBody } from "discord-api-types/v10";
 
 import type { Client } from "@/lib/client/Client.js";
-import type { MessageCreateOptions } from "@/lib/client/ClientHelper.js";
+import type { MessageCreateOptions } from "@/lib/managers/client/ClientChannelManager.js";
 import type { Message } from "../index.js";
 
 export class DMChannel extends applyMixins(BaseChannel<APIDMChannel>, [TextBasedChannelMixin]) {
