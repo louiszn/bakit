@@ -12,6 +12,10 @@ import {
 import type { GuildTextChannel } from "./GuildTextChannel.js";
 import type { GuildVoiceChannel } from "./GuildVoiceChannel.js";
 import type { DMChannel } from "./DMChannel.js";
+import type { ThreadBasedChannel } from "./ThreadChannel.js";
+import type { GuildAnnouncementChannel } from "./GuildAnnouncementChannel.js";
+import type { GuildStageVoiceChannel } from "./GuildStageVoiceChannel.js";
+import type { GuildCategory } from "./GuildCategory.js";
 
 export type BaseChannelPayload =
 	| APIChannelBase<ChannelType>
@@ -19,13 +23,19 @@ export type BaseChannelPayload =
 	| GatewayChannelUpdateDispatchData
 	| APIChannel;
 
-export type TextBasedChannel = GuildTextChannel | GuildVoiceChannel | DMChannel;
-export type VoiceBasedChannel = GuildVoiceChannel;
-export type GuildChannel = GuildTextChannel | GuildVoiceChannel;
+export type TextBasedChannel =
+	| GuildTextChannel
+	| GuildVoiceChannel
+	| GuildStageVoiceChannel
+	| DMChannel
+	| GuildAnnouncementChannel
+	| ThreadBasedChannel;
+export type VoiceBasedChannel = GuildVoiceChannel | GuildStageVoiceChannel;
+export type GuildChannel = GuildTextChannel | GuildVoiceChannel | GuildAnnouncementChannel | GuildCategory;
 
 export type Channel = TextBasedChannel | VoiceBasedChannel | GuildChannel | BaseChannel<BaseChannelPayload>;
 
-export abstract class BaseChannel<D extends BaseChannelPayload> extends BaseStructure {
+export class BaseChannel<D extends BaseChannelPayload, Type extends ChannelType = D["type"]> extends BaseStructure {
 	public constructor(
 		client: Client,
 		public data: D,
@@ -33,12 +43,16 @@ export abstract class BaseChannel<D extends BaseChannelPayload> extends BaseStru
 		super(client);
 	}
 
+	public get partial() {
+		return Object.keys(this.data).length <= 2;
+	}
+
 	public get id() {
 		return this.data.id;
 	}
 
-	public get type() {
-		return this.data.type;
+	public get type(): Type {
+		return this.data.type as Type;
 	}
 
 	public override toString() {
@@ -61,12 +75,42 @@ export abstract class BaseChannel<D extends BaseChannelPayload> extends BaseStru
 		return this.type === ChannelType.DM;
 	}
 
+	public isThread(): this is ThreadBasedChannel {
+		return (
+			this.type === ChannelType.AnnouncementThread ||
+			this.type === ChannelType.PublicThread ||
+			this.type === ChannelType.PrivateThread
+		);
+	}
+
+	public isPublicThread(): this is ThreadBasedChannel {
+		return this.type === ChannelType.PublicThread;
+	}
+
+	public isPrivateThread(): this is ThreadBasedChannel {
+		return this.type === ChannelType.PrivateThread;
+	}
+
+	public isAnnouncementThread(): this is ThreadBasedChannel {
+		return this.type === ChannelType.AnnouncementThread;
+	}
+
+	public isCategory(): this is GuildCategory {
+		return this.type === ChannelType.GuildCategory;
+	}
+
 	public inGuild(): this is GuildChannel {
 		return "guild_id" in this.data;
 	}
 
-	public fetch(): Promise<this> {
-		return this.client.helper.fetchChannel<this>(this.id, true);
+	public async fetch(): Promise<this> {
+		const channel = await this.client.channels.fetch(this.id, true);
+
+		if (!channel) {
+			throw new Error("Channel not found");
+		}
+
+		return channel as this;
 	}
 
 	public _patch(data: Partial<D>) {

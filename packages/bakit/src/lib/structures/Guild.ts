@@ -2,11 +2,10 @@ import { Collection } from "@discordjs/collection";
 
 import { BaseStructure } from "./BaseStructure.js";
 
-import { createChannel } from "../utils/channel.js";
-
 import type { Client } from "../client/Client.js";
 import type { APIGuild, GatewayGuildCreateDispatchData, GatewayGuildUpdateDispatchData } from "discord-api-types/v10";
 import type { Channel } from "./channel/BaseChannel.js";
+import { ClientChannelManager } from "../managers/client/ClientChannelManager.js";
 
 export type GuildPayload = APIGuild | GatewayGuildUpdateDispatchData | GatewayGuildCreateDispatchData;
 
@@ -67,7 +66,7 @@ export class Guild extends BaseStructure {
 		this.channels.clear();
 
 		for (const channelData of this.data.channels) {
-			const channel = createChannel(this.client, channelData);
+			const channel = ClientChannelManager.create(this.client, channelData);
 
 			if (channel) {
 				this.channels.set(channel.id, channel);
@@ -75,8 +74,4 @@ export class Guild extends BaseStructure {
 			}
 		}
 	}
-
-	// public get roles() {
-	// 	return this.data.roles;
-	// }
 }

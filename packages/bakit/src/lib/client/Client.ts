@@ -12,11 +12,11 @@ import { Guild } from "../structures/Guild.js";
 import { ClientHelper } from "./ClientHelper.js";
 import { Partial } from "./Partial.js";
 import { IntentsBitField, type IntentResolvable } from "../utils/IntentsBitField.js";
-import { ClientCacheManager, type ClientCacheManagerOptions } from "./ClientCacheManager.js";
+import { ClientCacheManager, ClientChannelManager, type ClientCacheManagerOptions } from "../managers/client/index.js";
 
 import { handlers } from "./dispatches/index.js";
 
-import type { Channel, Typing } from "../structures/index.js";
+import type { Channel, Typing, ThreadBasedChannel } from "../structures/index.js";
 import type { ClientGatewayDispatchHandler } from "./dispatches/registry.js";
 
 export interface ClientOptions {
@@ -51,6 +51,10 @@ export interface ClientEvents {
 	channelUpdate: [channel: Channel];
 	channelDelete: [channel: Channel];
 
+	threadCreate: [thread: ThreadBasedChannel];
+	threadUpdate: [thread: ThreadBasedChannel];
+	threadDelete: [thread: ThreadBasedChannel];
+
 	typingStart: [typing: Typing];
 }
 
@@ -62,9 +66,16 @@ export class Client<Ready extends boolean = boolean> extends EventEmitter<Client
 
 	public readonly shards: ShardingManager;
 	public readonly rest: RESTLike;
+
+	/**
+	 * @private
+	 * @deprecated
+	 */
 	public readonly helper: ClientHelper;
 
 	public readonly cache: ClientCacheManager;
+
+	public readonly channels: ClientChannelManager;
 
 	#user?: User;
 	#ready = false;
@@ -98,6 +109,7 @@ export class Client<Ready extends boolean = boolean> extends EventEmitter<Client
 		);
 
 		this.cache = new ClientCacheManager(this.options.cache);
+		this.channels = new ClientChannelManager(this);
 
 		this.helper = new ClientHelper(this);
 
