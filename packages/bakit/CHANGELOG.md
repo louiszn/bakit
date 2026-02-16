@@ -1,5 +1,21 @@
 # bakit
 
+## 3.2.0
+
+### Minor Changes
+
+- Introduce new channel structures:
+  - GuildCategory
+  - GuildForumChannel with Tag
+  - GuildAnnouncementChannel
+  - ThreadChannel
+
+- Introduce new partial: Partial.Channel
+
+- Optimize cache system for resolving channels, messages and users
+
+- Deprecate: Client#helper (ClientHelper) for more managers
+
 ## 3.1.0
 
 ### Minor Changes
