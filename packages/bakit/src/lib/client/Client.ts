@@ -16,7 +16,7 @@ import { ClientCacheManager, type ClientCacheManagerOptions } from "./ClientCach
 
 import { handlers } from "./dispatches/index.js";
 
-import type { Channel } from "../structures/index.js";
+import type { Channel, Typing } from "../structures/index.js";
 import type { ClientGatewayDispatchHandler } from "./dispatches/registry.js";
 
 export interface ClientOptions {
@@ -50,6 +50,8 @@ export interface ClientEvents {
 	channelCreate: [channel: Channel];
 	channelUpdate: [channel: Channel];
 	channelDelete: [channel: Channel];
+
+	typingStart: [typing: Typing];
 }
 
 export class Client<Ready extends boolean = boolean> extends EventEmitter<ClientEvents> {

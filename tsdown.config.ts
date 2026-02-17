@@ -11,7 +11,6 @@ export function makeConfig(...options: Partial<UserConfig>[]) {
 		outDir: "dist",
 		target: "es2022",
 		treeshake: true,
-		external: [/^(?!(?:\.{0,2}\/|@\/))/], // match anything that doesn't start with ./, ../, /, @/
 		...opts,
 	});
 
