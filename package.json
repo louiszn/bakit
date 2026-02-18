@@ -15,7 +15,7 @@
 	"devDependencies": {
 		"@changesets/cli": "^2.29.8",
 		"@eslint/js": "^9.39.2",
-		"@octokit/auth-app": "^8.2.0",
+		"@octokit/app": "^16.1.2",
 		"@octokit/rest": "^22.0.1",
 		"@types/mdast": "^4.0.4",
 		"@types/minimist": "^1.2.5",
