@@ -17,7 +17,6 @@ jobs:
 
     env:
       NODE_ENV: production
-      GITHUB_REPOSITORY: ${{ github.repository }}
 
     steps:
       - name: Checkout repository
@@ -44,9 +43,9 @@ jobs:
 
       - name: Bump versions and release
         env:
-          GITHUB_APP_ID: ${{ secrets.GITHUB_APP_ID }}
-          GITHUB_PRIVATE_KEY: ${{ secrets.GITHUB_PRIVATE_KEY }}
-          GITHUB_INSTALLATION_ID: ${{ secrets.GITHUB_INSTALLATION_ID }}
+          BAKIT_APP_ID: ${{ secrets.BAKIT_APP_ID }}
+          BAKIT_PRIVATE_KEY: ${{ secrets.BAKIT_PRIVATE_KEY }}
+          BAKIT_INSTALLATION_ID: ${{ secrets.BAKIT_INSTALLATION_ID }}
           DRY_RUN: ${{ secrets.DRY_RUN }}
         run: pnpm tsx scripts/release/index.ts
 

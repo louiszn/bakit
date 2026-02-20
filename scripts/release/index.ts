@@ -15,9 +15,9 @@ if (DRY_RUN) {
 console.log("⌛ Initializing context...");
 
 const { git, octokit, auth } = await getContext({
-	appId: process.env["GITHUB_APP_ID"]!,
-	privateKey: process.env["GITHUB_PRIVATE_KEY"]!,
-	installationId: Number(process.env["GITHUB_INSTALLATION_ID"]),
+	appId: process.env["BAKIT_APP_ID"]!,
+	privateKey: process.env["BAKIT_PRIVATE_KEY"]!,
+	installationId: Number(process.env["BAKIT_INSTALLATION_ID"]),
 });
 
 console.log("⌛ Setting up git...");
