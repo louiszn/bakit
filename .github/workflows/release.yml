@@ -5,45 +5,50 @@ concurrency:
   cancel-in-progress: false
 
 on:
-  push:
-    branches:
-      - main
   workflow_dispatch:
 
 permissions:
-  contents: write # create tags + releases
-  packages: write # npm publish (via token)
+  contents: write # for creating tags + releases
+  packages: write # for npm publish
 
 jobs:
   release:
     runs-on: ubuntu-latest
 
+    env:
+      NODE_ENV: production
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0 # REQUIRED for tags
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
+          fetch-depth: 0 # full history + tags required
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 22
           registry-url: https://registry.npmjs.org/
-          cache: pnpm
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
       - name: Build packages
         run: pnpm -r build
-        env:
-          NODE_ENV: production
 
-      - name: Run release script
+      - name: Bump versions and release
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BAKIT_APP_ID: ${{ secrets.BAKIT_APP_ID }}
+          BAKIT_PRIVATE_KEY: ${{ secrets.BAKIT_PRIVATE_KEY }}
+          BAKIT_INSTALLATION_ID: ${{ secrets.BAKIT_INSTALLATION_ID }}
+          DRY_RUN: ${{ secrets.DRY_RUN }}
+        run: pnpm tsx scripts/release/index.ts
+
+      - name: Publish packages
+        env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-        run: pnpm tsx scripts/release.ts
+          DRY_RUN: ${{ secrets.DRY_RUN }}
+        run: pnpm -r publish --no-git-checks --access public ${{ env.DRY_RUN == 'true' && '--dry-run' || '' }}
