@@ -11,39 +11,49 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write # create tags + releases
-  packages: write # npm publish (via token)
+  contents: write # for creating tags + releases
+  packages: write # for npm publish
 
 jobs:
   release:
     runs-on: ubuntu-latest
 
+    env:
+      NODE_ENV: production
+      GITHUB_REPOSITORY: ${{ github.repository }}
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0 # REQUIRED for tags
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
+          fetch-depth: 0 # full history + tags required
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 22
           registry-url: https://registry.npmjs.org/
-          cache: pnpm
+          cache: "pnpm"
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 8
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
       - name: Build packages
         run: pnpm -r build
-        env:
-          NODE_ENV: production
 
-      - name: Run release script
+      - name: Bump versions and release
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_APP_ID: ${{ secrets.GITHUB_APP_ID }}
+          GITHUB_PRIVATE_KEY: ${{ secrets.GITHUB_PRIVATE_KEY }}
+          GITHUB_INSTALLATION_ID: ${{ secrets.GITHUB_INSTALLATION_ID }}
+        run: pnpm tsx scripts/release/index.ts
+
+      - name: Publish packages
+        env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-        run: pnpm tsx scripts/release.ts
+        run: pnpm -r publish --no-git-checks --access public --dry-run
