@@ -1,5 +1,4 @@
-import { App } from "@octokit/app";
-import { Octokit } from "@octokit/rest";
+import { App, Octokit } from "octokit";
 import { simpleGit, type SimpleGit } from "simple-git";
 
 export interface ContextOptions {
@@ -25,13 +24,11 @@ export async function getContext(options: ContextOptions): Promise<Context> {
 	const app = new App({
 		appId: options.appId,
 		privateKey: options.privateKey,
-		Octokit,
 	});
 
 	const octokit = await app.getInstallationOctokit(options.installationId);
 
-	const { token } = (await octokit.auth()) as { token: string };
-	const { data: info } = await octokit.apps.getAuthenticated();
+	const { data: info } = await octokit.rest.apps.getAuthenticated();
 
 	if (!info) {
 		throw new Error("Failed to get authenticated app");
@@ -39,6 +36,11 @@ export async function getContext(options: ContextOptions): Promise<Context> {
 
 	const name = `${info.slug}[bot]`;
 	const email = `${info.slug}[bot]@users.noreply.github.com`;
+
+	const { token } = (await octokit.auth({
+		type: "installation",
+		installationId: options.installationId,
+	})) as { token: string };
 
 	const git = simpleGit();
 
