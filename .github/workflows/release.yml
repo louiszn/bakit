@@ -5,9 +5,6 @@ concurrency:
   cancel-in-progress: false
 
 on:
-  push:
-    branches:
-      - main
   workflow_dispatch:
 
 permissions:
@@ -50,9 +47,11 @@ jobs:
           GITHUB_APP_ID: ${{ secrets.GITHUB_APP_ID }}
           GITHUB_PRIVATE_KEY: ${{ secrets.GITHUB_PRIVATE_KEY }}
           GITHUB_INSTALLATION_ID: ${{ secrets.GITHUB_INSTALLATION_ID }}
+          DRY_RUN: ${{ secrets.DRY_RUN }}
         run: pnpm tsx scripts/release/index.ts
 
       - name: Publish packages
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-        run: pnpm -r publish --no-git-checks --access public --dry-run
+          DRY_RUN: ${{ secrets.DRY_RUN }}
+        run: pnpm -r publish --no-git-checks --access public ${{ env.DRY_RUN == 'true' && '--dry-run' || '' }}

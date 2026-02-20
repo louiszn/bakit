@@ -6,6 +6,12 @@ const REPO = {
 	repo: "bakit",
 };
 
+const DRY_RUN = process.env["DRY_RUN"] === "true";
+
+if (DRY_RUN) {
+	console.log("⚠️ DRY RUN ENABLED, NO CHANGES WILL BE PUSHED TO REMOTE.");
+}
+
 console.log("⌛ Initializing context...");
 
 const { git, octokit, auth } = await getContext({
@@ -39,6 +45,10 @@ if (newBumps.length === 0) {
 	process.exit(0);
 }
 
+for (const bump of newBumps) {
+	console.log(`[+] ${bump.tag}:\n${bump.summary}`);
+}
+
 console.log("⌛ Committing changes...");
 
 await git.add(["packages/**/package.json", "packages/**/CHANGELOG.md"]);
@@ -48,35 +58,39 @@ for (const bump of newBumps) {
 	await git.addAnnotatedTag(bump.tag, `Release ${bump.tag}`);
 }
 
-// Some runners don't know upstream branch.
-const branch = (await git.revparse(["--abbrev-ref", "HEAD"])).trim();
+if (!DRY_RUN) {
+	// Some runners don't know upstream branch.
+	const branch = (await git.revparse(["--abbrev-ref", "HEAD"])).trim();
 
-await git.push("origin", branch);
-await git.pushTags("origin");
+	await git.push("origin", branch);
+	await git.pushTags("origin");
 
-console.log("⌛ Creating releases...");
+	console.log("⌛ Creating releases...");
 
-for (const [index, bump] of newBumps.entries()) {
-	try {
-		await octokit.rest.repos.createRelease({
-			owner: REPO.owner,
-			repo: REPO.repo,
-			tag_name: bump.tag,
-			name: bump.tag,
-			body: bump.summary,
-			prerelease: bump.isPrerelease,
-			make_latest: bump.isLatest ? "true" : "false",
-		});
+	for (const [index, bump] of newBumps.entries()) {
+		try {
+			await octokit.rest.repos.createRelease({
+				owner: REPO.owner,
+				repo: REPO.repo,
+				tag_name: bump.tag,
+				name: bump.tag,
+				body: bump.summary,
+				prerelease: bump.isPrerelease,
+				make_latest: bump.isLatest ? "true" : "false",
+			});
 
-		console.log(`✅ [${index + 1}/${newBumps.length}] Created release ${bump.tag}`);
-	} catch (err) {
-		if (err instanceof Error && "status" in err && err.status === 422) {
-			console.log(`⚠️ Release ${bump.tag} already exists, skipping`);
-			continue;
+			console.log(`✅ [${index + 1}/${newBumps.length}] Created release ${bump.tag}`);
+		} catch (err) {
+			if (err instanceof Error && "status" in err && err.status === 422) {
+				console.log(`⚠️ Release ${bump.tag} already exists, skipping`);
+				continue;
+			}
+
+			throw err;
 		}
-
-		throw err;
 	}
-}
 
-console.log("✅ Release completed!");
+	console.log("✅ Release completed!");
+} else {
+	console.log("✅ Dry run complete.");
+}
