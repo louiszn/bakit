@@ -43,7 +43,7 @@
 		"@bakit/rest": "workspace:^",
 		"@bakit/utils": "workspace:^",
 		"@discordjs/collection": "^2.1.1",
-		"discord-api-types": "^0.38.38",
+		"discord-api-types": "^0.38.40",
 		"p-queue": "^9.1.0",
 		"type-fest": "^4.41.0",
 		"ws": "^8.19.0"
