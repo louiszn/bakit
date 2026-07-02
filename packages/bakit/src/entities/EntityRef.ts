@@ -1,5 +1,7 @@
+import type { Snowflake } from "discord-api-types/globals";
+
 export interface EntityRef<TSnapshot> {
-	readonly id: string;
+	readonly id: Snowflake;
 
 	fetch(): Promise<TSnapshot>;
 
@@ -13,7 +15,7 @@ export interface EntityRef<TSnapshot> {
 }
 
 export abstract class BaseEntityRef<TSnapshot> implements EntityRef<TSnapshot> {
-	abstract readonly id: string;
+	constructor(readonly id: string) {}
 
 	protected abstract _fetch(): Promise<TSnapshot>;
 	protected abstract _get(): Promise<TSnapshot | undefined>;
