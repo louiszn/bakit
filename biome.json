@@ -11,7 +11,7 @@
 	"formatter": {
 		"enabled": true,
 		"indentStyle": "tab",
-		"lineWidth": 100
+		"lineWidth": 110
 	},
 	"linter": {
 		"enabled": true,
