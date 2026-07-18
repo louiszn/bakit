@@ -5,12 +5,18 @@ import type { UserSnapshot } from "../snapshots/UserSnapshot";
 import { BaseEntityRef } from "./EntityRef";
 
 export class UserRef extends BaseEntityRef<UserSnapshot> {
+	readonly users: UserManager;
+	readonly current?: UserSnapshot;
+
 	constructor(
 		id: Snowflake,
-		readonly users: UserManager,
-		protected readonly current?: UserSnapshot,
+		users: UserManager,
+		current?: UserSnapshot,
 	) {
 		super(id);
+
+		this.users = users;
+		this.current = current;
 	}
 
 	protected _fetch() {

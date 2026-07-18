@@ -1,0 +1,11 @@
+{
+	"biome.enabled": true,
+	"biome.requireConfiguration": true,
+	"biome.configurationPath": "biome.json",
+	"editor.defaultFormatter": "biomejs.biome",
+	"editor.formatOnSave": true,
+	"editor.codeActionsOnSave": {
+		"source.fixAll.biome": "explicit",
+		"source.organizeImports.biome": "explicit"
+	}
+}

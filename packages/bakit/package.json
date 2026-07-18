@@ -13,6 +13,7 @@
 		"@discordjs/collection": "^2.1.1",
 		"@discordjs/rest": "^2.6.1",
 		"@discordjs/ws": "^2.0.4",
+		"@vladfrangu/async_event_emitter": "^2.4.7",
 		"discord-api-types": "^0.38.49"
 	}
 }

@@ -1,12 +1,17 @@
 import type { REST } from "@discordjs/rest";
 import { type APIUser, Routes, type Snowflake } from "discord-api-types/v10";
+
 import { UserRef } from "../refs";
 import { SnapshotSource, UserSnapshot } from "../snapshots";
 import { BaseManager } from "./BaseManager";
 
 export class UserManager extends BaseManager<UserSnapshot, UserRef> {
-	constructor(private readonly rest: REST) {
+	readonly rest: REST
+
+	constructor(rest: REST) {
 		super();
+
+		this.rest = rest;
 	}
 
 	ref(id: Snowflake, current?: UserSnapshot): UserRef {

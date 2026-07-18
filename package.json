@@ -9,10 +9,13 @@
 		"check": "bunx --bun @biomejs/biome check --write"
 	},
 	"devDependencies": {
-		"@biomejs/biome": "2.5.2",
+		"@biomejs/biome": "^2.5.3",
 		"@types/bun": "latest"
 	},
 	"peerDependencies": {
-		"typescript": "^5"
+		"typescript": "^5.9.3"
+	},
+	"dependencies": {
+		"type-fest": "^5.8.0"
 	}
 }

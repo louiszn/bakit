@@ -5,27 +5,27 @@ import type { EntityRef } from "../refs";
 import type { Snapshot } from "../snapshots";
 
 export abstract class BaseManager<TSnapshot extends Snapshot<unknown>, TRef extends EntityRef<TSnapshot>> {
-	readonly cache = new Collection<string, TSnapshot>();
+	#cache = new Collection<string, TSnapshot>();
 
 	get(id: Snowflake): TSnapshot | undefined {
-		return this.cache.get(id);
+		return this.#cache.get(id);
 	}
 
 	add(snapshot: TSnapshot): TSnapshot {
-		this.cache.set(snapshot.id, snapshot);
+		this.#cache.set(snapshot.id, snapshot);
 		return snapshot;
 	}
 
 	delete(id: Snowflake): boolean {
-		return this.cache.delete(id);
+		return this.#cache.delete(id);
 	}
 
 	has(id: Snowflake): boolean {
-		return this.cache.has(id);
+		return this.#cache.has(id);
 	}
 
 	clear(): void {
-		this.cache.clear();
+		this.#cache.clear();
 	}
 
 	abstract ref(id: Snowflake, current?: TSnapshot): TRef;

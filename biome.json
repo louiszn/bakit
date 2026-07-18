@@ -6,7 +6,17 @@
 		"useIgnoreFile": true
 	},
 	"files": {
-		"ignoreUnknown": false
+		"ignoreUnknown": false,
+		"includes": [
+			"**",
+			"!!**/node_modules",
+			"!!**/dist",
+			"!!**/build",
+			"!!**/coverage",
+			"!!**/.turbo",
+			"!!**/.svelte-kit",
+			"!!**/.vite"
+		]
 	},
 	"formatter": {
 		"enabled": true,
@@ -16,12 +26,42 @@
 	"linter": {
 		"enabled": true,
 		"rules": {
-			"preset": "recommended"
+			"preset": "recommended",
+			"style": {
+				"noCommonJs": "error",
+				"noDefaultExport": "error",
+				"noEnum": "error",
+				"noExportedImports": "error",
+				"noParameterProperties": "error",
+				"useConsistentMemberAccessibility": {
+					"level": "error",
+					"options": {
+						"accessibility": "noPublic"
+					}
+				},
+				"useExportType": "error",
+				"useImportType": "error",
+				"useNodejsImportProtocol": "error"
+			},
+			"suspicious": {
+				"noConstEnum": "error",
+				"noExplicitAny": "warn",
+				"noFocusedTests": "error",
+				"noImplicitAnyLet": "error"
+			}
 		}
 	},
 	"javascript": {
 		"formatter": {
-			"quoteStyle": "double"
+			"quoteStyle": "double",
+			"semicolons": "always",
+			"trailingCommas": "all"
+		}
+	},
+	"json": {
+		"formatter": {
+			"enabled": true,
+			"trailingCommas": "none"
 		}
 	},
 	"assist": {

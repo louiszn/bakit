@@ -15,7 +15,11 @@ export interface EntityRef<TSnapshot> {
 }
 
 export abstract class BaseEntityRef<TSnapshot> implements EntityRef<TSnapshot> {
-	constructor(readonly id: string) {}
+	readonly id: string;
+
+	constructor(id: string) {
+		this.id = id;
+	}
 
 	protected abstract _fetch(): Promise<TSnapshot>;
 	protected abstract _get(): Promise<TSnapshot | undefined>;
