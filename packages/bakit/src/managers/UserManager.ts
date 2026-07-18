@@ -1,17 +1,16 @@
-import type { REST } from "@discordjs/rest";
 import { type APIUser, Routes, type Snowflake } from "discord-api-types/v10";
-
 import { UserRef } from "../refs";
 import { SnapshotSource, UserSnapshot } from "../snapshots";
 import { BaseManager } from "./BaseManager";
 
-export class UserManager extends BaseManager<UserSnapshot, UserRef> {
-	readonly rest: REST
-
-	constructor(rest: REST) {
-		super();
-
-		this.rest = rest;
+export class UserManager extends BaseManager<APIUser, UserSnapshot, UserRef> {
+	createSnapshot(
+		id: Snowflake,
+		raw: APIUser,
+		source: SnapshotSource,
+		receivedAt = Date.now(),
+	): UserSnapshot {
+		return new UserSnapshot(this.resources, id, raw, source, receivedAt);
 	}
 
 	ref(id: Snowflake, current?: UserSnapshot): UserRef {
@@ -19,8 +18,7 @@ export class UserManager extends BaseManager<UserSnapshot, UserRef> {
 	}
 
 	async fetch(id: string): Promise<UserSnapshot> {
-		const raw = (await this.rest.get(Routes.user(id))) as APIUser;
-		const snapshot = new UserSnapshot(raw.id, raw, SnapshotSource.Rest, SnapshotSource.Rest);
-		return snapshot;
+		const raw = (await this.resources.rest.get(Routes.user(id))) as APIUser;
+		return this.createSnapshot(raw.id, raw, SnapshotSource.Rest, SnapshotSource.Rest);
 	}
 }

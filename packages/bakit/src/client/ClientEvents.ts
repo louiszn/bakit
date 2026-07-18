@@ -1,15 +1,22 @@
-import type { GatewayDispatchPayload, GatewayReadyDispatchData } from "discord-api-types/v10";
+import type {
+	GatewayDispatchPayload,
+	GatewayMessageCreateDispatchData,
+	GatewayReadyDispatchData,
+} from "discord-api-types/v10";
 import type { ValueOf } from "type-fest";
-import type { UserRef } from "../refs";
+import type { MessageRef, UserRef } from "../refs";
 
 export const ClientEvent = {
 	Raw: "raw",
 	Ready: "ready",
+	MessageCreate: "messageCreate",
 } as const;
 export type ClientEvent = ValueOf<typeof ClientEvent>;
 
 export interface ClientEvents {
 	[ClientEvent.Ready]: [event: ClientReadyEvent];
+
+	[ClientEvent.MessageCreate]: [event: ClientMessageCreateEvent];
 
 	/**
 	 * Raw dispatches for unhandled events.
@@ -21,4 +28,10 @@ export interface ClientEvents {
 export interface ClientReadyEvent {
 	raw: GatewayReadyDispatchData;
 	user: UserRef;
+}
+
+export interface ClientMessageCreateEvent {
+	raw: GatewayMessageCreateDispatchData;
+	message: MessageRef;
+	author: UserRef;
 }

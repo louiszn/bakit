@@ -2,7 +2,7 @@ import { REST } from "@discordjs/rest";
 import { AsyncEventEmitter } from "@vladfrangu/async_event_emitter";
 import { type GatewayIntentBits, GatewayVersion } from "discord-api-types/v10";
 
-import { GatewayManager } from "../gateway/GatewayManager";
+import { GatewayManager } from "../gateway";
 import type { ClientEvents } from "./ClientEvents";
 import { Resources } from "./Resources";
 

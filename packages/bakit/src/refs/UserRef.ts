@@ -8,11 +8,7 @@ export class UserRef extends BaseEntityRef<UserSnapshot> {
 	readonly users: UserManager;
 	readonly current?: UserSnapshot;
 
-	constructor(
-		id: Snowflake,
-		users: UserManager,
-		current?: UserSnapshot,
-	) {
+	constructor(id: Snowflake, users: UserManager, current?: UserSnapshot) {
 		super(id);
 
 		this.users = users;

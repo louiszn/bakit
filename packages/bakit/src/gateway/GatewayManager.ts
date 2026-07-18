@@ -8,8 +8,8 @@ import {
 	type GatewayReadyDispatchData,
 } from "discord-api-types/v10";
 
-import type { Client } from "../client";
-import { SnapshotSource, UserSnapshot } from "../snapshots";
+import { type Client, ClientEvent } from "../client";
+import { SnapshotSource } from "../snapshots";
 
 export interface GatewayManagerOptions {
 	token: string;
@@ -23,10 +23,7 @@ export class GatewayManager {
 	#ws: WebSocketManager;
 	readonly client: Client;
 
-	constructor(
-		client: Client,
-		options: GatewayManagerOptions,
-	) {
+	constructor(client: Client, options: GatewayManagerOptions) {
 		this.client = client;
 
 		this.#ws = new WebSocketManager({
@@ -51,16 +48,20 @@ export class GatewayManager {
 	}
 
 	#handleDispatch(payload: GatewayDispatchPayload) {
+		const { resources } = this.client;
+
 		switch (payload.t) {
 			case GatewayDispatchEvents.Ready: {
 				const raw = payload.d as GatewayReadyDispatchData;
 
-				const user = this.client.resources.users.ref(
+				const snapshot = resources.users.createSnapshot(
 					raw.user.id,
-					new UserSnapshot(raw.user.id, raw.user, SnapshotSource.Gateway),
+					raw.user,
+					SnapshotSource.Gateway,
 				);
+				const user = resources.users.ref(raw.user.id, snapshot);
 
-				this.client.emit("ready", {
+				this.client.emit(ClientEvent.Ready, {
 					raw,
 					user,
 				});
@@ -71,15 +72,20 @@ export class GatewayManager {
 			case GatewayDispatchEvents.MessageCreate: {
 				const raw = payload.d as GatewayMessageCreateDispatchData;
 
-				this.client.emit("rawMessageCreate", {
+				const snapshot = resources.messages.createSnapshot(raw.id, raw, SnapshotSource.Gateway);
+				const message = resources.messages.ref(raw.id, raw.channel_id, snapshot);
+
+				this.client.emit(ClientEvent.MessageCreate, {
 					raw,
+					message,
+					author: snapshot.author,
 				});
 
 				break;
 			}
 
 			default: {
-				this.client.emit("raw", payload);
+				this.client.emit(ClientEvent.Raw, payload);
 				break;
 			}
 		}

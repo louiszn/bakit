@@ -1,14 +1,16 @@
 import type { REST } from "@discordjs/rest";
 
-import { UserManager } from "../managers";
+import { MessageManager, UserManager } from "../managers";
 
 export class Resources {
+	readonly rest: REST;
 	readonly users: UserManager;
-	readonly rest: REST
+	readonly messages: MessageManager;
 
 	constructor(rest: REST) {
 		this.rest = rest;
 
-		this.users = new UserManager(rest);
+		this.users = new UserManager(this);
+		this.messages = new MessageManager(this);
 	}
 }
