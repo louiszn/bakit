@@ -4,8 +4,6 @@ import {
 	GatewayDispatchEvents,
 	type GatewayDispatchPayload,
 	type GatewayIntentBits,
-	type GatewayMessageCreateDispatchData,
-	type GatewayReadyDispatchData,
 } from "discord-api-types/v10";
 
 import { type Client, ClientEvent } from "../client";
@@ -52,7 +50,7 @@ export class GatewayManager {
 
 		switch (payload.t) {
 			case GatewayDispatchEvents.Ready: {
-				const raw = payload.d as GatewayReadyDispatchData;
+				const { d: raw } = payload;
 
 				const snapshot = resources.users.createSnapshot(
 					raw.user.id,
@@ -70,7 +68,7 @@ export class GatewayManager {
 			}
 
 			case GatewayDispatchEvents.MessageCreate: {
-				const raw = payload.d as GatewayMessageCreateDispatchData;
+				const { d: raw } = payload;
 
 				const snapshot = resources.messages.createSnapshot(raw.id, raw, SnapshotSource.Gateway);
 				const message = resources.messages.ref(raw.id, raw.channel_id, snapshot);
