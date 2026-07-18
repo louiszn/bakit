@@ -1,4 +1,4 @@
-import { Client, GatewayIntentBits } from "../src";
+import { Client, ClientEvent, GatewayIntentBits } from "../src";
 
 const BOT_TOKEN = process.env["BOT_TOKEN"];
 if (!BOT_TOKEN) {
@@ -10,7 +10,7 @@ const client = new Client({
 	intents: GatewayIntentBits.Guilds,
 });
 
-client.on("ready", async (event) => {
+client.on(ClientEvent.Ready, async (event) => {
 	const user = await event.user.resolve(true);
 	console.log(`Logged in as ${user.displayName}`);
 });
