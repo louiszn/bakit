@@ -23,7 +23,7 @@ client.on(ClientEvent.MessageCreate, async (event) => {
 	const message = await event.message.resolve(true);
 	const author = await event.author.resolve(true);
 
-	if (author.id !== "1019066895195971666") {
+	if (author.bot) {
 		return;
 	}
 

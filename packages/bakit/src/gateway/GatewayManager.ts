@@ -46,7 +46,8 @@ export class GatewayManager {
 	}
 
 	#handleDispatch(payload: GatewayDispatchPayload) {
-		const { resources } = this.client;
+		const { client } = this;
+		const { resources } = client;
 
 		switch (payload.t) {
 			case GatewayDispatchEvents.Ready: {
@@ -60,6 +61,7 @@ export class GatewayManager {
 				const user = resources.users.ref(raw.user.id, snapshot);
 
 				this.client.emit(ClientEvent.Ready, {
+					client,
 					raw,
 					user,
 				});
@@ -73,10 +75,47 @@ export class GatewayManager {
 				const snapshot = resources.messages.createSnapshot(raw.id, raw, SnapshotSource.Gateway);
 				const message = resources.messages.ref(raw.id, raw.channel_id, snapshot);
 
-				this.client.emit(ClientEvent.MessageCreate, {
+				client.emit(ClientEvent.MessageCreate, {
 					raw,
+					client,
 					message,
 					author: snapshot.author,
+				});
+
+				break;
+			}
+
+			case GatewayDispatchEvents.MessageUpdate: {
+				const { d: raw } = payload;
+
+				const snapshot = resources.messages.createSnapshot(raw.id, raw, SnapshotSource.Gateway);
+				const message = resources.messages.ref(raw.id, raw.channel_id, snapshot);
+
+				client.emit(ClientEvent.MessageUpdate, {
+					raw,
+					client,
+					message,
+					author: snapshot.author,
+
+					// TODO: implement cache module
+					previous: undefined,
+				});
+
+				break;
+			}
+
+			case GatewayDispatchEvents.MessageDelete: {
+				const { d: raw } = payload;
+
+				const message = resources.messages.ref(raw.id, raw.channel_id);
+
+				client.emit(ClientEvent.MessageDelete, {
+					raw,
+					client,
+					message,
+
+					// TODO: implement cache module
+					deleted: undefined,
 				});
 
 				break;
