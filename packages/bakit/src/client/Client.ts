@@ -6,13 +6,21 @@ import { GatewayManager } from "../gateway";
 import type { ClientEvents } from "./ClientEvents";
 import { Resources } from "./Resources";
 
+export type IntentsResolvable = GatewayIntentBits | readonly GatewayIntentBits[];
+
 export interface ClientOptions {
 	token: string;
-	intents: GatewayIntentBits;
+	intents: IntentsResolvable;
+}
+
+export function resolveIntents(intents: IntentsResolvable): GatewayIntentBits {
+	return Array.isArray(intents)
+		? intents.reduce((value, intent) => value | intent, 0)
+		: (intents as GatewayIntentBits);
 }
 
 export class Client extends AsyncEventEmitter<ClientEvents> {
-	readonly options: ClientOptions;
+	readonly options: Omit<ClientOptions, "intents"> & { intents: GatewayIntentBits };
 	readonly rest: REST;
 	readonly resources: Resources;
 	readonly gateway: GatewayManager;
@@ -20,14 +28,17 @@ export class Client extends AsyncEventEmitter<ClientEvents> {
 	constructor(options: ClientOptions) {
 		super();
 
-		this.options = options;
+		this.options = {
+			...options,
+			intents: resolveIntents(options.intents),
+		};
 
 		this.rest = new REST({ version: GatewayVersion }).setToken(options.token);
 		this.resources = new Resources(this.rest);
 
 		this.gateway = new GatewayManager(this, {
-			token: options.token,
-			intents: options.intents,
+			token: this.options.token,
+			intents: this.options.intents,
 			rest: this.rest,
 		});
 	}
