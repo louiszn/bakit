@@ -6,11 +6,13 @@
 		"packages/*"
 	],
 	"scripts": {
-		"check": "bunx --bun @biomejs/biome check --write"
+		"check": "bunx --bun @biomejs/biome check --write",
+		"prepare": "husky"
 	},
 	"devDependencies": {
 		"@biomejs/biome": "^2.5.3",
-		"@types/bun": "latest"
+		"@types/bun": "latest",
+		"husky": "^9.1.7"
 	},
 	"peerDependencies": {
 		"typescript": "^5.9.3"
