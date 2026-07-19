@@ -7,8 +7,11 @@ if (!BOT_TOKEN) {
 
 const client = new Client({
 	token: BOT_TOKEN,
-	intents:
-		GatewayIntentBits.Guilds | GatewayIntentBits.MessageContent | GatewayIntentBits.GuildMessages,
+	intents: [
+		GatewayIntentBits.Guilds,
+		GatewayIntentBits.MessageContent,
+		GatewayIntentBits.GuildMessages,
+	],
 });
 
 client.on(ClientEvent.Ready, async (event) => {
@@ -24,7 +27,9 @@ client.on(ClientEvent.MessageCreate, async (event) => {
 		return;
 	}
 
-	console.log(`${author.tag}:`, message.content);
+	if (message.content.startsWith("!ping")) {
+		await message.reply("Pong!");
+	}
 });
 
 await client.start();
