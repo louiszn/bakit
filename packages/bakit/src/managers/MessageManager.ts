@@ -1,7 +1,14 @@
 import type { Snowflake } from "discord-api-types/globals";
-import { Routes } from "discord-api-types/v10";
+import {
+	type APIMessage,
+	type RESTAPIMessageReference,
+	type RESTPostAPIChannelMessageFormDataBody,
+	Routes,
+} from "discord-api-types/v10";
+
 import { MessageRef } from "../refs";
 import { type MessageRaw, MessageSnapshot, SnapshotSource } from "../snapshots";
+import type { CreateMessageOptions } from "../types";
 import { BaseManager } from "./BaseManager";
 
 export class MessageManager extends BaseManager<
@@ -26,5 +33,39 @@ export class MessageManager extends BaseManager<
 	async fetch(id: Snowflake, channelId: string): Promise<MessageSnapshot> {
 		const raw = (await this.resources.rest.get(Routes.channelMessage(channelId, id))) as MessageRaw;
 		return this.createSnapshot(raw.id, raw, SnapshotSource.Rest);
+	}
+
+	async create(channelId: string, options: CreateMessageOptions | string) {
+		const opts: CreateMessageOptions = typeof options === "string" ? { content: options } : options;
+
+		const reference: RESTAPIMessageReference | undefined = (() => {
+			if (!opts.reply) {
+				return;
+			}
+
+			if (typeof opts.reply === "string") {
+				return {
+					message_id: opts.reply,
+					channel_id: channelId,
+				};
+			}
+
+			return {
+				message_id: opts.reply.id,
+				channel_id: opts.reply.channelId ?? channelId,
+			};
+		})();
+
+		const payload: RESTPostAPIChannelMessageFormDataBody = {
+			content: opts.content,
+			message_reference: reference ?? undefined,
+		};
+
+		const raw = (await this.resources.rest.post(Routes.channelMessages(channelId), {
+			body: payload,
+		})) as APIMessage;
+
+		const snapshot = this.createSnapshot(raw.id, raw, SnapshotSource.Rest);
+		return this.ref(raw.id, channelId, snapshot);
 	}
 }
