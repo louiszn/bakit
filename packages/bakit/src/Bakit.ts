@@ -24,19 +24,19 @@ export class Bakit extends Client {
 		await super.start();
 
 		for (const plugin of this.#plugins) {
-			await plugin.onPreStop?.();
+			await plugin.onPostStart?.();
 		}
 	}
 
 	override async stop(): Promise<void> {
 		for (const plugin of this.#plugins) {
-			await plugin.onPreStart?.();
+			await plugin.onPreStop?.();
 		}
 
 		await super.stop();
 
 		for (const plugin of this.#plugins) {
-			await plugin.onPreStop?.();
+			await plugin.onPostStop?.();
 		}
 	}
 }
