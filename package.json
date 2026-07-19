@@ -7,12 +7,15 @@
 	],
 	"scripts": {
 		"check": "bunx --bun @biomejs/biome check --write",
+		"build": "tsdown --workspace",
 		"prepare": "husky"
 	},
 	"devDependencies": {
-		"@biomejs/biome": "^2.5.3",
+		"@biomejs/biome": "^2.5.4",
 		"@types/bun": "latest",
-		"husky": "^9.1.7"
+		"husky": "^9.1.7",
+		"publint": "^0.3.21",
+		"tsdown": "^0.22.9"
 	},
 	"peerDependencies": {
 		"typescript": "^5.9.3"
