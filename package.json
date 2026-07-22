@@ -7,7 +7,7 @@
 	],
 	"scripts": {
 		"check": "bunx --bun @biomejs/biome check --write",
-		"build": "tsdown --workspace",
+		"build": "bunx --bun tsdown --workspace",
 		"prepare": "husky"
 	},
 	"devDependencies": {
