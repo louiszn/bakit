@@ -12,6 +12,7 @@
 	},
 	"devDependencies": {
 		"@biomejs/biome": "^2.5.4",
+		"@changesets/cli": "^2.31.1",
 		"@types/bun": "latest",
 		"husky": "^9.1.7",
 		"publint": "^0.3.21",

@@ -1,0 +1,42 @@
+when:
+  - event: push
+    branch: main
+
+steps:
+  prepare:
+    image: oven/bun:1
+    commands:
+      - bun install --frozen-lockfile
+
+  release:
+    image: oven/bun:1
+    environment:
+      NPM_TOKEN:
+        from_secret: NPM_TOKEN
+      CODEBERG_TOKEN:
+        from_secret: CODEBERG_TOKEN
+    commands:
+      - |
+        if find .changeset -name '*.md' ! -name README.md | grep -q .; then
+          echo "Pending changesets found"
+
+          git config user.name "Bakit CI"
+          git config user.email "noreply@codeberg.org"
+
+          git checkout -B changeset-release/main
+
+          bunx changeset version
+          bun install
+
+          git add .
+          git commit -m "chore: version packages" || true
+          git push --force origin changeset-release/main
+        else
+          # Forgejo API:
+          # create PR if it doesn't exist
+          # changeset-release/main -> main
+          
+          echo "No pending changesets; publishing"
+          bun run build
+          bunx changeset publish
+        fi
