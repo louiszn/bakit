@@ -15,6 +15,7 @@ steps:
 
     environment:
       CI: "true"
+      GIT_SSL_CAINFO: /etc/ssl/certs/ca-certificates.crt
 
       NPM_TOKEN:
         from_secret: NPM_TOKEN
@@ -24,7 +25,7 @@ steps:
 
     commands:
       - echo "[setup] Installing system dependencies"
-      - apt-get update && apt-get install -y --no-install-recommends git curl
+      - apt-get update && apt-get install -y --no-install-recommends git curl ca-certificates
 
       - echo "[setup] Installing project dependencies"
       - bun install --frozen-lockfile
@@ -33,9 +34,12 @@ steps:
         set -e
 
         echo "[git] Configuring commit identity"
-
         git config user.name "Bakit CI"
         git config user.email "noreply@codeberg.org"
+
+        # The Woodpecker clone container may leave behind an SSL CA path
+        # that does not exist inside this container.
+        git config --unset-all http.sslCAInfo || true
 
         echo "[changesets] Checking for pending changesets"
 
@@ -102,6 +106,7 @@ steps:
           else
             echo "[pr] Release PR #$${PR_NUMBER} already exists"
           fi
+
         else
           echo "[changesets] No pending changesets found"
 
