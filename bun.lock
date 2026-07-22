@@ -4,9 +4,6 @@
   "workspaces": {
     "": {
       "name": "bakit",
-      "dependencies": {
-        "type-fest": "^5.8.0",
-      },
       "devDependencies": {
         "@biomejs/biome": "^2.5.4",
         "@changesets/cli": "^2.31.1",
@@ -25,6 +22,7 @@
       "dependencies": {
         "@bakit/core": "workspace:*",
         "tiny-glob": "^0.2.9",
+        "type-fest": "5.8.0",
       },
       "devDependencies": {
         "@types/bun": "latest",
@@ -35,7 +33,7 @@
     },
     "packages/core": {
       "name": "@bakit/core",
-      "version": "4.0.0-alpha.1",
+      "version": "1.0.0-alpha.1",
       "dependencies": {
         "@discordjs/collection": "^2.1.1",
         "@discordjs/rest": "^2.6.1",
