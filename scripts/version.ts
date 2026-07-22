@@ -31,8 +31,8 @@ function resolveEnv(name: string): string {
 async function configureGit(): Promise<void> {
 	console.log("[git] Configuring Git");
 
-	await $`git config user.name ${"Bakit CI"}`;
-	await $`git config user.email ${"git@louiszn.fyi"}`;
+	await $`git config user.name "Bakit CI"`;
+	await $`git config user.email "git@louiszn.fyi"`;
 
 	await $`git config --unset-all http.sslCAInfo`.nothrow().quiet();
 }
