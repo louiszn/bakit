@@ -1,7 +1,30 @@
 {
 	"name": "bakit",
-	"version": "4.0.0-alpha.1",
+	"version": "4.0.0-alpha.0",
+	"description": "A lightweight Discord framework for explicit, predictable bots",
+	"homepage": "https://codeberg.org/louiszn/bakit",
+	"repository": {
+		"type": "git",
+		"url": "git+https://codeberg.org/louiszn/bakit.git"
+	},
+	"bugs": {
+		"url": "https://codeberg.org/louiszn/bakit/issues"
+	},
+	"keywords": [
+		"discord",
+		"bot",
+		"framework",
+		"typescript"
+	],
+	"author": "Louiszn",
 	"type": "module",
+	"files": [
+		"dist"
+	],
+	"exports": {
+		".": "./dist/index.mjs",
+		"./package.json": "./package.json"
+	},
 	"devDependencies": {
 		"@types/bun": "latest"
 	},
@@ -10,10 +33,7 @@
 	},
 	"dependencies": {
 		"@bakit/core": "workspace:*",
-		"tiny-glob": "^0.2.9"
-	},
-	"exports": {
-		".": "./dist/index.mjs",
-		"./package.json": "./package.json"
+		"tiny-glob": "^0.2.9",
+		"type-fest": "5.8.0"
 	}
 }

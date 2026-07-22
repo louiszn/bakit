@@ -1,5 +1,5 @@
+import { pathToFileURL } from "node:url";
 import type { ClientEvent, ClientEvents } from "@bakit/core";
-import { pathToFileURL } from "bun";
 import glob from "tiny-glob";
 import type { Promisable } from "type-fest";
 
