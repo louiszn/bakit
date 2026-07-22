@@ -41,10 +41,23 @@ steps:
         # that does not exist inside this container.
         git config --unset-all http.sslCAInfo || true
 
-        echo "[changesets] Checking for pending changesets"
+        echo "[changesets] Checking release status"
+        bunx changeset status --output /tmp/changeset-status.json
 
-        if find .changeset -maxdepth 1 -type f -name '*.md' ! -name README.md | grep -q .; then
-          echo "[changesets] Pending changesets found"
+        HAS_PENDING_RELEASES="$$(bun -e '
+          const status = await Bun.file(
+            "/tmp/changeset-status.json"
+          ).json();
+
+          process.stdout.write(
+            status.releases?.length > 0
+              ? "true"
+              : "false"
+          );
+        ')"
+
+        if [ "$${HAS_PENDING_RELEASES}" = "true" ]; then
+          echo "[changesets] Pending releases found"
 
           echo "[release] Creating release branch"
           git checkout -B changeset-release/main
@@ -57,8 +70,15 @@ steps:
           bun install
           echo "[deps] Lockfile updated"
 
-          echo "[git] Creating version commit"
+          echo "[git] Staging version changes"
           git add .
+
+          if git diff --cached --quiet; then
+            echo "[error] Changesets reported pending releases but version produced no changes"
+            exit 1
+          fi
+
+          echo "[git] Creating version commit"
           git commit -m "chore: version packages"
           echo "[git] Version commit created"
 
@@ -114,7 +134,7 @@ steps:
           fi
 
         else
-          echo "[changesets] No pending changesets found"
+          echo "[changesets] No pending releases found"
 
           echo "[publish] Configuring npm authentication"
           echo "//registry.npmjs.org/:_authToken=$${NPM_TOKEN}" > "$$HOME/.npmrc"
