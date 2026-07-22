@@ -34,27 +34,26 @@ steps:
           git commit -m "chore: version packages"
 
           git remote set-url origin \
-            "https://oauth2:${CODEBERG_TOKEN}@codeberg.org/louiszn/bakit.git"
+            "https://oauth2:$${CODEBERG_TOKEN}@codeberg.org/louiszn/bakit.git"
 
           git push --force origin changeset-release/main
 
           echo "Creating or updating release pull request"
 
-          PR_NUMBER="$(
-            curl -fsS \
-              -H "Authorization: token ${CODEBERG_TOKEN}" \
-              "https://codeberg.org/api/v1/repos/louiszn/bakit/pulls?state=open&head=louiszn:changeset-release/main&base=main" \
-              | bun -e '
-                const input = await Bun.stdin.text();
-                const prs = JSON.parse(input);
-                if (prs.length > 0) console.log(prs[0].number);
-              '
+          PR_NUMBER="$$(curl -fsS \
+            -H "Authorization: token $${CODEBERG_TOKEN}" \
+            "https://codeberg.org/api/v1/repos/louiszn/bakit/pulls?state=open&head=louiszn:changeset-release/main&base=main" \
+            | bun -e '
+              const input = await Bun.stdin.text();
+              const prs = JSON.parse(input);
+              if (prs.length > 0) console.log(prs[0].number);
+            '
           )"
 
-          if [ -z "${PR_NUMBER}" ]; then
+          if [ -z "$${PR_NUMBER}" ]; then
             curl -fsS \
               -X POST \
-              -H "Authorization: token ${CODEBERG_TOKEN}" \
+              -H "Authorization: token $${CODEBERG_TOKEN}" \
               -H "Content-Type: application/json" \
               "https://codeberg.org/api/v1/repos/louiszn/bakit/pulls" \
               -d '{
@@ -66,7 +65,7 @@ steps:
 
             echo "Release pull request created"
           else
-            echo "Release pull request #${PR_NUMBER} already exists"
+            echo "Release pull request #$${PR_NUMBER} already exists"
           fi
         else
           echo "No pending changesets found"
@@ -75,8 +74,7 @@ steps:
           bunx changeset publish
 
           git remote set-url origin \
-            "https://oauth2:${CODEBERG_TOKEN}@codeberg.org/louiszn/bakit.git"
+            "https://oauth2:$${CODEBERG_TOKEN}@codeberg.org/louiszn/bakit.git"
 
           git push origin --tags
         fi
-        
