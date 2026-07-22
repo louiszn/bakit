@@ -25,7 +25,7 @@ steps:
 
     commands:
       - echo "[setup] Installing system dependencies"
-      - apt-get update && apt-get install -y --no-install-recommends git curl ca-certificates
+      - apt-get update && apt-get install -y --no-install-recommends git curl ca-certificates npm
 
       - echo "[setup] Installing project dependencies"
       - bun install --frozen-lockfile
