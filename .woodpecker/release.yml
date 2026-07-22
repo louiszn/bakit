@@ -74,13 +74,19 @@ steps:
 
           PR_NUMBER="$$(curl -fsS \
             -H "Authorization: token $${CODEBERG_TOKEN}" \
-            "https://codeberg.org/api/v1/repos/louiszn/bakit/pulls?state=open&head=louiszn:changeset-release/main&base=main" \
+            "https://codeberg.org/api/v1/repos/louiszn/bakit/pulls?state=open&limit=50" \
             | bun -e '
               const input = await Bun.stdin.text();
               const prs = JSON.parse(input);
 
-              if (prs.length > 0) {
-                console.log(prs[0].number);
+              const pr = prs.find(
+                (pr) =>
+                  pr.head?.ref === "changeset-release/main" &&
+                  pr.base?.ref === "main"
+              );
+
+              if (pr) {
+                console.log(pr.number);
               }
             '
           )"
