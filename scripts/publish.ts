@@ -38,9 +38,7 @@ async function configureGit(): Promise<void> {
 	await $`git config user.name "Bakit CI"`;
 	await $`git config user.email "git@louiszn.fyi"`;
 
-	await $`git config --unset-all http.sslCAInfo`
-		.nothrow()
-		.quiet();
+	await $`git config --unset-all http.sslCAInfo`.nothrow().quiet();
 }
 
 async function configureRemote(): Promise<void> {
