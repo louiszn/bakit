@@ -1,5 +1,11 @@
 # bakit
 
+## 4.0.0-alpha.2
+
+### Patch Changes
+
+- 1f2517f: Resolved correct dependencies
+
 ## 4.0.0-alpha.1
 
 ### Patch Changes

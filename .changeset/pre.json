@@ -1,9 +1,12 @@
 {
-	"mode": "pre",
-	"tag": "alpha",
-	"initialVersions": {
-		"bakit": "4.0.0-alpha.0",
-		"@bakit/core": "1.0.0-alpha.0"
-	},
-	"changesets": ["little-peaches-melt"]
+  "mode": "pre",
+  "tag": "alpha",
+  "initialVersions": {
+    "bakit": "4.0.0-alpha.0",
+    "@bakit/core": "1.0.0-alpha.0"
+  },
+  "changesets": [
+    "little-peaches-melt",
+    "pink-lights-learn"
+  ]
 }
