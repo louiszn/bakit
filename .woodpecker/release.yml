@@ -35,7 +35,7 @@ steps:
 
         echo "[git] Configuring commit identity"
         git config user.name "Bakit CI"
-        git config user.email "noreply@codeberg.org"
+        git config user.email "git@louiszn.fyi"
 
         # The Woodpecker clone container may leave behind an SSL CA path
         # that does not exist inside this container.
