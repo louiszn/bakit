@@ -39,4 +39,6 @@ steps:
           echo "No pending changesets; publishing"
           bun run build
           bunx changeset publish
+
+          git push origin --tags
         fi
