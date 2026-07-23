@@ -19,6 +19,6 @@ export class UserManager extends BaseManager<APIUser, UserSnapshot, UserRef> {
 
 	async fetch(id: string): Promise<UserSnapshot> {
 		const raw = (await this.resources.rest.get(Routes.user(id))) as APIUser;
-		return this.createSnapshot(raw.id, raw, SnapshotSource.Rest, SnapshotSource.Rest);
+		return this.createSnapshot(raw.id, raw, SnapshotSource.Rest);
 	}
 }
