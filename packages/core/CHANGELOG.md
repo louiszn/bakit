@@ -1,5 +1,11 @@
 # @bakit/core
 
+## 1.0.0-alpha.5
+
+### Patch Changes
+
+- 3537a24: Update tiny-mixin
+
 ## 1.0.0-alpha.4
 
 ### Patch Changes

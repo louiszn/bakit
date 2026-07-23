@@ -1,6 +1,6 @@
 {
 	"name": "bakit",
-	"version": "4.0.0-alpha.5",
+	"version": "4.0.0-alpha.6",
 	"description": "A lightweight Discord framework for explicit, predictable bots",
 	"license": "MIT",
 	"homepage": "https://codeberg.org/louiszn/bakit",

@@ -6,6 +6,7 @@
 		"@bakit/core": "1.0.0-alpha.0"
 	},
 	"changesets": [
+		"brown-cities-know",
 		"goofy-glasses-dress",
 		"hip-eggs-attend",
 		"little-peaches-melt",
