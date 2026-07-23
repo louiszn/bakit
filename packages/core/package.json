@@ -1,6 +1,6 @@
 {
 	"name": "@bakit/core",
-	"version": "1.0.0-alpha.1",
+	"version": "1.0.0-alpha.2",
 	"description": "A lightweight Discord API wrapper for Bakit",
 	"homepage": "https://codeberg.org/louiszn/bakit",
 	"repository": {

@@ -1,5 +1,14 @@
 # bakit
 
+## 4.0.0-alpha.3
+
+### Patch Changes
+
+- f3eafd9: Moved discord-api-types export to discord-types
+- Updated dependencies [a9ad3f5]
+- Updated dependencies [f3eafd9]
+  - @bakit/core@1.0.0-alpha.2
+
 ## 4.0.0-alpha.2
 
 ### Patch Changes
