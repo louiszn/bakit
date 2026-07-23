@@ -1,7 +1,7 @@
 import {
+	type APIInteractionResponseChannelMessageWithSource,
 	type APIMessage,
 	InteractionResponseType,
-	MessageFlags,
 	type RESTPostAPIInteractionCallbackWithResponseResult,
 	Routes,
 } from "discord-api-types/v10";
@@ -9,6 +9,7 @@ import { type Constructor, createMixin } from "tiny-mixin";
 
 import type { MessageRef } from "../../../refs";
 import type { MessageCreateOptions } from "../../../types";
+import { resolveFlags } from "../../../utils";
 import { SnapshotSource } from "../../Snapshot";
 import type { BaseInteractionSnapshot } from "../InteractionSnapshot";
 
@@ -40,8 +41,14 @@ export const RepliableInteractionMixin = createMixin(
 			reply(options: InteractionReplyOptions): Promise<MessageRef | undefined>;
 			async reply(options: InteractionReplyOptions | string): Promise<MessageRef | undefined> {
 				const normalized = typeof options === "string" ? { content: options } : options;
-
 				const { withMessage = false, ...data } = normalized;
+
+				const body: APIInteractionResponseChannelMessageWithSource = {
+					type: InteractionResponseType.ChannelMessageWithSource,
+					data: {
+						flags: resolveFlags(data.flags),
+					},
+				};
 
 				const response = await this.resources.rest.post(
 					Routes.interactionCallback(this.id, this.token),
@@ -52,10 +59,7 @@ export const RepliableInteractionMixin = createMixin(
 									with_response: "true",
 								})
 							: undefined,
-						body: {
-							type: InteractionResponseType.ChannelMessageWithSource,
-							data,
-						},
+						body,
 					},
 				);
 
@@ -78,11 +82,7 @@ export const RepliableInteractionMixin = createMixin(
 					auth: false,
 					body: {
 						type: InteractionResponseType.DeferredChannelMessageWithSource,
-						data: options.flags
-							? {
-									flags: MessageFlags.Ephemeral,
-								}
-							: undefined,
+						data: { flags: resolveFlags(options.flags) },
 					},
 				});
 			}
