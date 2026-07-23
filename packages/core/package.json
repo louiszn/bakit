@@ -2,6 +2,7 @@
 	"name": "@bakit/core",
 	"version": "1.0.0-alpha.2",
 	"description": "A lightweight Discord API wrapper for Bakit",
+	"license": "MIT",
 	"homepage": "https://codeberg.org/louiszn/bakit",
 	"repository": {
 		"type": "git",
@@ -39,5 +40,8 @@
 		"@vladfrangu/async_event_emitter": "^2.4.7",
 		"discord-api-types": "^0.38.49",
 		"type-fest": "5.8.0"
+	},
+	"engines": {
+		"node": ">=24.17.0"
 	}
 }

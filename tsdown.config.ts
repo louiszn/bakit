@@ -7,6 +7,9 @@ export default defineConfig({
 	dts: true,
 	exports: true,
 	publint: true,
+	inputOptions: {
+		platform: "node",
+	},
 	deps: {
 		onlyBundle: [],
 	},
