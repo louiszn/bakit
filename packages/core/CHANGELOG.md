@@ -1,5 +1,13 @@
 # @bakit/core
 
+## 1.0.0-alpha.4
+
+### Patch Changes
+
+- e4a6cf4: Added interactionCreate
+  Added base snapshots for Interaction
+  Added constants with Intent and MessageFlag
+
 ## 1.0.0-alpha.3
 
 ### Patch Changes
