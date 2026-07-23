@@ -23,6 +23,7 @@
 	],
 	"exports": {
 		".": "./dist/index.mjs",
+		"./discord-types": "./dist/discord-types.mjs",
 		"./package.json": "./package.json"
 	},
 	"devDependencies": {
