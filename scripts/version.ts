@@ -125,6 +125,9 @@ async function main(): Promise<void> {
 	console.log("[deps] Updating lockfile");
 	await $`bun install`;
 
+	console.log("[tsdown] Building packages");
+	await $`bun run build`;
+
 	console.log("[git] Staging changes");
 	await $`git add .`;
 
