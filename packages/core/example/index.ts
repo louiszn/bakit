@@ -1,4 +1,4 @@
-import { Client, ClientEvent, GatewayIntentBits } from "../src";
+import { Client, ClientEvent, Intent, MessageFlag } from "../src";
 
 const BOT_TOKEN = process.env.BOT_TOKEN;
 if (!BOT_TOKEN) {
@@ -7,11 +7,7 @@ if (!BOT_TOKEN) {
 
 const client = new Client({
 	token: BOT_TOKEN,
-	intents: [
-		GatewayIntentBits.Guilds,
-		GatewayIntentBits.MessageContent,
-		GatewayIntentBits.GuildMessages,
-	],
+	intents: [Intent.Guilds],
 });
 
 client.on(ClientEvent.Ready, async (event) => {
@@ -19,16 +15,16 @@ client.on(ClientEvent.Ready, async (event) => {
 	console.log(`Logged in as ${user.tag}`);
 });
 
-client.on(ClientEvent.MessageCreate, async (event) => {
-	const message = await event.message.resolve(true);
-	const author = await event.author.resolve(true);
-
-	if (author.bot) {
+client.on(ClientEvent.InteractionCreate, async ({ interaction }) => {
+	if (!interaction.isChatInputCommand()) {
 		return;
 	}
 
-	if (message.content.startsWith("!ping")) {
-		await message.reply("Pong!");
+	if (interaction.commandName === "ping") {
+		await interaction.reply({
+			content: "Pong!",
+			flags: [MessageFlag.Ephemeral],
+		});
 	}
 });
 

@@ -4,7 +4,7 @@ import type {
 	GatewayMessageUpdateDispatchData,
 } from "discord-api-types/v10";
 import type { UserRef } from "../refs";
-import type { MessageReference, ReplyMessageOptions } from "../types";
+import type { MessageReference, MessageReplyOptions } from "../types";
 import { BaseSnapshot } from "./Snapshot";
 
 export type MessageRaw =
@@ -39,7 +39,7 @@ export class MessageSnapshot extends BaseSnapshot<MessageRaw> implements Message
 		return this.#author;
 	}
 
-	async reply(options: ReplyMessageOptions | string) {
+	async reply(options: MessageReplyOptions | string) {
 		const opts = typeof options === "string" ? { content: options } : options;
 
 		return this.resources.messages.create(this.channelId, {

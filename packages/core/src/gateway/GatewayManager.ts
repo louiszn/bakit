@@ -8,6 +8,7 @@ import {
 
 import { type Client, ClientEvent } from "../client";
 import { SnapshotSource } from "../snapshots";
+import { createInteractionSnapshot } from "../utils/interaction";
 
 export interface GatewayManagerOptions {
 	token: string;
@@ -116,6 +117,19 @@ export class GatewayManager {
 
 					// TODO: implement cache module
 					deleted: undefined,
+				});
+
+				break;
+			}
+
+			case GatewayDispatchEvents.InteractionCreate: {
+				const { d: raw } = payload;
+
+				const interaction = createInteractionSnapshot(resources, raw, SnapshotSource.Gateway);
+				this.client.emit("interactionCreate", {
+					interaction,
+					raw,
+					client,
 				});
 
 				break;

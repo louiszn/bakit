@@ -8,7 +8,8 @@ import {
 
 import { MessageRef } from "../refs";
 import { type MessageRaw, MessageSnapshot, SnapshotSource } from "../snapshots";
-import type { CreateMessageOptions } from "../types";
+import type { MessageCreateOptions } from "../types";
+import { resolveFlags } from "../utils";
 import { BaseManager } from "./BaseManager";
 
 export class MessageManager extends BaseManager<
@@ -35,8 +36,8 @@ export class MessageManager extends BaseManager<
 		return this.createSnapshot(raw.id, raw, SnapshotSource.Rest);
 	}
 
-	async create(channelId: string, options: CreateMessageOptions | string) {
-		const opts: CreateMessageOptions = typeof options === "string" ? { content: options } : options;
+	async create(channelId: string, options: MessageCreateOptions | string) {
+		const opts: MessageCreateOptions = typeof options === "string" ? { content: options } : options;
 
 		const reference: RESTAPIMessageReference | undefined = (() => {
 			if (!opts.reply) {
@@ -59,6 +60,7 @@ export class MessageManager extends BaseManager<
 		const payload: RESTPostAPIChannelMessageFormDataBody = {
 			content: opts.content,
 			message_reference: reference ?? undefined,
+			flags: resolveFlags(opts.flags),
 		};
 
 		const raw = (await this.resources.rest.post(Routes.channelMessages(channelId), {

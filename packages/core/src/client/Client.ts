@@ -1,26 +1,20 @@
 import { REST } from "@discordjs/rest";
 import { AsyncEventEmitter } from "@vladfrangu/async_event_emitter";
-import { type GatewayIntentBits, GatewayVersion } from "discord-api-types/v10";
+import { GatewayVersion } from "discord-api-types/v10";
 
+import type { Intent } from "../constants";
 import { GatewayManager } from "../gateway";
+import { resolveFlags } from "../utils";
 import type { ClientEvents } from "./ClientEvents";
 import { Resources } from "./Resources";
 
-export type IntentsResolvable = GatewayIntentBits | readonly GatewayIntentBits[];
-
 export interface ClientOptions {
 	token: string;
-	intents: IntentsResolvable;
-}
-
-export function resolveIntents(intents: IntentsResolvable): GatewayIntentBits {
-	return Array.isArray(intents)
-		? intents.reduce((value, intent) => value | intent, 0)
-		: (intents as GatewayIntentBits);
+	intents: number | Intent | readonly Intent[];
 }
 
 export class Client extends AsyncEventEmitter<ClientEvents> {
-	readonly options: Omit<ClientOptions, "intents"> & { intents: GatewayIntentBits };
+	readonly options: Omit<ClientOptions, "intents"> & { intents: number };
 	readonly rest: REST;
 	readonly resources: Resources;
 	readonly gateway: GatewayManager;
@@ -30,7 +24,7 @@ export class Client extends AsyncEventEmitter<ClientEvents> {
 
 		this.options = {
 			...options,
-			intents: resolveIntents(options.intents),
+			intents: resolveFlags(options.intents),
 		};
 
 		this.rest = new REST({ version: GatewayVersion }).setToken(options.token);

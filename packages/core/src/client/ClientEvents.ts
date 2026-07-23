@@ -1,13 +1,16 @@
 import type {
 	GatewayDispatchPayload,
+	GatewayInteractionCreateDispatchData,
 	GatewayMessageCreateDispatchData,
 	GatewayMessageDeleteDispatchData,
 	GatewayMessageUpdateDispatchData,
 	GatewayReadyDispatchData,
 } from "discord-api-types/v10";
 import type { ValueOf } from "type-fest";
+
 import type { MessageRef, UserRef } from "../refs";
 import type { MessageSnapshot } from "../snapshots";
+import type { InteractionSnapshot } from "../snapshots/interaction";
 import type { Client } from "./Client";
 
 export const ClientEvent = {
@@ -16,6 +19,7 @@ export const ClientEvent = {
 	MessageCreate: "messageCreate",
 	MessageUpdate: "messageUpdate",
 	MessageDelete: "messageDelete",
+	InteractionCreate: "interactionCreate",
 } as const;
 export type ClientEvent = ValueOf<typeof ClientEvent>;
 
@@ -25,6 +29,8 @@ export interface ClientEvents {
 	[ClientEvent.MessageCreate]: [event: ClientMessageCreateEvent];
 	[ClientEvent.MessageUpdate]: [event: ClientMessageUpdateEvent];
 	[ClientEvent.MessageDelete]: [event: ClientMessageDeleteEvent];
+
+	[ClientEvent.InteractionCreate]: [event: ClientInteractionCreateEvent];
 
 	/**
 	 * Raw dispatches for unhandled events.
@@ -59,4 +65,9 @@ export interface ClientMessageDeleteEvent
 	extends ClientEventBase<GatewayMessageDeleteDispatchData> {
 	message: MessageRef;
 	deleted?: MessageSnapshot;
+}
+
+export interface ClientInteractionCreateEvent
+	extends ClientEventBase<GatewayInteractionCreateDispatchData> {
+	interaction: InteractionSnapshot;
 }
