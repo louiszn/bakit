@@ -1,5 +1,11 @@
 # @bakit/core
 
+## 1.0.0-alpha.6
+
+### Patch Changes
+
+- 709e8ee: Fixed flag resolving
+
 ## 1.0.0-alpha.5
 
 ### Patch Changes
