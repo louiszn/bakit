@@ -1,5 +1,12 @@
 # @bakit/core
 
+## 1.0.0-alpha.3
+
+### Patch Changes
+
+- e459c36: Removed incorrect 4th arg to resolve correct receivedAt
+- bf62817: Updated package.json information
+
 ## 1.0.0-alpha.2
 
 ### Patch Changes

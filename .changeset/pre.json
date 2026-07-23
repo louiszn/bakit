@@ -5,5 +5,12 @@
 		"bakit": "4.0.0-alpha.0",
 		"@bakit/core": "1.0.0-alpha.0"
 	},
-	"changesets": ["hip-eggs-attend", "little-peaches-melt", "pink-lights-learn", "tangy-phones-warn"]
+	"changesets": [
+		"goofy-glasses-dress",
+		"hip-eggs-attend",
+		"little-peaches-melt",
+		"pink-lights-learn",
+		"silent-keys-repeat",
+		"tangy-phones-warn"
+	]
 }
