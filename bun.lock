@@ -41,7 +41,7 @@
         "@discordjs/ws": "^2.0.4",
         "@vladfrangu/async_event_emitter": "^2.4.7",
         "discord-api-types": "^0.38.49",
-        "tiny-mixin": "^1.1.6",
+        "tiny-mixin": "^1.2.2",
         "type-fest": "5.8.0",
       },
       "devDependencies": {
@@ -423,7 +423,7 @@
 
     "tiny-glob": ["tiny-glob@0.2.9", "", { "dependencies": { "globalyzer": "0.1.0", "globrex": "^0.1.2" } }, "sha512-g/55ssRPUjShh+xkfx9UPDXqhckHEsHr4Vd9zX55oSdGZc/MD0m3sferOkwWtp98bv+kcVfEHtRJgBVJzelrzg=="],
 
-    "tiny-mixin": ["tiny-mixin@1.1.6", "", {}, "sha512-a4upieD/BRJGGsqTkwxxY8Ud8M4vrkUbi+kZQxDJotNspbPAx3+aWSevpYRLJzZV+3FL6QYu1KZA7xDZl3P8wQ=="],
+    "tiny-mixin": ["tiny-mixin@1.2.2", "", {}, "sha512-FfMv0eU6x7PTkRPe7Cgv7JT2iQpK1/5fLSk3tVIvjNfe/XclTu7x9NZ1P1vrNxQReREL4INx+VrWjK1bRCE5fw=="],
 
     "tinyexec": ["tinyexec@1.2.4", "", {}, "sha512-SHf/r48b7vOrjve9PxJo3MN5v5yuyjHvdUcrQffT3WXMUfnGmHDVbC4k3sHJaJTgZCwpUplIaAo5ANtMyp3YHg=="],
 
