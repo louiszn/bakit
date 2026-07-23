@@ -39,7 +39,7 @@
 		"@discordjs/ws": "^2.0.4",
 		"@vladfrangu/async_event_emitter": "^2.4.7",
 		"discord-api-types": "^0.38.49",
-		"tiny-mixin": "^1.1.4",
+		"tiny-mixin": "^1.1.6",
 		"type-fest": "5.8.0"
 	},
 	"engines": {

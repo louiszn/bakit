@@ -23,7 +23,7 @@ export abstract class BaseSnapshot<TRaw> implements Snapshot<TRaw> {
 	readonly source: SnapshotSource;
 	readonly receivedAt: number;
 
-	protected readonly resources: Resources;
+	readonly resources: Resources;
 
 	constructor(
 		resources: Resources,

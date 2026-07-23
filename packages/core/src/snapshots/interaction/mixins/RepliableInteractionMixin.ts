@@ -24,7 +24,7 @@ export interface InteractionDeferReplyOptions {
 
 export const RepliableInteractionMixin = createMixin(
 	(base: Constructor<BaseInteractionSnapshot>) => {
-		class RepliableInteraction extends base {
+		abstract class RepliableInteraction extends base {
 			reply(
 				options: InteractionReplyOptions & {
 					withMessage: true;
@@ -70,7 +70,7 @@ export const RepliableInteractionMixin = createMixin(
 					throw new Error("Interaction response did not include a message");
 				}
 
-				return this.createMessageRef(raw);
+				return this.#createMessageRef(raw);
 			}
 
 			async deferReply(options: InteractionDeferReplyOptions = {}): Promise<void> {
@@ -98,10 +98,10 @@ export const RepliableInteractionMixin = createMixin(
 					},
 				)) as APIMessage;
 
-				return this.createMessageRef(raw);
+				return this.#createMessageRef(raw);
 			}
 
-			private createMessageRef(raw: APIMessage): MessageRef {
+			#createMessageRef(raw: APIMessage): MessageRef {
 				const snapshot = this.resources.messages.createSnapshot(raw.id, raw, SnapshotSource.Rest);
 				return this.resources.messages.ref(raw.id, raw.channel_id, snapshot);
 			}

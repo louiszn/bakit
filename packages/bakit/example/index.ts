@@ -1,4 +1,4 @@
-import { GatewayIntentBits, useApp, useListeners } from "../src";
+import { Intent, useApp, useListeners } from "../src";
 
 const BOT_TOKEN = process.env.BOT_TOKEN;
 if (!BOT_TOKEN) {
@@ -11,7 +11,7 @@ const listeners = useListeners({
 });
 
 const app = useApp({
-	intents: [GatewayIntentBits.MessageContent, GatewayIntentBits.GuildMessages],
+	intents: [Intent.MessageContent, Intent.GuildMessages],
 	token: BOT_TOKEN,
 	plugins: [listeners],
 });
