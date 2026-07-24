@@ -1,5 +1,11 @@
 # @bakit/core
 
+## 1.0.0-alpha.8
+
+### Patch Changes
+
+- e75e07c: Fixed missing message content
+
 ## 1.0.0-alpha.7
 
 ### Patch Changes
