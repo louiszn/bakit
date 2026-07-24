@@ -47,6 +47,7 @@ export const RepliableInteractionMixin = createMixin(
 				const body: APIInteractionResponseChannelMessageWithSource = {
 					type: InteractionResponseType.ChannelMessageWithSource,
 					data: {
+						content: data.content,
 						flags: resolveFlags(data.flags),
 					},
 				};

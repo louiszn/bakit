@@ -127,7 +127,8 @@ export class GatewayManager {
 				const { d: raw } = payload;
 
 				const interaction = createInteractionSnapshot(resources, raw, SnapshotSource.Gateway);
-				this.client.emit("interactionCreate", {
+
+				this.client.emit(ClientEvent.InteractionCreate, {
 					interaction,
 					raw,
 					client,
