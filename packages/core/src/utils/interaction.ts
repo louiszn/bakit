@@ -5,9 +5,12 @@ import {
 	InteractionType,
 } from "discord-api-types/v10";
 
-import type { Resources } from "../client";
-import type { SnapshotSource } from "../snapshots";
-import { BaseInteractionSnapshot, ChatInputInteractionSnapshot } from "../snapshots/interaction";
+import type { Resources } from "#/client";
+import {
+	BaseInteractionSnapshot,
+	ChatInputInteractionSnapshot,
+	type SnapshotSource,
+} from "#/models";
 
 export function createInteractionSnapshot(
 	resources: Resources,

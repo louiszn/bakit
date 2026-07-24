@@ -6,22 +6,11 @@ import type {
 	GatewayMessageUpdateDispatchData,
 	GatewayReadyDispatchData,
 } from "discord-api-types/v10";
-import type { ValueOf } from "type-fest";
 
-import type { MessageRef, UserRef } from "../refs";
-import type { MessageSnapshot } from "../snapshots";
-import type { InteractionSnapshot } from "../snapshots/interaction";
+import type { ClientEvent } from "#/constants";
+import type { InteractionSnapshot, MessageRef, MessageSnapshot, UserRef } from "#/models";
+
 import type { Client } from "./Client";
-
-export const ClientEvent = {
-	Raw: "raw",
-	Ready: "ready",
-	MessageCreate: "messageCreate",
-	MessageUpdate: "messageUpdate",
-	MessageDelete: "messageDelete",
-	InteractionCreate: "interactionCreate",
-} as const;
-export type ClientEvent = ValueOf<typeof ClientEvent>;
 
 export interface ClientEvents {
 	[ClientEvent.Ready]: [event: ClientReadyEvent];

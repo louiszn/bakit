@@ -8,17 +8,19 @@
 	"scripts": {
 		"check": "bunx --bun @biomejs/biome check --write",
 		"build": "bunx --bun tsdown --workspace",
-		"typecheck": "bunx --bun tsc --noEmit",
+		"typecheck": "bun run typecheck:root && bun run typecheck:packages",
+		"typecheck:root": "tsc -p tsconfig.json --noEmit",
+		"typecheck:packages": "bun run --workspaces --parallel typecheck",
 		"prepare": "husky"
 	},
 	"devDependencies": {
-		"@biomejs/biome": "^2.5.4",
+		"@biomejs/biome": "^2.5.5",
 		"@changesets/cli": "^2.31.1",
 		"@types/bun": "latest",
 		"husky": "^9.1.7",
-		"lint-staged": "^17.1.1",
-		"publint": "^0.3.21",
-		"tsdown": "^0.22.9"
+		"lint-staged": "^17.2.0",
+		"publint": "^0.3.22",
+		"tsdown": "^0.22.14"
 	},
 	"peerDependencies": {
 		"typescript": "^5.9.3"

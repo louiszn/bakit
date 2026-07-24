@@ -5,13 +5,13 @@
     "": {
       "name": "bakit",
       "devDependencies": {
-        "@biomejs/biome": "^2.5.4",
+        "@biomejs/biome": "^2.5.5",
         "@changesets/cli": "^2.31.1",
         "@types/bun": "latest",
         "husky": "^9.1.7",
-        "lint-staged": "^17.1.1",
-        "publint": "^0.3.21",
-        "tsdown": "^0.22.9",
+        "lint-staged": "^17.2.0",
+        "publint": "^0.3.22",
+        "tsdown": "^0.22.14",
       },
       "peerDependencies": {
         "typescript": "^5.9.3",
@@ -19,7 +19,7 @@
     },
     "packages/bakit": {
       "name": "bakit",
-      "version": "4.0.0-alpha.5",
+      "version": "4.0.0-alpha.7",
       "dependencies": {
         "@bakit/core": "workspace:*",
         "tiny-glob": "^0.2.9",
@@ -34,7 +34,7 @@
     },
     "packages/core": {
       "name": "@bakit/core",
-      "version": "1.0.0-alpha.4",
+      "version": "1.0.0-alpha.6",
       "dependencies": {
         "@discordjs/collection": "^2.1.1",
         "@discordjs/rest": "^2.6.1",
@@ -433,7 +433,7 @@
 
     "tree-kill": ["tree-kill@1.2.2", "", { "bin": { "tree-kill": "cli.js" } }, "sha512-L0Orpi8qGpRG//Nd+H90vFB+3iHnue1zSSGmNOOCh1GLJ7rUKVwV2HvijphGQS2UmhUZewS9VgvxYIdgr+fG1A=="],
 
-    "tsdown": ["tsdown@0.22.13", "", { "dependencies": { "ansis": "^4.3.1", "cac": "^7.0.0", "defu": "^6.1.7", "empathic": "^2.0.1", "hookable": "^6.1.1", "import-without-cache": "^0.4.0", "obug": "^2.1.4", "picomatch": "^4.0.5", "rolldown": "~1.2.0", "rolldown-plugin-dts": "^0.27.12", "tinyexec": "^1.2.4", "tinyglobby": "^0.2.17", "tree-kill": "^1.2.2", "unconfig-core": "^7.5.0", "verkit": "^0.1.2" }, "peerDependencies": { "@arethetypeswrong/core": "^0.18.1", "@tsdown/css": "0.22.13", "@tsdown/exe": "0.22.13", "@vitejs/devtools": "*", "publint": "^0.3.8", "tsx": "*", "typescript": "^5.0.0 || ^6.0.0 || ^7.0.0", "unplugin-unused": "^0.5.0", "unrun": "*" }, "optionalPeers": ["@arethetypeswrong/core", "@tsdown/css", "@tsdown/exe", "@vitejs/devtools", "publint", "tsx", "typescript", "unplugin-unused", "unrun"], "bin": { "tsdown": "./dist/run.mjs" } }, "sha512-XaYFhtiKRUvTpXv/YAehsHdbEb3LN/iMlzjSINbjlaATtXN2zVPKox2STKhcyFPlh++8Zg7suNN27E679IfAUA=="],
+    "tsdown": ["tsdown@0.22.14", "", { "dependencies": { "ansis": "^4.3.1", "cac": "^7.0.0", "defu": "^6.1.7", "empathic": "^2.0.1", "hookable": "^6.1.1", "import-without-cache": "^0.4.0", "obug": "^2.1.4", "picomatch": "^4.0.5", "rolldown": "~1.2.0", "rolldown-plugin-dts": "^0.27.13", "tinyexec": "^1.2.4", "tinyglobby": "^0.2.17", "tree-kill": "^1.2.2", "unconfig-core": "^7.5.0", "verkit": "^0.3.0" }, "peerDependencies": { "@arethetypeswrong/core": "^0.18.1", "@tsdown/css": "0.22.14", "@tsdown/exe": "0.22.14", "@vitejs/devtools": "*", "publint": "^0.3.8", "tsx": "*", "typescript": "^5.0.0 || ^6.0.0 || ^7.0.0", "unplugin-unused": "^0.5.0", "unrun": "*" }, "optionalPeers": ["@arethetypeswrong/core", "@tsdown/css", "@tsdown/exe", "@vitejs/devtools", "publint", "tsx", "typescript", "unplugin-unused", "unrun"], "bin": { "tsdown": "./dist/run.mjs" } }, "sha512-ule7Y+fsAN2iZbLDoo7C4KYljFJNJJ+fLshyn+9gozeTspVersWHxwdGB+Dm2hzA38s6muFnUTl0jK3vJm9ifQ=="],
 
     "tslib": ["tslib@2.8.1", "", {}, "sha512-oJFu94HQb+KVduSUQL7wnpmqnfmLsOA/nAh6b6EH0wCEoK0/mPeXU6c3wKDV83MkOuHPRHtSXKKU99IBazS/2w=="],
 
@@ -449,7 +449,7 @@
 
     "universalify": ["universalify@0.1.2", "", {}, "sha512-rBJeI5CXAlmy1pV+617WB9J63U6XcazHHF2f2dbJix4XzpUF0RS3Zbj0FGIOCAva5P/d/GBOYaACQ1w+0azUkg=="],
 
-    "verkit": ["verkit@0.1.2", "", {}, "sha512-WqkT8n3hqizuCu71W3bUzf5fjBmkbXcudsehe/NbxA8PgqoKnSOY5K0Ba2ckg1qaRaSpSz7as/n9K1R9JXjQKg=="],
+    "verkit": ["verkit@0.3.0", "", {}, "sha512-Njrh4U8UODGajoZ44QS2C/BsoEM9DTI/aCqY5swsizb+/ap0FamvnCMcZAxrR5+aoC0ZqkawEfpC/N2SBc+xeA=="],
 
     "which": ["which@2.0.2", "", { "dependencies": { "isexe": "^2.0.0" }, "bin": { "node-which": "./bin/node-which" } }, "sha512-BLI3Tl1TW3Pvl70l3yq3Y64i+awpwXqsGBYWkkqMtnbXgrMD+yj7rhW0kuEDxzJaYXGjEW5ogapKNMEKNMjibA=="],
 

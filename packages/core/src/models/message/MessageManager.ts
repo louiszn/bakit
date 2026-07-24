@@ -6,13 +6,15 @@ import {
 	Routes,
 } from "discord-api-types/v10";
 
-import { MessageRef } from "../refs";
-import { type MessageRaw, MessageSnapshot, SnapshotSource } from "../snapshots";
-import type { MessageCreateOptions } from "../types";
-import { resolveFlags } from "../utils";
-import { BaseManager } from "./BaseManager";
+import type { MessageCreateOptions, MessageRaw } from "#/types";
+import { resolveFlags } from "#/utils";
 
-export class MessageManager extends BaseManager<
+import { BaseEntityManager } from "../EntityManager";
+import { SnapshotSource } from "../Snapshot";
+import { MessageRef } from "./MessageRef";
+import { MessageSnapshot } from "./MessageSnapshot";
+
+export class MessageManager extends BaseEntityManager<
 	MessageRaw,
 	MessageSnapshot,
 	MessageRef,

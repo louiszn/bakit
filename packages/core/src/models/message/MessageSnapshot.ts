@@ -1,16 +1,7 @@
-import type {
-	APIMessage,
-	GatewayMessageCreateDispatchData,
-	GatewayMessageUpdateDispatchData,
-} from "discord-api-types/v10";
-import type { UserRef } from "../refs";
-import type { MessageReference, MessageReplyOptions } from "../types";
-import { BaseSnapshot } from "./Snapshot";
+import type { MessageRaw, MessageReference, MessageReplyOptions } from "#/types";
 
-export type MessageRaw =
-	| GatewayMessageCreateDispatchData
-	| GatewayMessageUpdateDispatchData
-	| APIMessage;
+import { BaseSnapshot } from "../Snapshot";
+import type { UserRef } from "../user";
 
 export class MessageSnapshot extends BaseSnapshot<MessageRaw> implements MessageReference {
 	#author?: UserRef;

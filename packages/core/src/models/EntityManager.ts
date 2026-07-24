@@ -1,9 +1,11 @@
 import type { Snowflake } from "discord-api-types/globals";
-import type { Resources } from "../client";
-import type { EntityRef } from "../refs";
-import type { Snapshot, SnapshotSource } from "../snapshots";
 
-export abstract class BaseManager<
+import type { EntityRef } from "./EntityRef";
+import type { Snapshot, SnapshotSource } from "./Snapshot";
+
+import type { Resources } from "../client";
+
+export abstract class BaseEntityManager<
 	TRaw,
 	TSnapshot extends Snapshot<TRaw>,
 	TRef extends EntityRef<TSnapshot>,

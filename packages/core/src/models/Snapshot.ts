@@ -1,5 +1,6 @@
 import type { Snowflake } from "discord-api-types/globals";
 import type { ValueOf } from "type-fest";
+
 import type { Resources } from "../client";
 
 export interface Snapshot<TRaw> {

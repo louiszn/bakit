@@ -7,9 +7,10 @@ import {
 } from "discord-api-types/v10";
 import { type Constructor, createMixin } from "tiny-mixin";
 
-import type { MessageRef } from "../../../refs";
-import type { MessageCreateOptions } from "../../../types";
-import { resolveFlags } from "../../../utils";
+import type { MessageCreateOptions } from "#/types";
+import { resolveFlags } from "#/utils";
+
+import type { MessageRef } from "../../message";
 import { SnapshotSource } from "../../Snapshot";
 import type { BaseInteractionSnapshot } from "../InteractionSnapshot";
 

@@ -1,4 +1,16 @@
-import type { MessageFlag } from "../constants";
+import type {
+	APIMessage,
+	GatewayMessageCreateDispatchData,
+	GatewayMessageUpdateDispatchData,
+	Snowflake,
+} from "discord-api-types/v10";
+
+import type { MessageFlag } from "#/constants";
+
+export type MessageRaw =
+	| GatewayMessageCreateDispatchData
+	| GatewayMessageUpdateDispatchData
+	| APIMessage;
 
 export interface MessageReference {
 	readonly id: Snowflake;

@@ -1,9 +1,11 @@
 import { type APIUser, Routes, type Snowflake } from "discord-api-types/v10";
-import { UserRef } from "../refs";
-import { SnapshotSource, UserSnapshot } from "../snapshots";
-import { BaseManager } from "./BaseManager";
 
-export class UserManager extends BaseManager<APIUser, UserSnapshot, UserRef> {
+import { BaseEntityManager } from "../EntityManager";
+import { SnapshotSource } from "../Snapshot";
+import { UserRef } from "./UserRef";
+import { UserSnapshot } from "./UserSnapshot";
+
+export class UserManager extends BaseEntityManager<APIUser, UserSnapshot, UserRef> {
 	createSnapshot(
 		id: Snowflake,
 		raw: APIUser,

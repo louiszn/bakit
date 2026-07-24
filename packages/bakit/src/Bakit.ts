@@ -1,4 +1,5 @@
 import { Client, type ClientOptions } from "@bakit/core";
+
 import type { BakitPlugin, BakitPluginFactory } from "./types/plugin";
 
 export interface BakitOptions extends ClientOptions {

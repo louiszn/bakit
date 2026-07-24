@@ -1,13 +1,7 @@
 import { GatewayIntentBits } from "discord-api-types/v10";
 import type { ValueOf } from "type-fest";
-import type { EnumValue } from "../types";
 
-type IntentObject = {
-	readonly [K in keyof typeof GatewayIntentBits]: EnumValue<(typeof GatewayIntentBits)[K]>;
-};
+import { createNumericEnumObject } from "#/utils";
 
-export const Intent = Object.fromEntries(
-	Object.entries(GatewayIntentBits).filter(([, value]) => typeof value === "number"),
-) as IntentObject;
-
+export const Intent = { ...createNumericEnumObject(GatewayIntentBits) } as const;
 export type Intent = ValueOf<typeof Intent>;

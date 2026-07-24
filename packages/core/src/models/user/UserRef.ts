@@ -1,8 +1,8 @@
 import type { Snowflake } from "discord-api-types/globals";
 
-import type { UserManager } from "../managers/UserManager";
-import type { UserSnapshot } from "../snapshots/UserSnapshot";
-import { BaseEntityRef } from "./EntityRef";
+import { BaseEntityRef } from "../EntityRef";
+import type { UserManager } from "./UserManager";
+import type { UserSnapshot } from "./UserSnapshot";
 
 export class UserRef extends BaseEntityRef<UserSnapshot> {
 	readonly users: UserManager;

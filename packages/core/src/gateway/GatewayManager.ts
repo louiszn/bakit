@@ -6,9 +6,10 @@ import {
 	type GatewayIntentBits,
 } from "discord-api-types/v10";
 
-import { type Client, ClientEvent } from "../client";
-import { SnapshotSource } from "../snapshots";
-import { createInteractionSnapshot } from "../utils/interaction";
+import type { Client } from "#/client";
+import { ClientEvent } from "#/constants";
+import { SnapshotSource } from "#/models";
+import { createInteractionSnapshot } from "#/utils";
 
 export interface GatewayManagerOptions {
 	token: string;

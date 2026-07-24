@@ -1,6 +1,6 @@
 import type { REST } from "@discordjs/rest";
 
-import { MessageManager, UserManager } from "../managers";
+import { MessageManager, UserManager } from "#/models";
 
 export class Resources {
 	readonly rest: REST;
