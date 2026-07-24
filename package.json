@@ -8,6 +8,7 @@
 	"scripts": {
 		"check": "bunx --bun @biomejs/biome check --write",
 		"build": "bunx --bun tsdown --workspace",
+		"typecheck": "bunx --bun tsc --noEmit",
 		"prepare": "husky"
 	},
 	"devDependencies": {

@@ -15,11 +15,11 @@ export class UserRef extends BaseEntityRef<UserSnapshot> {
 		this.current = current;
 	}
 
-	protected _fetch() {
+	fetch() {
 		return this.users.fetch(this.id);
 	}
 
-	protected _get() {
-		return Promise.resolve(this.current ?? this.users.get(this.id));
+	get() {
+		return Promise.resolve(this.current);
 	}
 }

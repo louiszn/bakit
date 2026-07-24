@@ -11,7 +11,7 @@ const client = new Client({
 });
 
 client.on(ClientEvent.Ready, async (event) => {
-	const user = await event.user.resolve(true);
+	const user = await event.user.resolve();
 	console.log(`Logged in as ${user.tag}`);
 });
 
