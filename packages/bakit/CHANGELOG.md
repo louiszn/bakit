@@ -1,5 +1,16 @@
 # bakit
 
+## 4.0.0-alpha.8
+
+### Patch Changes
+
+- 5dae1cf: Reorganized entity managers, references, and snapshots into domain-based model modules.
+
+  `BaseManager` has been renamed to `BaseEntityManager`. The Discord API `Routes` object is now also exported from `@bakit/core`.
+
+- Updated dependencies [5dae1cf]
+  - @bakit/core@1.0.0-alpha.7
+
 ## 4.0.0-alpha.7
 
 ### Patch Changes

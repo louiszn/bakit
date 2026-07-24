@@ -1,5 +1,13 @@
 # @bakit/core
 
+## 1.0.0-alpha.7
+
+### Patch Changes
+
+- 5dae1cf: Reorganized entity managers, references, and snapshots into domain-based model modules.
+
+  `BaseManager` has been renamed to `BaseEntityManager`. The Discord API `Routes` object is now also exported from `@bakit/core`.
+
 ## 1.0.0-alpha.6
 
 ### Patch Changes
