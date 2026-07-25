@@ -1,44 +1,40 @@
 import { Client, type ClientOptions } from "@bakit/core";
 
-import type { BakitPlugin, BakitPluginFactory } from "./types/plugin";
+import { Lifecycle, type LifecyclePlugin } from "./lifecycle";
 
 export interface BakitOptions extends ClientOptions {
 	plugins?: BakitPluginFactory[];
 }
 
+export interface BakitLifecycle {
+	start: [];
+	stop: [];
+}
+
+export type BakitPlugin = LifecyclePlugin<BakitLifecycle>;
+export type BakitPluginFactory = (bakit: Bakit) => BakitPlugin;
+
 export class Bakit extends Client {
-	#plugins: BakitPlugin[] = [];
+	readonly #lifecycle = new Lifecycle<BakitLifecycle>();
 
 	constructor(options: BakitOptions) {
 		super(options);
 
 		for (const factory of options.plugins ?? []) {
-			this.#plugins.push(factory(this));
+			this.#lifecycle.use(factory(this));
 		}
 	}
 
 	override async start(): Promise<void> {
-		for (const plugin of this.#plugins) {
-			await plugin.onPreStart?.();
-		}
-
-		await super.start();
-
-		for (const plugin of this.#plugins) {
-			await plugin.onPostStart?.();
-		}
+		await this.#lifecycle.run("start", async () => {
+			await super.start();
+		});
 	}
 
 	override async stop(): Promise<void> {
-		for (const plugin of this.#plugins) {
-			await plugin.onPreStop?.();
-		}
-
-		await super.stop();
-
-		for (const plugin of this.#plugins) {
-			await plugin.onPostStop?.();
-		}
+		await this.#lifecycle.run("stop", async () => {
+			await super.stop();
+		});
 	}
 }
 

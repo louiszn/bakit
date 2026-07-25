@@ -1,31 +1,22 @@
 import type { ClientEvent, ClientEvents } from "@bakit/core";
 import type { Promisable } from "type-fest";
 
-export type ListenerHook<TEvent extends ClientEvent> = (
+export type ListenerHandler<TEvent extends ClientEvent> = (
 	...args: ClientEvents[TEvent]
 ) => Promisable<void>;
 
 export interface ListenerOptions<TEvent extends ClientEvent> {
 	event: TEvent;
-
-	onPre?: ListenerHook<TEvent>;
-	onMain: ListenerHook<TEvent>;
-	onPost?: ListenerHook<TEvent>;
+	execute: ListenerHandler<TEvent>;
 }
 
 export class Listener<TEvent extends ClientEvent> {
 	readonly event: TEvent;
-
-	readonly onPre?: ListenerHook<TEvent>;
-	readonly onMain: ListenerHook<TEvent>;
-	readonly onPost?: ListenerHook<TEvent>;
+	readonly execute: ListenerHandler<TEvent>;
 
 	constructor(options: ListenerOptions<TEvent>) {
 		this.event = options.event;
-
-		this.onPre = options.onPre;
-		this.onMain = options.onMain;
-		this.onPost = options.onPost;
+		this.execute = options.execute;
 	}
 }
 

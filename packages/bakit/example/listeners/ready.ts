@@ -2,7 +2,7 @@ import { ClientEvent, useListener } from "../../src";
 
 export const ready = useListener({
 	event: ClientEvent.Ready,
-	async onMain(event) {
+	async execute(event) {
 		const user = await event.user.resolve();
 		console.log(`Successfully logged in as ${user.tag}`);
 	},
