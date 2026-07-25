@@ -1,5 +1,11 @@
 # bakit
 
+## 4.0.0-alpha.10
+
+### Patch Changes
+
+- 9aa53e3: Add lifecycle framework system
+
 ## 4.0.0-alpha.9
 
 ### Patch Changes
