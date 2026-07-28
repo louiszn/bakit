@@ -1,0 +1,46 @@
+{
+	"name": "@bakit/command",
+	"version": "1.0.0-alpha.0",
+	"description": "A powerful command framework plugin for Bakit",
+	"license": "MIT",
+	"homepage": "https://codeberg.org/louiszn/bakit",
+	"repository": {
+		"type": "git",
+		"url": "git+https://codeberg.org/louiszn/bakit.git"
+	},
+	"bugs": {
+		"url": "https://codeberg.org/louiszn/bakit/issues"
+	},
+	"keywords": [
+		"discord",
+		"bot",
+		"framework",
+		"typescript"
+	],
+	"author": "Louiszn",
+	"type": "module",
+	"files": [
+		"dist"
+	],
+	"exports": {
+		".": "./dist/index.mjs",
+		"./package.json": "./package.json"
+	},
+	"scripts": {
+		"typecheck": "tsc --noEmit"
+	},
+	"devDependencies": {
+		"@types/bun": "latest"
+	},
+	"peerDependencies": {
+		"typescript": "^5"
+	},
+	"dependencies": {
+		"bakit": "workspace:^",
+		"tiny-glob": "^0.2.9",
+		"type-fest": "5.8.0"
+	},
+	"engines": {
+		"node": ">=24.17.0"
+	}
+}

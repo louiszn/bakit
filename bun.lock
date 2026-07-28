@@ -19,7 +19,7 @@
     },
     "packages/bakit": {
       "name": "bakit",
-      "version": "4.0.0-alpha.7",
+      "version": "4.0.0-alpha.10",
       "dependencies": {
         "@bakit/core": "workspace:*",
         "tiny-glob": "^0.2.9",
@@ -32,9 +32,24 @@
         "typescript": "^5",
       },
     },
+    "packages/command": {
+      "name": "@bakit/command",
+      "version": "1.0.0-alpha.0",
+      "dependencies": {
+        "bakit": "workspace:^",
+        "tiny-glob": "^0.2.9",
+        "type-fest": "5.8.0",
+      },
+      "devDependencies": {
+        "@types/bun": "latest",
+      },
+      "peerDependencies": {
+        "typescript": "^5",
+      },
+    },
     "packages/core": {
       "name": "@bakit/core",
-      "version": "1.0.0-alpha.6",
+      "version": "1.0.0-alpha.8",
       "dependencies": {
         "@discordjs/collection": "^2.1.1",
         "@discordjs/rest": "^2.6.1",
@@ -54,6 +69,8 @@
   },
   "packages": {
     "@babel/runtime": ["@babel/runtime@7.29.7", "", {}, "sha512-Nq8OhGWiZIZGV6hLHoyAKLLcJihP/xFeBMGJoUrxTX2psI8dCifzLhZISFb+VWS3wFMRDmCGw5R+dOySCqPLhw=="],
+
+    "@bakit/command": ["@bakit/command@workspace:packages/command"],
 
     "@bakit/core": ["@bakit/core@workspace:packages/core"],
 

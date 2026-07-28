@@ -3,7 +3,8 @@
 	"tag": "alpha",
 	"initialVersions": {
 		"bakit": "4.0.0-alpha.0",
-		"@bakit/core": "1.0.0-alpha.0"
+		"@bakit/core": "1.0.0-alpha.0",
+		"@bakit/command": "1.0.0-alpha.0"
 	},
 	"changesets": [
 		"brown-cities-know",
