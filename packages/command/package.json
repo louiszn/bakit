@@ -1,6 +1,6 @@
 {
 	"name": "@bakit/command",
-	"version": "1.0.0-alpha.1",
+	"version": "1.0.0-alpha.2",
 	"description": "A powerful command framework plugin for Bakit",
 	"license": "MIT",
 	"homepage": "https://codeberg.org/louiszn/bakit",

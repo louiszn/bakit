@@ -1,5 +1,11 @@
 # @bakit/command
 
+## 1.0.0-alpha.2
+
+### Patch Changes
+
+- b10a3ac: Renamed useListeners to useCommands
+
 ## 1.0.0-alpha.1
 
 ### Patch Changes
