@@ -1,5 +1,11 @@
 # @bakit/command
 
+## 1.0.0-alpha.3
+
+### Patch Changes
+
+- 9062190: Correct prefixes type and add useCommand
+
 ## 1.0.0-alpha.2
 
 ### Patch Changes
