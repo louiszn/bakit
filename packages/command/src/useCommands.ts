@@ -34,7 +34,7 @@ async function loadCommands(
 	);
 }
 
-export function useListeners(options: UseCommandsOptions = {}): BakitPluginFactory {
+export function useCommands(options: UseCommandsOptions = {}): BakitPluginFactory {
 	return (bakit) => {
 		const registry = new CommandRegistry();
 
