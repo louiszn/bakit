@@ -1,5 +1,12 @@
 # @bakit/core
 
+## 1.0.0-alpha.9
+
+### Patch Changes
+
+- 9b59a92: - Added user to BaseInteractionSnapshot
+  - Renamed Context to LifecycleContext
+
 ## 1.0.0-alpha.8
 
 ### Patch Changes
