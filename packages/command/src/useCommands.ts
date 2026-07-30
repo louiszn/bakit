@@ -11,7 +11,7 @@ import {
 
 import {
 	type CommandPluginFactory,
-	type CommandPrefixesFactory,
+	type CommandPrefixResolvable,
 	CommandRegistry,
 } from "./CommandRegistry";
 import { Command } from "./command";
@@ -22,7 +22,7 @@ export interface UseCommandsOptions {
 
 	pattern?: string | readonly string[];
 	cwd?: string;
-	prefixes?: CommandPrefixesFactory;
+	prefixes?: CommandPrefixResolvable[];
 }
 
 async function loadCommands(
@@ -40,7 +40,7 @@ async function loadCommands(
 
 export function useCommands(options: UseCommandsOptions = {}): BakitPluginFactory {
 	return (bakit) => {
-		const registry = new CommandRegistry();
+		const registry = new CommandRegistry(options.prefixes);
 
 		for (const factory of options.plugins ?? []) {
 			registry.lifecycle.use(factory(bakit));
