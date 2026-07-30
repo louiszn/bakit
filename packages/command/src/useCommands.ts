@@ -9,7 +9,11 @@ import {
 	glob,
 } from "bakit";
 
-import { type CommandPluginFactory, CommandRegistry } from "./CommandRegistry";
+import {
+	type CommandPluginFactory,
+	type CommandPrefixesFactory,
+	CommandRegistry,
+} from "./CommandRegistry";
 import { Command } from "./command";
 
 export interface UseCommandsOptions {
@@ -18,7 +22,7 @@ export interface UseCommandsOptions {
 
 	pattern?: string | readonly string[];
 	cwd?: string;
-	prefixes?: [];
+	prefixes?: CommandPrefixesFactory;
 }
 
 async function loadCommands(

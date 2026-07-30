@@ -21,3 +21,7 @@ export class Command {
 		this.execute = options.execute;
 	}
 }
+
+export function useCommand(options: CommandOptions) {
+	return new Command(options);
+}
