@@ -1,5 +1,12 @@
 # @bakit/command
 
+## 1.0.0-alpha.4
+
+### Patch Changes
+
+- fc3bd23: - Passes prefixes to CommandRegistry
+  - Fixed prefixes type in options
+
 ## 1.0.0-alpha.3
 
 ### Patch Changes
