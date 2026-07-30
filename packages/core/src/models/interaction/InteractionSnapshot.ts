@@ -6,12 +6,15 @@ import {
 } from "discord-api-types/v10";
 
 import { BaseSnapshot } from "../Snapshot";
+import type { UserRef } from "../user";
 import type { BaseApplicationCommandInteractionSnapshot } from "./ApplicationCommandInteractionSnapshot";
 import type { ChatInputInteractionSnapshot } from "./ChatInputInteractionSnapshot";
 
 export class BaseInteractionSnapshot<
 	TRaw extends APIInteraction = APIInteraction,
 > extends BaseSnapshot<TRaw> {
+	#user?: UserRef;
+
 	get applicationId(): Snowflake {
 		return this.raw.application_id;
 	}
@@ -62,6 +65,26 @@ export class BaseInteractionSnapshot<
 
 	get authorizingIntegrationOwners() {
 		return this.raw.authorizing_integration_owners;
+	}
+
+	get user() {
+		if (!this.#user) {
+			const user = this.raw.user ?? this.raw.member?.user;
+			if (!user) {
+				throw new Error("Received interaction by an invalid user");
+			}
+
+			const snapshot = this.resources.users.createSnapshot(
+				user.id,
+				user,
+				this.source,
+				this.receivedAt,
+			);
+
+			this.#user = this.resources.users.ref(user.id, snapshot);
+		}
+
+		return this.#user;
 	}
 
 	isApplicationCommand(): this is ApplicationCommandInteractionSnapshot {

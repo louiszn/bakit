@@ -1,4 +1,4 @@
-export class Context<THook extends PropertyKey = PropertyKey> {
+export class LifecycleContext<THook extends PropertyKey = PropertyKey> {
 	#cancelled = false;
 	readonly hook: THook;
 

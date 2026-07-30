@@ -1,6 +1,6 @@
 import type { Promisable } from "type-fest";
 
-import { Context } from "./Context";
+import { LifecycleContext } from "./LifecycleContext";
 
 type LifecycleSpec<T> = {
 	[THook in keyof T]: unknown[];
@@ -9,12 +9,16 @@ type LifecycleSpec<T> = {
 export type LifecycleHook<
 	TLifecycle extends LifecycleSpec<TLifecycle>,
 	THook extends keyof TLifecycle,
-> = (context: Context<THook>, ...args: TLifecycle[THook]) => Promisable<void>;
+> = (context: LifecycleContext<THook>, ...args: TLifecycle[THook]) => Promisable<void>;
 
 export type LifecycleErrorHook<
 	TLifecycle extends LifecycleSpec<TLifecycle>,
 	THook extends keyof TLifecycle,
-> = (context: Context<THook>, error: unknown, ...args: TLifecycle[THook]) => Promisable<void>;
+> = (
+	context: LifecycleContext<THook>,
+	error: unknown,
+	...args: TLifecycle[THook]
+) => Promisable<void>;
 
 export interface LifecycleHooks<
 	TLifecycle extends LifecycleSpec<TLifecycle>,
@@ -51,8 +55,8 @@ export class Lifecycle<TLifecycle extends LifecycleSpec<TLifecycle>> {
 		hook: THook,
 		target: LifecycleHook<TLifecycle, THook>,
 		...args: TLifecycle[THook]
-	): Promise<Context<THook>> {
-		const context = new Context(hook);
+	): Promise<LifecycleContext<THook>> {
+		const context = new LifecycleContext(hook);
 		const entered: LifecycleHooks<TLifecycle, THook>[] = [];
 
 		try {
