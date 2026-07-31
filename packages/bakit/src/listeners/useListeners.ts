@@ -1,28 +1,10 @@
 import { pathToFileURL } from "node:url";
 
-import type { ClientEvent } from "@bakit/core";
-
-import type { Bakit, BakitPluginFactory } from "#/Bakit";
-import { type Dispose, Lifecycle, type LifecyclePlugin } from "#/lifecycle";
+import type { BakitPluginFactory } from "#/Bakit";
 import { type GlobOptions, glob } from "#/utils";
 
-import { Listener, type ListenerHandler } from "./Listener";
-
-type AnyListener = Listener<ClientEvent>;
-type AnyListenerHandler = ListenerHandler<ClientEvent>;
-
-export interface ListenerInvocation {
-	event: ClientEvent;
-	listener: AnyListener;
-	args: readonly unknown[];
-}
-
-export interface ListenersLifecycle {
-	invoke: [invocation: ListenerInvocation];
-}
-
-export type ListenerPlugin = LifecyclePlugin<ListenersLifecycle>;
-export type ListenerPluginFactory = (bakit: Bakit) => ListenerPlugin;
+import { type AnyListener, Listener } from "./Listener";
+import { type ListenerPluginFactory, ListenerRegistry } from "./ListenerRegistry";
 
 export interface UseListenersOptions {
 	listeners?: readonly AnyListener[];
@@ -45,74 +27,38 @@ async function loadListeners(
 	);
 }
 
-function createHandler(
-	listener: AnyListener,
-	lifecycle: Lifecycle<ListenersLifecycle>,
-): AnyListenerHandler {
-	return async (...args) => {
-		const invocation: ListenerInvocation = {
-			event: listener.event,
-			listener,
-			args,
-		};
-
-		await lifecycle.run("invoke", () => listener.execute(...(args as never)), invocation);
-	};
-}
-
-function subscribe(
-	bakit: Bakit,
-	listener: AnyListener,
-	lifecycle: Lifecycle<ListenersLifecycle>,
-): Dispose {
-	const handler = createHandler(listener, lifecycle);
-
-	bakit.on(listener.event, handler);
-
-	return () => bakit.off(listener.event, handler);
-}
-
 export function useListeners(options: UseListenersOptions = {}): BakitPluginFactory {
 	return (bakit) => {
-		const listeners = new Set<AnyListener>(options.listeners ?? []);
-
-		const lifecycle = new Lifecycle<ListenersLifecycle>();
-		const subscriptions: Dispose[] = [];
+		const listeners = new ListenerRegistry(bakit);
 
 		for (const factory of options.plugins ?? []) {
-			lifecycle.use(factory(bakit));
-		}
-
-		function unsubscribeAll(): void {
-			while (subscriptions.length > 0) {
-				subscriptions.pop()?.();
-			}
+			listeners.lifecycle.use(factory(bakit));
 		}
 
 		return {
 			start: {
 				async onPre() {
+					listeners.unsubscribeAll();
+
+					for (const listener of options.listeners ?? []) {
+						listeners.subscribe(listener);
+					}
+
 					if (options.pattern) {
 						const loaded = await loadListeners(options.pattern, {
 							cwd: options.cwd,
 						});
 
 						for (const listener of loaded) {
-							listeners.add(listener);
+							listeners.subscribe(listener);
 						}
-					}
-
-					unsubscribeAll();
-
-					for (const listener of listeners) {
-						subscriptions.push(subscribe(bakit, listener, lifecycle));
 					}
 				},
 			},
 
 			stop: {
 				onPre() {
-					unsubscribeAll();
+					listeners.unsubscribeAll();
 				},
 			},
 		};

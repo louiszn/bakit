@@ -10,6 +10,9 @@ export interface ListenerOptions<TEvent extends ClientEvent> {
 	execute: ListenerHandler<TEvent>;
 }
 
+export type AnyListener = Listener<ClientEvent>;
+export type AnyListenerHandler = ListenerHandler<ClientEvent>;
+
 export class Listener<TEvent extends ClientEvent> {
 	readonly event: TEvent;
 	readonly execute: ListenerHandler<TEvent>;
