@@ -1,12 +1,16 @@
-import { BaseParameter, type BaseParameterOptions } from "./Parameter";
+import { BaseParameter, type ParameterOptions } from "./Parameter";
 
-export interface StringParameterOptions extends BaseParameterOptions {
-	minLength?: number;
-	maxLength?: number;
-	pattern?: RegExp;
-}
+export type StringParameterOptions<Required extends boolean = boolean> =
+	ParameterOptions<Required> & {
+		minLength?: number;
+		maxLength?: number;
+		pattern?: RegExp;
+	};
 
-export class StringParameter extends BaseParameter<string, StringParameterOptions> {
+export class StringParameter<Required extends boolean = false> extends BaseParameter<
+	string,
+	StringParameterOptions<Required>
+> {
 	parse(value: string) {
 		return value;
 	}

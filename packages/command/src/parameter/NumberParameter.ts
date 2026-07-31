@@ -1,11 +1,15 @@
-import { BaseParameter, type BaseParameterOptions } from "./Parameter";
+import { BaseParameter, type ParameterOptions } from "./Parameter";
 
-export interface NumberParameterOptions extends BaseParameterOptions {
-	min?: number;
-	max?: number;
-}
+export type NumberParameterOptions<Required extends boolean = false> =
+	ParameterOptions<Required> & {
+		min?: number;
+		max?: number;
+	};
 
-export class NumberParameter extends BaseParameter<number, NumberParameterOptions> {
+export class NumberParameter<Required extends boolean = false> extends BaseParameter<
+	number,
+	NumberParameterOptions<Required>
+> {
 	parse(value: string | number) {
 		const number = Number(value);
 

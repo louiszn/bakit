@@ -1,26 +1,24 @@
 import shellQuote from "shell-quote";
 import parse, { type Arguments } from "yargs-parser";
 
-import type { Command, ParameterMap } from "#/command";
+import type { Command } from "#/command";
 import type { CommandContext } from "#/context";
 import type { BaseParameter } from "#/parameter";
-
-type AnyCommand = Command<ParameterMap>;
 
 export interface MessageParserOptions {
 	content: string;
 	prefixes: readonly string[];
-	commands: ReadonlyMap<string, AnyCommand>;
+	commands: ReadonlyMap<string, Command>;
 	context: CommandContext;
 }
 
 export interface MessageParserResult {
-	command: AnyCommand;
+	command: Command;
 	values: Record<string, unknown>;
 }
 
 export interface ParsedCli {
-	command: AnyCommand;
+	command: Command;
 	argv: Arguments;
 }
 
@@ -50,7 +48,17 @@ export class MessageParser {
 	}
 
 	tokenize(content: string): string[] {
-		return shellQuote.parse(content).filter((token): token is string => typeof token === "string");
+		const argv = shellQuote
+			.parse(content)
+			.filter((token): token is string => typeof token === "string");
+
+		for (const arg of argv) {
+			if (/^-[^-].{1,}/.test(arg)) {
+				throw new Error(`Invalid option '${arg}'. Use '--${arg.slice(1)}' for long options.`);
+			}
+		}
+
+		return argv;
 	}
 
 	parseCli(options: MessageParserOptions): ParsedCli | null {
@@ -82,7 +90,7 @@ export class MessageParser {
 	}
 
 	async resolveParameters(options: {
-		command: AnyCommand;
+		command: Command;
 		argv: Arguments;
 		context: CommandContext;
 	}): Promise<Record<string, unknown>> {

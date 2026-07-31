@@ -4,9 +4,19 @@ import type { CommandContext } from "#/context";
 export interface BaseParameterOptions {
 	name?: string;
 	description?: string;
-	required?: boolean;
 	aliases?: readonly string[];
+	required?: boolean;
 }
+
+export type RequiredOption<Required extends boolean> = Required extends true
+	? { required: true }
+	: { required?: false };
+
+export type ParameterOptions<Required extends boolean = boolean> = Omit<
+	BaseParameterOptions,
+	"required"
+> &
+	RequiredOption<Required>;
 
 export interface ParameterParseContext {
 	command: Command;
@@ -44,5 +54,5 @@ export abstract class BaseParameter<
 		context: ParameterParseContext,
 	): Value | Promise<Value>;
 
-	validate(_value: Value): void | Promise<void> {}
+	validate?(value: Value, context: ParameterParseContext): void | Promise<void>;
 }

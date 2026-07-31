@@ -31,7 +31,10 @@ export class InteractionParser {
 				context,
 			});
 
-			await parameter.validate(value);
+			await parameter.validate?.(value, {
+				command,
+				context,
+			});
 
 			values[parameter.name] = value;
 		}

@@ -6,7 +6,7 @@ export class MessageCommandContext<Values extends object = object> extends BaseC
 	MessageSnapshot,
 	Values
 > {
-	send(options: MessageCreateOptions): Promise<MessageRef> {
+	send(options: MessageCreateOptions | string): Promise<MessageRef> {
 		return this.source.resources.messages.create(this.source.channelId, options);
 	}
 }
