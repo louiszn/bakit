@@ -1,5 +1,19 @@
 # @bakit/command
 
+## 1.0.0-alpha.5
+
+### Patch Changes
+
+- 0ca44a7: Added a typed parameter system for defining and validating command arguments.
+  Added message command parsing with CLI-style syntax, including support for positional arguments and named options.
+  Added interaction command parsing using Discord application command options.
+  Added context.values to provide parsed and validated parameter values directly in command handlers.
+  Added InteractionOptions for convenient access to interaction options, including subcommand and subcommand group support.
+  Improved command parsing architecture by separating message and interaction parsers from the command registry.
+- Updated dependencies [091478b]
+- Updated dependencies [0ca44a7]
+  - bakit@4.0.0-alpha.12
+
 ## 1.0.0-alpha.4
 
 ### Patch Changes
