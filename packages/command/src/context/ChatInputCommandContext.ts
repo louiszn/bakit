@@ -2,7 +2,10 @@ import type { ChatInputInteractionSnapshot, MessageCreateOptions, MessageRef } f
 
 import { BaseCommandContext } from "./CommandContext";
 
-export class ChatInputCommandContext extends BaseCommandContext<ChatInputInteractionSnapshot> {
+export class ChatInputCommandContext<Values extends object = object> extends BaseCommandContext<
+	ChatInputInteractionSnapshot,
+	Values
+> {
 	send(options: MessageCreateOptions | string): Promise<MessageRef> {
 		return this.source.reply(
 			typeof options === "string"

@@ -30,15 +30,18 @@
 		"typecheck": "tsc --noEmit"
 	},
 	"devDependencies": {
-		"@types/bun": "latest"
+		"@types/bun": "latest",
+		"@types/yargs-parser": "^21.0.3"
 	},
 	"peerDependencies": {
 		"typescript": "^5"
 	},
 	"dependencies": {
 		"bakit": "workspace:^",
+		"shell-quote": "^1.10.0",
 		"tiny-glob": "^0.2.9",
-		"type-fest": "5.8.0"
+		"type-fest": "5.8.0",
+		"yargs-parser": "^22.0.0"
 	},
 	"engines": {
 		"node": ">=24.17.0"

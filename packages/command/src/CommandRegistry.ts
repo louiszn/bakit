@@ -8,8 +8,9 @@ import {
 } from "bakit";
 import type { Promisable } from "type-fest";
 
-import type { Command } from "./command/Command";
+import type { Command } from "./command";
 import { type CommandContext, createContext, type MessageCommandContext } from "./context";
+import { InteractionParser, MessageParser } from "./parser";
 
 export interface CommandInvocation {
 	command: Command;
@@ -27,9 +28,13 @@ export type CommandPrefixesFactory = (context: MessageCommandContext) => Promisa
 export type CommandPrefixResolvable = string | CommandPrefixesFactory;
 
 export class CommandRegistry {
+	readonly prefixes: CommandPrefixResolvable[];
+
 	readonly commands = new Collection<string, Command>();
 	readonly lifecycle = new Lifecycle<CommandsLifecycle>();
-	readonly prefixes: CommandPrefixResolvable[];
+
+	readonly messageParser = new MessageParser();
+	readonly interactionParser = new InteractionParser();
 
 	constructor(prefixes?: CommandPrefixResolvable[]) {
 		this.prefixes = prefixes ?? [];
@@ -59,6 +64,7 @@ export class CommandRegistry {
 		const context = createContext({
 			source: interaction,
 			author: interaction.user,
+			client: event.client as Bakit,
 		});
 
 		await this.handleContext(context);
@@ -75,42 +81,40 @@ export class CommandRegistry {
 		const context = createContext({
 			source: message,
 			author: message.author,
+			client: event.client as Bakit,
 		});
 
 		await this.handleContext(context);
 	}
 
 	async handleContext(context: CommandContext) {
-		let command: Command | undefined;
-
 		if (context.isChatInput()) {
-			command = this.commands.get(context.source.commandName);
+			const command = this.commands.get(context.source.commandName);
+
+			if (!command) {
+				return;
+			}
+
+			await this.interactionParser.parse({
+				command,
+				context,
+			});
+
+			await command.execute(context);
 		} else {
-			const { content } = context.source;
-			const lowerContent = content.toLowerCase();
+			const parsed = await this.messageParser.parse({
+				content: context.source.content,
+				prefixes: await this.resolvePrefixes(context),
+				commands: this.commands,
+				context,
+			});
 
-			const prefix = (await this.resolvePrefixes(context))
-				.sort((a, b) => b.length - a.length)
-				.find((p) => lowerContent.startsWith(p.toLowerCase()));
-
-			if (!prefix) {
+			if (!parsed) {
 				return;
 			}
 
-			const [commandName] = content.slice(prefix.length).trim().split(/\s+/);
-
-			if (!commandName) {
-				return;
-			}
-
-			command = this.commands.get(commandName.toLowerCase());
+			await parsed.command.execute(context);
 		}
-
-		if (!command) {
-			return;
-		}
-
-		await command.execute(context);
 	}
 
 	async resolvePrefixes(context: MessageCommandContext): Promise<string[]> {
