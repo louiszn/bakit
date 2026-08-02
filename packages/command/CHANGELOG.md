@@ -1,5 +1,12 @@
 # @bakit/command
 
+## 1.0.0-alpha.6
+
+### Patch Changes
+
+- e3316da: Simplified parameters design
+  - bakit@4.0.0-alpha.13
+
 ## 1.0.0-alpha.5
 
 ### Patch Changes

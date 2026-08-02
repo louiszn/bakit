@@ -1,5 +1,11 @@
 # @bakit/core
 
+## 1.0.0-alpha.11
+
+### Patch Changes
+
+- b970bc5: Simplified unused interfaces
+
 ## 1.0.0-alpha.10
 
 ### Patch Changes
