@@ -2,11 +2,11 @@ import type { Snowflake } from "discord-api-types/globals";
 
 import type { MessageReference } from "#/types";
 
-import { BaseEntityRef } from "../EntityRef";
+import { EntityRef } from "../EntityRef";
 import type { MessageManager } from "./MessageManager";
 import type { MessageSnapshot } from "./MessageSnapshot";
 
-export class MessageRef extends BaseEntityRef<MessageSnapshot> implements MessageReference {
+export class MessageRef extends EntityRef<MessageSnapshot> implements MessageReference {
 	readonly channelId: string;
 
 	readonly messages: MessageManager;

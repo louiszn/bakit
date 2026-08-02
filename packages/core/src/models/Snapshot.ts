@@ -3,13 +3,6 @@ import type { ValueOf } from "type-fest";
 
 import type { Resources } from "../client";
 
-export interface Snapshot<TRaw> {
-	readonly id: Snowflake;
-	readonly raw: TRaw;
-	readonly source: SnapshotSource;
-	readonly receivedAt: number;
-}
-
 export const SnapshotSource = {
 	Cache: 0,
 	Rest: 1,
@@ -17,8 +10,8 @@ export const SnapshotSource = {
 } as const;
 export type SnapshotSource = ValueOf<typeof SnapshotSource>;
 
-export abstract class BaseSnapshot<TRaw> implements Snapshot<TRaw> {
-	readonly id: string;
+export abstract class Snapshot<TRaw> {
+	readonly id: Snowflake;
 	readonly raw: TRaw;
 
 	readonly source: SnapshotSource;

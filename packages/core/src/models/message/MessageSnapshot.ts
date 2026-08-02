@@ -1,9 +1,9 @@
 import type { MessageRaw, MessageReference, MessageReplyOptions } from "#/types";
 
-import { BaseSnapshot } from "../Snapshot";
+import { Snapshot } from "../Snapshot";
 import type { UserRef } from "../user";
 
-export class MessageSnapshot extends BaseSnapshot<MessageRaw> implements MessageReference {
+export class MessageSnapshot extends Snapshot<MessageRaw> implements MessageReference {
 	#author?: UserRef;
 
 	get channelId() {

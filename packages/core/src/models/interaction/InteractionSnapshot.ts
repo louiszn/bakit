@@ -5,14 +5,14 @@ import {
 	InteractionType,
 } from "discord-api-types/v10";
 
-import { BaseSnapshot } from "../Snapshot";
+import { Snapshot } from "../Snapshot";
 import type { UserRef } from "../user";
 import type { BaseApplicationCommandInteractionSnapshot } from "./ApplicationCommandInteractionSnapshot";
 import type { ChatInputInteractionSnapshot } from "./ChatInputInteractionSnapshot";
 
 export class BaseInteractionSnapshot<
 	TRaw extends APIInteraction = APIInteraction,
-> extends BaseSnapshot<TRaw> {
+> extends Snapshot<TRaw> {
 	#user?: UserRef;
 
 	get applicationId(): Snowflake {

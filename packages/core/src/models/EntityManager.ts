@@ -5,7 +5,7 @@ import type { Snapshot, SnapshotSource } from "./Snapshot";
 
 import type { Resources } from "../client";
 
-export abstract class BaseEntityManager<
+export abstract class EntityManager<
 	TRaw,
 	TSnapshot extends Snapshot<TRaw>,
 	TRef extends EntityRef<TSnapshot>,

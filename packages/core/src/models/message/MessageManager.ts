@@ -9,12 +9,12 @@ import {
 import type { MessageCreateOptions, MessageRaw } from "#/types";
 import { resolveFlags } from "#/utils";
 
-import { BaseEntityManager } from "../EntityManager";
+import { EntityManager } from "../EntityManager";
 import { SnapshotSource } from "../Snapshot";
 import { MessageRef } from "./MessageRef";
 import { MessageSnapshot } from "./MessageSnapshot";
 
-export class MessageManager extends BaseEntityManager<
+export class MessageManager extends EntityManager<
 	MessageRaw,
 	MessageSnapshot,
 	MessageRef,

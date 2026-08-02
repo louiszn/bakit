@@ -1,8 +1,8 @@
 import type { APIUser } from "discord-api-types/v10";
 
-import { BaseSnapshot } from "../Snapshot";
+import { Snapshot } from "../Snapshot";
 
-export class UserSnapshot extends BaseSnapshot<APIUser> {
+export class UserSnapshot extends Snapshot<APIUser> {
 	get bot() {
 		return Boolean(this.raw.bot);
 	}
