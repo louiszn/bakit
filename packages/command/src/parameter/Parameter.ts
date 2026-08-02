@@ -1,52 +1,29 @@
 import type { Command } from "#/command";
 import type { CommandContext } from "#/context";
 
-export interface BaseParameterOptions {
+export type ParameterOptions<Required extends boolean = boolean> = {
 	name?: string;
 	description?: string;
 	aliases?: readonly string[];
-	required?: boolean;
-}
-
-export type RequiredOption<Required extends boolean> = Required extends true
-	? { required: true }
-	: { required?: false };
-
-export type ParameterOptions<Required extends boolean = boolean> = Omit<
-	BaseParameterOptions,
-	"required"
-> &
-	RequiredOption<Required>;
+	required?: Required;
+};
 
 export interface ParameterParseContext {
 	command: Command;
 	context: CommandContext;
 }
 
-export abstract class BaseParameter<
-	Value,
-	Options extends BaseParameterOptions = BaseParameterOptions,
-> {
-	readonly options: Options;
+export abstract class Parameter<Value = unknown, Required extends boolean = boolean> {
+	readonly name!: string;
+	readonly description: string;
+	readonly aliases: string[];
+	readonly required: Required;
 
-	constructor(options?: Options) {
-		this.options = options ?? ({} as Options);
-	}
-
-	get name() {
-		return this.options.name ?? "";
-	}
-
-	get required() {
-		return this.options.required ?? false;
-	}
-
-	get aliases() {
-		return this.options.aliases ?? [];
-	}
-
-	get description() {
-		return this.options.description ?? this.name;
+	constructor(options?: ParameterOptions<Required>) {
+		this.name = options?.name ?? "";
+		this.description = options?.description ?? "a command";
+		this.aliases = (options?.aliases ?? []) as string[];
+		this.required = Boolean(options?.required) as Required;
 	}
 
 	abstract parse(

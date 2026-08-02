@@ -1,4 +1,4 @@
-import { BaseParameter, type ParameterOptions } from "./Parameter";
+import { Parameter, type ParameterOptions } from "./Parameter";
 
 export type NumberParameterOptions<Required extends boolean = false> =
 	ParameterOptions<Required> & {
@@ -6,10 +6,17 @@ export type NumberParameterOptions<Required extends boolean = false> =
 		max?: number;
 	};
 
-export class NumberParameter<Required extends boolean = false> extends BaseParameter<
-	number,
-	NumberParameterOptions<Required>
-> {
+export class NumberParameter<Required extends boolean = false> extends Parameter<number, Required> {
+	readonly min?: number;
+	readonly max?: number;
+
+	constructor(options?: NumberParameterOptions<Required>) {
+		super(options);
+
+		this.min = options?.min;
+		this.max = options?.max;
+	}
+
 	parse(value: string | number) {
 		const number = Number(value);
 
@@ -21,7 +28,7 @@ export class NumberParameter<Required extends boolean = false> extends BaseParam
 	}
 
 	override validate(value: number) {
-		const { min, max } = this.options;
+		const { min, max } = this;
 
 		if (min !== undefined && value < min) {
 			throw new Error(`Expected a value greater than or equal to ${min}.`);

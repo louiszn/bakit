@@ -3,7 +3,7 @@ import parse, { type Arguments } from "yargs-parser";
 
 import type { Command } from "#/command";
 import type { CommandContext } from "#/context";
-import type { BaseParameter } from "#/parameter";
+import type { Parameter } from "#/parameter";
 
 export interface MessageParserOptions {
 	content: string;
@@ -99,7 +99,7 @@ export class MessageParser {
 		const values: Record<string, unknown> = {};
 		const positional = [...argv._].map(String);
 
-		const parameters: BaseParameter<unknown>[] = Object.values(command.parameters);
+		const parameters: Parameter[] = Object.values(command.parameters);
 		const optionalParameters = parameters.filter((parameter) => !parameter.required);
 
 		const allowOptionalPositional = optionalParameters.length === 1;

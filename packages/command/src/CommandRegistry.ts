@@ -65,7 +65,7 @@ export class CommandRegistry {
 			source: interaction,
 			author: interaction.user,
 			client: event.client as Bakit,
-		});
+		}) as CommandContext<never>;
 
 		await this.handleContext(context);
 	}
@@ -82,12 +82,12 @@ export class CommandRegistry {
 			source: message,
 			author: message.author,
 			client: event.client as Bakit,
-		});
+		}) as CommandContext<never>;
 
 		await this.handleContext(context);
 	}
 
-	async handleContext(context: CommandContext) {
+	async handleContext(context: CommandContext<never>) {
 		if (context.isChatInput()) {
 			const command = this.commands.get(context.source.commandName);
 

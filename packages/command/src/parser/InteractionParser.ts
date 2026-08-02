@@ -1,9 +1,9 @@
-import type { Command, ParameterMap } from "#/command";
+import type { Command } from "#/command";
 import type { CommandContext } from "#/context";
-import type { BaseParameter } from "#/parameter";
+import type { Parameter } from "#/parameter";
 
 export interface InteractionParserOptions {
-	command: Command<ParameterMap>;
+	command: Command;
 	context: CommandContext;
 }
 
@@ -15,7 +15,7 @@ export class InteractionParser {
 
 		const values: Record<string, unknown> = {};
 
-		for (const parameter of Object.values<BaseParameter<unknown>>(command.parameters)) {
+		for (const parameter of Object.values<Parameter>(command.parameters)) {
 			const raw = context.source.options.get(parameter.name)?.value;
 
 			if (raw === undefined) {

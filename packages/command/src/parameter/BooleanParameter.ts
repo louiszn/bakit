@@ -1,8 +1,8 @@
-import { BaseParameter, type ParameterOptions } from "./Parameter";
+import { Parameter } from "./Parameter";
 
-export class BooleanParameter<Required extends boolean = boolean> extends BaseParameter<
+export class BooleanParameter<Required extends boolean = boolean> extends Parameter<
 	boolean,
-	ParameterOptions<Required>
+	Required
 > {
 	parse(value: string) {
 		return Boolean(value);

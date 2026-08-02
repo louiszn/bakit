@@ -1,22 +1,31 @@
-import { BaseParameter, type ParameterOptions } from "./Parameter";
+import { Parameter, type ParameterOptions } from "./Parameter";
 
-export type StringParameterOptions<Required extends boolean = boolean> =
-	ParameterOptions<Required> & {
-		minLength?: number;
-		maxLength?: number;
-		pattern?: RegExp;
-	};
+export interface StringParameterOptions<Required extends boolean = boolean>
+	extends ParameterOptions<Required> {
+	minLength?: number;
+	maxLength?: number;
+	pattern?: RegExp;
+}
 
-export class StringParameter<Required extends boolean = false> extends BaseParameter<
-	string,
-	StringParameterOptions<Required>
-> {
+export class StringParameter<Required extends boolean = false> extends Parameter<string, Required> {
+	readonly minLength?: number;
+	readonly maxLength?: number;
+	readonly pattern?: RegExp;
+
+	constructor(options?: StringParameterOptions<Required>) {
+		super(options);
+
+		this.maxLength = options?.maxLength;
+		this.minLength = options?.minLength;
+		this.pattern = options?.pattern;
+	}
+
 	parse(value: string) {
 		return value;
 	}
 
 	override validate(value: string) {
-		const { minLength, maxLength, pattern } = this.options;
+		const { minLength, maxLength, pattern } = this;
 
 		if (minLength !== undefined && value.length < minLength) {
 			throw new Error(`Expected at least ${minLength} characters.`);

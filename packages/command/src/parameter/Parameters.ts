@@ -5,27 +5,19 @@ import type { ParameterOptions } from "./Parameter";
 import { StringParameter, type StringParameterOptions } from "./StringParameter";
 
 export const Parameters = {
-	string: <const O extends StringParameterOptions>(options?: O) => {
-		type Required = O extends { required: true } ? true : false;
-
-		return new StringParameter<Required>(options as never);
+	string<const R extends boolean>(options?: StringParameterOptions<R>) {
+		return new StringParameter<R>(options);
 	},
 
-	number: <const O extends NumberParameterOptions>(options?: O) => {
-		type Required = O extends { required: true } ? true : false;
-
-		return new NumberParameter<Required>(options as NumberParameterOptions<Required>);
+	number<const R extends boolean>(options?: NumberParameterOptions<R>) {
+		return new NumberParameter<R>(options);
 	},
 
-	integer: <const O extends NumberParameterOptions>(options?: O) => {
-		type Required = O extends { required: true } ? true : false;
-
-		return new IntegerParameter<Required>(options as NumberParameterOptions<Required>);
+	integer<const R extends boolean>(options?: NumberParameterOptions<R>) {
+		return new IntegerParameter<R>(options);
 	},
 
-	boolean: <const O extends ParameterOptions>(options?: O) => {
-		type Required = O extends { required: true } ? true : false;
-
-		return new BooleanParameter<Required>(options as ParameterOptions<Required>);
+	boolean<const R extends boolean>(options?: ParameterOptions<R>) {
+		return new BooleanParameter<R>(options);
 	},
 };
