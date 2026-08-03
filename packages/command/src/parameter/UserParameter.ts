@@ -17,7 +17,7 @@ export class UserParameter<Required extends boolean = false> extends Parameter<U
 		super(options);
 	}
 
-	async parse(value: string | UserSnapshot, context: ParameterParseContext) {
+	async parse(value: string | UserSnapshot, context: ParameterParseContext): Promise<UserRef> {
 		const { users } = context.context.client.resources;
 
 		let snapshot: UserSnapshot;
