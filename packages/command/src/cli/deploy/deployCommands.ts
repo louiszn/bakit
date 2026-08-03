@@ -1,5 +1,6 @@
-import type { RootCommand } from "@bakit/command";
 import { REST, Routes } from "bakit";
+
+import type { RootCommand } from "#/command";
 
 import { transformCommands } from "./transform";
 

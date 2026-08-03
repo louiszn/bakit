@@ -2,9 +2,11 @@
 
 import { resolve } from "node:path";
 
-import { loadCommands, loadConfig } from "@bakit/command";
 import { REST, Routes } from "bakit";
 import { Command } from "commander";
+
+import { loadCommands } from "#/command";
+import { loadConfig } from "#/config";
 
 import { transformCommands } from "./deploy/transform";
 

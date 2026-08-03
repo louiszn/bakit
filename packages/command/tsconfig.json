@@ -2,8 +2,7 @@
 	"extends": ["../../tsconfig.base.json"],
 	"compilerOptions": {
 		"paths": {
-			"#/*": ["./src/*"],
-			"@bakit/command": ["./src/index.ts"]
+			"#/*": ["./src/*"]
 		}
 	}
 }

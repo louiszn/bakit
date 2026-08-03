@@ -1,16 +1,4 @@
 import {
-	BooleanParameter,
-	Command,
-	type CommandTree,
-	IntegerParameter,
-	NumberParameter,
-	type Parameter,
-	type RootCommand,
-	StringParameter,
-	type Subcommand,
-	type SubcommandGroup,
-} from "@bakit/command";
-import {
 	type APIApplicationCommandBasicOption,
 	type APIApplicationCommandBooleanOption,
 	type APIApplicationCommandIntegerOption,
@@ -21,6 +9,21 @@ import {
 	ApplicationCommandOptionType,
 	type RESTPostAPIApplicationCommandsJSONBody,
 } from "bakit/discord-types";
+
+import {
+	Command,
+	type CommandTree,
+	type RootCommand,
+	type Subcommand,
+	type SubcommandGroup,
+} from "#/command";
+import {
+	BooleanParameter,
+	IntegerParameter,
+	NumberParameter,
+	type Parameter,
+	StringParameter,
+} from "#/parameter";
 
 function transformParameter(parameter: Parameter): APIApplicationCommandBasicOption {
 	const base = {
