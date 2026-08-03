@@ -6,6 +6,7 @@ import {
 	type APIApplicationCommandStringOption,
 	type APIApplicationCommandSubcommandGroupOption,
 	type APIApplicationCommandSubcommandOption,
+	type APIApplicationCommandUserOption,
 	ApplicationCommandOptionType,
 	type RESTPostAPIApplicationCommandsJSONBody,
 } from "bakit/discord-types";
@@ -23,6 +24,7 @@ import {
 	NumberParameter,
 	type Parameter,
 	StringParameter,
+	UserParameter,
 } from "#/parameter";
 
 function transformParameter(parameter: Parameter): APIApplicationCommandBasicOption {
@@ -86,6 +88,15 @@ function transformParameter(parameter: Parameter): APIApplicationCommandBasicOpt
 	if (parameter instanceof BooleanParameter) {
 		const option: APIApplicationCommandBooleanOption = {
 			type: ApplicationCommandOptionType.Boolean,
+			...base,
+		};
+
+		return option;
+	}
+
+	if (parameter instanceof UserParameter) {
+		const option: APIApplicationCommandUserOption = {
+			type: ApplicationCommandOptionType.User,
 			...base,
 		};
 
