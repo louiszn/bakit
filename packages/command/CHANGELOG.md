@@ -1,5 +1,12 @@
 # @bakit/command
 
+## 1.0.0-alpha.9
+
+### Patch Changes
+
+- e0c2815: Added support for user option
+  - bakit@4.0.0-alpha.15
+
 ## 1.0.0-alpha.8
 
 ### Patch Changes

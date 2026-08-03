@@ -1,5 +1,11 @@
 # @bakit/core
 
+## 1.0.0-alpha.13
+
+### Patch Changes
+
+- e0c2815: Added support for user option
+
 ## 1.0.0-alpha.12
 
 ### Patch Changes
