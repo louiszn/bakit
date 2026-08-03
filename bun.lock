@@ -19,7 +19,7 @@
     },
     "packages/bakit": {
       "name": "bakit",
-      "version": "4.0.0-alpha.11",
+      "version": "4.0.0-alpha.13",
       "dependencies": {
         "@bakit/core": "workspace:*",
         "tiny-glob": "^0.2.9",
@@ -34,9 +34,10 @@
     },
     "packages/command": {
       "name": "@bakit/command",
-      "version": "1.0.0-alpha.4",
+      "version": "1.0.0-alpha.6",
       "dependencies": {
         "bakit": "workspace:^",
+        "commander": "^15.0.0",
         "shell-quote": "^1.10.0",
         "tiny-glob": "^0.2.9",
         "type-fest": "5.8.0",
@@ -52,7 +53,7 @@
     },
     "packages/core": {
       "name": "@bakit/core",
-      "version": "1.0.0-alpha.9",
+      "version": "1.0.0-alpha.11",
       "dependencies": {
         "@discordjs/collection": "^2.1.1",
         "@discordjs/rest": "^2.6.1",
@@ -278,6 +279,8 @@
     "cac": ["cac@7.0.0", "", {}, "sha512-tixWYgm5ZoOD+3g6UTea91eow5z6AAHaho3g0V9CNSNb45gM8SmflpAc+GRd1InC4AqN/07Unrgp56Y94N9hJQ=="],
 
     "chardet": ["chardet@2.2.0", "", {}, "sha512-rddelWYNPRrXq6PtNEN2S3f6t9ILzvqaN5pVgi4kqt9jHQaXIial9PznB5iSPVlQSLNaaH22ItWz3EJtQ10+OA=="],
+
+    "commander": ["commander@15.0.0", "", {}, "sha512-z67u4ZhzCL/Tydu1lJARtEZYWbWaN7oYLHbsuzocr6y4N6WZAagG3RQ4FW61V1/0+jImpj293XfrcYnd1qxtPg=="],
 
     "cross-spawn": ["cross-spawn@7.0.6", "", { "dependencies": { "path-key": "^3.1.0", "shebang-command": "^2.0.0", "which": "^2.0.1" } }, "sha512-uV2QOWP2nWzsy2aMp8aRibhi9dlzF5Hgh5SHaB9OiTGEyDTiJJyx0uy51QXdyWbtAHNua4XJzUKca3OzKUd3vA=="],
 

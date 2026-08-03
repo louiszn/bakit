@@ -1,20 +1,17 @@
-import { pathToFileURL } from "node:url";
-
 import {
 	type BakitPluginFactory,
 	ClientEvent,
 	type ClientInteractionCreateEvent,
 	type ClientMessageCreateEvent,
-	type GlobOptions,
-	glob,
 } from "bakit";
 
 import {
+	type Command,
 	type CommandPluginFactory,
 	type CommandPrefixResolvable,
 	CommandRegistry,
-} from "../CommandRegistry";
-import { Command, CommandTree, type RootCommand } from "../command";
+	loadCommands,
+} from "#/command";
 
 export interface UseCommandsOptions {
 	commands?: readonly Command[];
@@ -23,21 +20,6 @@ export interface UseCommandsOptions {
 	pattern?: string | readonly string[];
 	cwd?: string;
 	prefixes?: CommandPrefixResolvable[];
-}
-
-async function loadCommands(
-	pattern: string | readonly string[],
-	options: GlobOptions,
-): Promise<RootCommand[]> {
-	const files = await glob(pattern, options);
-
-	const modules = await Promise.all(files.map((file) => import(pathToFileURL(file).href)));
-
-	return modules.flatMap((module) =>
-		Object.values(module).filter(
-			(value): value is RootCommand => value instanceof Command || value instanceof CommandTree,
-		),
-	);
 }
 
 export function useCommands(options: UseCommandsOptions = {}): BakitPluginFactory {
@@ -63,7 +45,8 @@ export function useCommands(options: UseCommandsOptions = {}): BakitPluginFactor
 					registry.add(...(options.commands ?? []));
 
 					if (options.pattern) {
-						const loaded = await loadCommands(options.pattern, {
+						const loaded = await loadCommands({
+							pattern: options.pattern,
 							cwd: options.cwd,
 						});
 

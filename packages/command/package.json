@@ -38,6 +38,7 @@
 	},
 	"dependencies": {
 		"bakit": "workspace:^",
+		"commander": "^15.0.0",
 		"shell-quote": "^1.10.0",
 		"tiny-glob": "^0.2.9",
 		"type-fest": "5.8.0",

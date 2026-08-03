@@ -3,6 +3,9 @@ import type { CommandTree, Subcommand } from "./tree";
 
 export * from "./BaseExecutableCommand";
 export * from "./Command";
+export * from "./CommandRegistry";
+export * from "./loadCommands";
+export * from "./parser";
 export * from "./tree";
 
 export type RootCommand = Command | CommandTree;

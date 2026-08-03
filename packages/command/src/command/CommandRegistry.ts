@@ -8,9 +8,9 @@ import {
 } from "bakit";
 import type { Promisable } from "type-fest";
 
-import type { ExecutableCommand, RootCommand } from "./command";
-import { type CommandContext, createContext, type MessageCommandContext } from "./context";
-import { CommandError, CommandExecutionError } from "./errors";
+import { type CommandContext, createContext, type MessageCommandContext } from "../context";
+import { CommandError, CommandExecutionError } from "../errors";
+import type { ExecutableCommand, RootCommand } from ".";
 import { InteractionParser, MessageParser } from "./parser";
 
 export interface CommandInvocation {

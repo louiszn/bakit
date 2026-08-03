@@ -1,6 +1,6 @@
 import type { Promisable } from "type-fest";
 
-import type { CommandPluginFactory } from "#/CommandRegistry";
+import type { CommandPluginFactory } from "#/command/CommandRegistry";
 import {
 	CommandExecutionError,
 	InvalidOptionSyntaxError,
