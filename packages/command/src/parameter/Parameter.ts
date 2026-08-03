@@ -27,10 +27,6 @@ export abstract class Parameter<Value = unknown, Required extends boolean = bool
 		this.required = Boolean(options?.required) as Required;
 	}
 
-	abstract parse(
-		value: string | number | boolean,
-		context: ParameterParseContext,
-	): Value | Promise<Value>;
-
+	abstract parse(value: unknown, context: ParameterParseContext): Value | Promise<Value>;
 	validate?(value: Value, context: ParameterParseContext): void | Promise<void>;
 }

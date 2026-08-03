@@ -1,4 +1,4 @@
-import { useCommandTree } from "../../src";
+import { Parameters, useCommandTree } from "../../src";
 
 export const admin = useCommandTree({
 	name: "admin",
@@ -17,7 +17,10 @@ foo.addSubcommand({
 
 admin.addSubcommand({
 	name: "ban",
+	parameters: {
+		user: Parameters.user({ required: true }),
+	},
 	execute(ctx) {
-		ctx.send("Ban");
+		ctx.send(`Banned <@${ctx.values.user.id}>`);
 	},
 });

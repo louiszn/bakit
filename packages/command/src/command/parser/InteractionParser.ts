@@ -2,6 +2,7 @@ import { Command, CommandTree, type ExecutableCommand, type RootCommand } from "
 import type { CommandContext } from "#/context";
 import { MissingParameterError } from "#/errors";
 import type { Parameter } from "#/parameter";
+import { UserParameter } from "#/parameter/UserParameter";
 
 export interface InteractionParserOptions {
 	root: RootCommand;
@@ -43,7 +44,16 @@ export class InteractionParser {
 		const values: Record<string, unknown> = {};
 
 		for (const parameter of Object.values<Parameter>(executable.parameters)) {
-			const raw = context.source.options.get(parameter.name)?.value;
+			// biome-ignore lint/suspicious/noExplicitAny: Unknown
+			let raw: any;
+
+			if (parameter instanceof UserParameter) {
+				raw = context.source.options.getUser(parameter.name);
+			}
+
+			if (raw === undefined) {
+				raw = context.source.options.get(parameter.name)?.value;
+			}
 
 			if (raw === undefined) {
 				if (parameter.required) {
@@ -63,7 +73,7 @@ export class InteractionParser {
 				context,
 			});
 
-			await parameter.validate?.(value, {
+			await parameter.validate?.(value as never, {
 				root: root,
 				executable,
 				context,

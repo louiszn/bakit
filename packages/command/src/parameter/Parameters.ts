@@ -3,6 +3,7 @@ import { IntegerParameter } from "./IntegerParameter";
 import { NumberParameter, type NumberParameterOptions } from "./NumberParameter";
 import type { ParameterOptions } from "./Parameter";
 import { StringParameter, type StringParameterOptions } from "./StringParameter";
+import { UserParameter, type UserParameterOptions } from "./UserParameter";
 
 export const Parameters = {
 	string<const R extends boolean>(options?: StringParameterOptions<R>) {
@@ -19,5 +20,9 @@ export const Parameters = {
 
 	boolean<const R extends boolean>(options?: ParameterOptions<R>) {
 		return new BooleanParameter<R>(options);
+	},
+
+	user<const R extends boolean>(options?: UserParameterOptions<R>) {
+		return new UserParameter<R>(options);
 	},
 };

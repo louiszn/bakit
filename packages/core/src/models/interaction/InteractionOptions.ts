@@ -1,4 +1,4 @@
-import { Collection } from "@discordjs/collection";
+import { Collection, type ReadonlyCollection } from "@discordjs/collection";
 import {
 	type APIApplicationCommandInteractionDataBasicOption,
 	type APIApplicationCommandInteractionDataOption,
@@ -7,6 +7,7 @@ import {
 	ApplicationCommandOptionType,
 } from "discord-api-types/v10";
 
+import type { UserSnapshot } from "../user";
 import type { ChatInputInteractionSnapshot } from "./ChatInputInteractionSnapshot";
 
 type LeafOption = Exclude<
@@ -18,6 +19,7 @@ type LeafOption = Exclude<
 export class InteractionOptions implements Iterable<LeafOption> {
 	readonly #data: readonly APIApplicationCommandInteractionDataOption[];
 	readonly #options: Collection<string, LeafOption>;
+	readonly #users: ReadonlyCollection<string, UserSnapshot>;
 
 	readonly subcommandGroup: string | null;
 	readonly subcommand: string | null;
@@ -29,6 +31,18 @@ export class InteractionOptions implements Iterable<LeafOption> {
 
 		this.subcommandGroup = result.group;
 		this.subcommand = result.subcommand;
+
+		this.#users = new Collection(
+			Object.entries(interaction.raw.data.resolved?.users ?? {}).map(([id, user]) => [
+				id,
+				interaction.resources.users.createSnapshot(
+					user.id,
+					user,
+					interaction.source,
+					interaction.receivedAt,
+				),
+			]),
+		);
 
 		this.#options = new Collection(result.options.map((option) => [option.name, option]));
 	}
@@ -63,6 +77,14 @@ export class InteractionOptions implements Iterable<LeafOption> {
 
 	getBoolean(name: string) {
 		return this.#getPrimitive<boolean>(name, ApplicationCommandOptionType.Boolean);
+	}
+
+	getUser(name: string) {
+		const id = this.#getPrimitive<string>(name, ApplicationCommandOptionType.User);
+
+		if (!id) return;
+
+		return this.#users.get(id);
 	}
 
 	getFocused() {
