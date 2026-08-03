@@ -1,5 +1,26 @@
 # @bakit/command
 
+## 1.0.0-alpha.7
+
+### Patch Changes
+
+- bc6f322: - Added a CLI entrypoint for command utilities.
+
+  - Added `defineConfig()` and `loadConfig()` helpers for shared configuration.
+  - Added reusable command loading utilities.
+
+  - Moved `CommandRegistry` under the command runtime.
+  - Moved parsers under the command module.
+  - Updated exports to match the new project structure.
+
+- cd3a631: - Added support for command trees with subcommands and subcommand groups.
+  - Added a `parse` lifecycle that runs before command invocation, allowing plugins to observe or handle parsing.
+  - Introduced structured command error classes for parsing, validation, and execution, all carrying command metadata and execution context.
+  - Added a command error plugin API for centralized error handling.
+  - Lifecycle `onError` hooks now treat errors as handled by default. Errors are only rethrown when no `onError` handler is registered or when an error handler throws.
+- Updated dependencies [cd3a631]
+  - bakit@4.0.0-alpha.14
+
 ## 1.0.0-alpha.6
 
 ### Patch Changes
