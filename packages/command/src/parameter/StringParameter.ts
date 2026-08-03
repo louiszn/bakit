@@ -1,4 +1,6 @@
-import { Parameter, type ParameterOptions } from "./Parameter";
+import { ParameterValidationError } from "#/errors";
+
+import { Parameter, type ParameterOptions, type ParameterParseContext } from "./Parameter";
 
 export interface StringParameterOptions<Required extends boolean = boolean>
 	extends ParameterOptions<Required> {
@@ -24,19 +26,31 @@ export class StringParameter<Required extends boolean = false> extends Parameter
 		return value;
 	}
 
-	override validate(value: string) {
+	override validate(value: string, context: ParameterParseContext) {
 		const { minLength, maxLength, pattern } = this;
 
 		if (minLength !== undefined && value.length < minLength) {
-			throw new Error(`Expected at least ${minLength} characters.`);
+			throw new ParameterValidationError(
+				this,
+				`Expected at least ${minLength} characters.`,
+				context,
+			);
 		}
 
 		if (maxLength !== undefined && value.length > maxLength) {
-			throw new Error(`Expected at most ${maxLength} characters.`);
+			throw new ParameterValidationError(
+				this,
+				`Expected at most ${maxLength} characters.`,
+				context,
+			);
 		}
 
 		if (pattern && !pattern.test(value)) {
-			throw new Error("Value does not match the required pattern.");
+			throw new ParameterValidationError(
+				this,
+				"Value does not match the required pattern.",
+				context,
+			);
 		}
 	}
 }

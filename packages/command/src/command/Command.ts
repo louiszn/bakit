@@ -1,30 +1,15 @@
-import type { CommandHandler, ParameterMap } from "./ExecutableCommand";
+import {
+	BaseExecutableCommand,
+	type ExecutableCommandOptions as BaseOptions,
+	type ParameterMap,
+} from "./BaseExecutableCommand";
 
-export interface CommandOptions<P extends ParameterMap = ParameterMap> {
-	name: string;
-	description?: string;
-	parameters?: P;
-	execute: CommandHandler<P>;
-}
+export interface CommandOptions<P extends ParameterMap = ParameterMap> extends BaseOptions<P> {}
 
-export class Command<P extends ParameterMap = ParameterMap> {
-	readonly name: string;
-	readonly description: string;
-	readonly parameters: P;
-	readonly execute: CommandHandler<P>;
-
+export class Command<P extends ParameterMap = ParameterMap> extends BaseExecutableCommand<P> {
+	// biome-ignore lint/complexity/noUselessConstructor: Ignore for now
 	constructor(options: CommandOptions<P>) {
-		this.name = options.name;
-		this.description = options.description ?? `${options.name} command`;
-		this.parameters = options.parameters ?? ({} as P);
-
-		for (const [name, parameter] of Object.entries(this.parameters)) {
-			Object.defineProperty(parameter, "name", {
-				value: parameter.name || name,
-			});
-		}
-
-		this.execute = options.execute;
+		super(options);
 	}
 }
 

@@ -20,8 +20,30 @@ export type CommandHandler<P extends ParameterMap = ParameterMap> = (
 	context: CommandContext<InferParameters<P>>,
 ) => Promisable<void>;
 
-export interface ExecutableCommand<P extends ParameterMap = ParameterMap> {
+export interface ExecutableCommandOptions<P extends ParameterMap = ParameterMap> {
+	name: string;
+	description?: string;
+	parameters?: P;
+	execute: CommandHandler<P>;
+}
+
+export class BaseExecutableCommand<P extends ParameterMap = ParameterMap> {
 	readonly name: string;
 	readonly description: string;
+	readonly parameters: P;
 	readonly execute: CommandHandler<P>;
+
+	constructor(options: ExecutableCommandOptions<P>) {
+		this.name = options.name;
+		this.description = options.description ?? "command";
+		this.parameters = options.parameters ?? ({} as P);
+
+		for (const [name, parameter] of Object.entries(this.parameters)) {
+			Object.defineProperty(parameter, "name", {
+				value: parameter.name || name,
+			});
+		}
+
+		this.execute = options.execute;
+	}
 }

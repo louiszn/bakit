@@ -13,8 +13,8 @@ import {
 	type CommandPluginFactory,
 	type CommandPrefixResolvable,
 	CommandRegistry,
-} from "./CommandRegistry";
-import { Command } from "./command";
+} from "../CommandRegistry";
+import { Command, CommandTree, type RootCommand } from "../command";
 
 export interface UseCommandsOptions {
 	commands?: readonly Command[];
@@ -28,13 +28,15 @@ export interface UseCommandsOptions {
 async function loadCommands(
 	pattern: string | readonly string[],
 	options: GlobOptions,
-): Promise<Command[]> {
+): Promise<RootCommand[]> {
 	const files = await glob(pattern, options);
 
 	const modules = await Promise.all(files.map((file) => import(pathToFileURL(file).href)));
 
 	return modules.flatMap((module) =>
-		Object.values(module).filter((value): value is Command => value instanceof Command),
+		Object.values(module).filter(
+			(value): value is RootCommand => value instanceof Command || value instanceof CommandTree,
+		),
 	);
 }
 

@@ -8,16 +8,19 @@ import {
 } from "bakit";
 import type { Promisable } from "type-fest";
 
-import type { Command } from "./command";
+import type { ExecutableCommand, RootCommand } from "./command";
 import { type CommandContext, createContext, type MessageCommandContext } from "./context";
+import { CommandError, CommandExecutionError } from "./errors";
 import { InteractionParser, MessageParser } from "./parser";
 
 export interface CommandInvocation {
-	command: Command;
-	args: readonly unknown[];
+	root: RootCommand;
+	executable: ExecutableCommand;
+	context: CommandContext;
 }
 
 export interface CommandsLifecycle {
+	parse: [context: CommandContext];
 	invoke: [invocation: CommandInvocation];
 }
 
@@ -30,7 +33,7 @@ export type CommandPrefixResolvable = string | CommandPrefixesFactory;
 export class CommandRegistry {
 	readonly prefixes: CommandPrefixResolvable[];
 
-	readonly commands = new Collection<string, Command>();
+	readonly commands = new Collection<string, RootCommand>();
 	readonly lifecycle = new Lifecycle<CommandsLifecycle>();
 
 	readonly messageParser = new MessageParser();
@@ -44,7 +47,7 @@ export class CommandRegistry {
 		this.commands.clear();
 	}
 
-	add(...commands: Command[]) {
+	add(...commands: RootCommand[]) {
 		for (const command of commands) {
 			if (this.commands.has(command.name)) {
 				throw new Error(`Command '${command.name}' already exists`);
@@ -88,33 +91,72 @@ export class CommandRegistry {
 	}
 
 	async handleContext(context: CommandContext<never>) {
-		if (context.isChatInput()) {
-			const command = this.commands.get(context.source.commandName);
+		let root: RootCommand | undefined;
+		let executable: ExecutableCommand | undefined;
 
-			if (!command) {
-				return;
-			}
+		await this.lifecycle.run(
+			"parse",
+			async () => {
+				if (context.isChatInput()) {
+					const command = this.commands.get(context.source.commandName);
 
-			await this.interactionParser.parse({
-				command,
-				context,
-			});
+					if (!command) {
+						return;
+					}
 
-			await command.execute(context);
-		} else {
-			const parsed = await this.messageParser.parse({
-				content: context.source.content,
-				prefixes: await this.resolvePrefixes(context),
-				commands: this.commands,
-				context,
-			});
+					const parsed = await this.interactionParser.parse({
+						root: command,
+						context,
+					});
 
-			if (!parsed) {
-				return;
-			}
+					root = parsed.root;
+					executable = parsed.executable;
+				} else {
+					const parsed = await this.messageParser.parse({
+						content: context.source.content,
+						prefixes: await this.resolvePrefixes(context),
+						commands: this.commands,
+						context,
+					});
 
-			await parsed.command.execute(context);
+					if (!parsed) {
+						return;
+					}
+
+					root = parsed.root;
+					executable = parsed.executable;
+				}
+			},
+			context,
+		);
+
+		if (!root || !executable) {
+			return;
 		}
+
+		await this.lifecycle.run(
+			"invoke",
+			async () => {
+				if (!executable || !root) {
+					return;
+				}
+
+				try {
+					await executable.execute(context);
+				} catch (error) {
+					if (error instanceof CommandError) {
+						throw error;
+					}
+
+					throw new CommandExecutionError(root, executable, context, error);
+				}
+			},
+			{
+				root,
+				executable,
+				context,
+			},
+		);
 	}
 
 	async resolvePrefixes(context: MessageCommandContext): Promise<string[]> {

@@ -89,10 +89,17 @@ export class Lifecycle<TLifecycle extends LifecycleSpec<TLifecycle>> {
 			return context;
 		} catch (error) {
 			const hookErrors: unknown[] = [];
+			let handled = false;
 
 			for (const handlers of entered.toReversed()) {
+				if (!handlers.onError) {
+					continue;
+				}
+
+				handled = true;
+
 				try {
-					await handlers.onError?.(context, error, ...args);
+					await handlers.onError(context, error, ...args);
 				} catch (hookError) {
 					hookErrors.push(hookError);
 				}
@@ -105,7 +112,11 @@ export class Lifecycle<TLifecycle extends LifecycleSpec<TLifecycle>> {
 				);
 			}
 
-			throw error;
+			if (!handled) {
+				throw error;
+			}
+
+			return context;
 		} finally {
 			for (const handlers of entered.toReversed()) {
 				await handlers.onPost?.(context, ...args);

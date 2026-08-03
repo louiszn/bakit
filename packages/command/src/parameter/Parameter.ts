@@ -1,4 +1,4 @@
-import type { Command } from "#/command";
+import type { ExecutableCommand, RootCommand } from "#/command";
 import type { CommandContext } from "#/context";
 
 export type ParameterOptions<Required extends boolean = boolean> = {
@@ -9,7 +9,8 @@ export type ParameterOptions<Required extends boolean = boolean> = {
 };
 
 export interface ParameterParseContext {
-	command: Command;
+	root: RootCommand;
+	executable: ExecutableCommand;
 	context: CommandContext;
 }
 

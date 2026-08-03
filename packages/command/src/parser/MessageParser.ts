@@ -1,24 +1,34 @@
+import type { ReadonlyCollection } from "bakit";
 import shellQuote from "shell-quote";
 import parse, { type Arguments } from "yargs-parser";
 
-import type { Command } from "#/command";
+import { Command, type ExecutableCommand, type RootCommand } from "#/command";
 import type { CommandContext } from "#/context";
+import {
+	InvalidOptionSyntaxError,
+	MissingParameterError,
+	MissingSubcommandError,
+	UnexpectedArgumentError,
+	UnknownCommandError,
+	UnknownSubcommandError,
+} from "#/errors";
 import type { Parameter } from "#/parameter";
 
 export interface MessageParserOptions {
 	content: string;
 	prefixes: readonly string[];
-	commands: ReadonlyMap<string, Command>;
+	commands: ReadonlyCollection<string, RootCommand>;
 	context: CommandContext;
 }
 
 export interface MessageParserResult {
-	command: Command;
+	root: RootCommand;
+	executable: ExecutableCommand;
 	values: Record<string, unknown>;
 }
 
 export interface ParsedCli {
-	command: Command;
+	root: RootCommand;
 	argv: Arguments;
 }
 
@@ -30,8 +40,11 @@ export class MessageParser {
 			return null;
 		}
 
+		const executable = this.resolveExecutable(options.context, parsed);
+
 		const values = await this.resolveParameters({
-			command: parsed.command,
+			root: parsed.root,
+			executable: executable,
 			argv: parsed.argv,
 			context: options.context,
 		});
@@ -42,19 +55,22 @@ export class MessageParser {
 		});
 
 		return {
-			command: parsed.command,
+			root: parsed.root,
+			executable,
 			values,
 		};
 	}
 
-	tokenize(content: string): string[] {
+	tokenize(context: CommandContext, content: string): string[] {
 		const argv = shellQuote
 			.parse(content)
 			.filter((token): token is string => typeof token === "string");
 
 		for (const arg of argv) {
 			if (/^-[^-].{1,}/.test(arg)) {
-				throw new Error(`Invalid option '${arg}'. Use '--${arg.slice(1)}' for long options.`);
+				throw new InvalidOptionSyntaxError(arg, {
+					context,
+				});
 			}
 		}
 
@@ -70,36 +86,94 @@ export class MessageParser {
 			return null;
 		}
 
-		const argv = this.tokenize(options.content.slice(prefix.length).trim());
+		const argv = this.tokenize(options.context, options.content.slice(prefix.length).trim());
 		const commandName = argv.shift()?.toLowerCase();
 
 		if (!commandName) {
 			return null;
 		}
 
-		const command = options.commands.get(commandName);
+		const root = options.commands.get(commandName);
 
-		if (!command) {
-			return null;
+		if (!root) {
+			throw new UnknownCommandError(commandName, {
+				context: options.context,
+			});
 		}
 
 		return {
-			command,
+			root,
 			argv: parse(argv),
 		};
 	}
 
+	resolveExecutable(context: CommandContext, parsed: ParsedCli): ExecutableCommand {
+		const { root, argv } = parsed;
+
+		if (root instanceof Command) {
+			return root;
+		}
+
+		const positional = [...argv._].map(String);
+		const first = positional.shift();
+
+		if (!first) {
+			throw new MissingSubcommandError(root, {
+				context,
+				root,
+			});
+		}
+
+		const group = root.groups.get(first);
+
+		if (group) {
+			const second = positional.shift();
+
+			if (!second) {
+				throw new MissingSubcommandError(group, {
+					context,
+					root,
+				});
+			}
+
+			const subcommand = group.commands.get(second);
+
+			if (!subcommand) {
+				throw new UnknownSubcommandError(group, second, {
+					context,
+					root,
+				});
+			}
+
+			argv._ = positional;
+			return subcommand;
+		}
+
+		const subcommand = root.commands.get(first);
+
+		if (!subcommand) {
+			throw new UnknownSubcommandError(root, first, {
+				context,
+				root,
+			});
+		}
+
+		argv._ = positional;
+		return subcommand;
+	}
+
 	async resolveParameters(options: {
-		command: Command;
+		root: RootCommand;
+		executable: ExecutableCommand;
 		argv: Arguments;
 		context: CommandContext;
 	}): Promise<Record<string, unknown>> {
-		const { command, argv, context } = options;
+		const { executable, argv, context, root } = options;
 
 		const values: Record<string, unknown> = {};
 		const positional = [...argv._].map(String);
 
-		const parameters: Parameter[] = Object.values(command.parameters);
+		const parameters: Parameter[] = Object.values(executable.parameters);
 		const optionalParameters = parameters.filter((parameter) => !parameter.required);
 
 		const allowOptionalPositional = optionalParameters.length === 1;
@@ -130,22 +204,33 @@ export class MessageParser {
 
 			if (raw === undefined) {
 				if (parameter.required) {
-					throw new Error(`Missing required parameter '${parameter.name}'.`);
+					throw new MissingParameterError(parameter, {
+						context,
+						root,
+						executable,
+					});
 				}
 
 				continue;
 			}
 
 			const value = await parameter.parse(raw, {
-				command,
+				root,
+				executable,
+				context,
+			});
+
+			await parameter.validate?.(value, {
+				root,
+				executable,
 				context,
 			});
 
 			values[parameter.name] = value;
 		}
 
-		if (positional.length > 0) {
-			throw new Error(`Unexpected positional argument '${positional[0]}'.`);
+		if (positional[0]) {
+			throw new UnexpectedArgumentError(positional[0]);
 		}
 
 		return values;

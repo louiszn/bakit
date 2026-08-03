@@ -1,38 +1,71 @@
-import type { Command } from "#/command";
+import { Command, CommandTree, type ExecutableCommand, type RootCommand } from "#/command";
 import type { CommandContext } from "#/context";
+import { MissingParameterError } from "#/errors";
 import type { Parameter } from "#/parameter";
 
 export interface InteractionParserOptions {
-	command: Command;
+	root: RootCommand;
 	context: CommandContext;
 }
 
+export interface InteractionParserResult {
+	root: RootCommand;
+	executable: ExecutableCommand;
+	values: Record<string, unknown>;
+}
+
 export class InteractionParser {
-	async parse({ command, context }: InteractionParserOptions) {
+	async parse(options: InteractionParserOptions): Promise<InteractionParserResult> {
+		const { root, context } = options;
+
 		if (!context.isChatInput()) {
-			return {};
+			throw new TypeError("Expected a chat input context.");
+		}
+
+		let executable: ExecutableCommand | undefined;
+
+		if (root instanceof CommandTree) {
+			const { subcommandGroup: group, subcommand } = context.source.options;
+
+			if (group && subcommand) {
+				executable = root.groups.get(group)?.commands.get(subcommand);
+			} else if (subcommand) {
+				executable = root.commands.get(subcommand);
+			}
+		} else if (root instanceof Command) {
+			executable = root;
+		}
+
+		if (!executable) {
+			throw new Error("Failed to resolve executable command.");
 		}
 
 		const values: Record<string, unknown> = {};
 
-		for (const parameter of Object.values<Parameter>(command.parameters)) {
+		for (const parameter of Object.values<Parameter>(executable.parameters)) {
 			const raw = context.source.options.get(parameter.name)?.value;
 
 			if (raw === undefined) {
 				if (parameter.required) {
-					throw new Error(`Missing required parameter '${parameter.name}'.`);
+					throw new MissingParameterError(parameter, {
+						context,
+						root,
+						executable,
+					});
 				}
 
 				continue;
 			}
 
 			const value = await parameter.parse(raw, {
-				command,
+				root: root,
+				executable,
 				context,
 			});
 
 			await parameter.validate?.(value, {
-				command,
+				root: root,
+				executable,
 				context,
 			});
 
@@ -44,6 +77,10 @@ export class InteractionParser {
 			enumerable: true,
 		});
 
-		return values;
+		return {
+			root,
+			executable,
+			values,
+		};
 	}
 }

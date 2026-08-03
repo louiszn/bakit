@@ -1,4 +1,4 @@
-export { Collection } from "@discordjs/collection";
+export { Collection, type ReadonlyCollection } from "@discordjs/collection";
 export { REST } from "@discordjs/rest";
 export { Routes } from "discord-api-types/v10";
 
