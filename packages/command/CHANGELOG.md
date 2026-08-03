@@ -1,5 +1,11 @@
 # @bakit/command
 
+## 1.0.0-alpha.10
+
+### Patch Changes
+
+- 2b82ae1: Fixed user parameter type
+
 ## 1.0.0-alpha.9
 
 ### Patch Changes
