@@ -1,5 +1,11 @@
 # @bakit/command
 
+## 1.0.0-alpha.11
+
+### Patch Changes
+
+- 4029c87: Added missing user parameter to transformParameter
+
 ## 1.0.0-alpha.10
 
 ### Patch Changes
