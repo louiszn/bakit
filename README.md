@@ -44,11 +44,11 @@ Development releases and package information will be published as the project ap
 
 Clone the repository and install dependencies:
 
-`git clone https://codeberg.org/louiszn/bakit.git`
-
-`cd bakit`
-
-`bun install`
+```sh
+git clone https://codeberg.org/louiszn/bakit.git
+cd bakit
+bun install
+```
 
 ## Contributing
 
