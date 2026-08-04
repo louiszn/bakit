@@ -1,13 +1,19 @@
 import type { MessageRaw, MessageReference, MessageReplyOptions } from "#/types";
 
+import type { GuildRef } from "../guild";
 import { Snapshot } from "../Snapshot";
 import type { UserRef } from "../user";
 
 export class MessageSnapshot extends Snapshot<MessageRaw> implements MessageReference {
 	#author?: UserRef;
+	#guild?: GuildRef;
 
 	get channelId() {
 		return this.raw.channel_id;
+	}
+
+	get guildId() {
+		return "guild_id" in this.raw ? this.raw.guild_id : undefined;
 	}
 
 	get content() {
@@ -28,6 +34,18 @@ export class MessageSnapshot extends Snapshot<MessageRaw> implements MessageRefe
 		}
 
 		return this.#author;
+	}
+
+	get guild() {
+		if (!this.guildId) {
+			return undefined;
+		}
+
+		if (!this.#guild) {
+			this.#guild = this.resources.guilds.ref(this.guildId);
+		}
+
+		return this.#guild;
 	}
 
 	async reply(options: MessageReplyOptions | string) {

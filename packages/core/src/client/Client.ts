@@ -38,6 +38,10 @@ export class Client extends AsyncEventEmitter<ClientEvents> {
 		});
 	}
 
+	get ready() {
+		return this.gateway.ready;
+	}
+
 	start() {
 		return this.gateway.start();
 	}
