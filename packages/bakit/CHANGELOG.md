@@ -1,5 +1,12 @@
 # bakit
 
+## 4.0.0-alpha.16
+
+### Patch Changes
+
+- Updated dependencies [c62e44b]
+  - @bakit/core@1.0.0-alpha.14
+
 ## 4.0.0-alpha.15
 
 ### Patch Changes

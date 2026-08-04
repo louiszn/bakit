@@ -1,5 +1,11 @@
 # @bakit/core
 
+## 1.0.0-alpha.14
+
+### Patch Changes
+
+- c62e44b: Added Guild and MessageReactionRef
+
 ## 1.0.0-alpha.13
 
 ### Patch Changes
