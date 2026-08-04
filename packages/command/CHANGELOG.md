@@ -1,5 +1,11 @@
 # @bakit/command
 
+## 1.0.0-alpha.12
+
+### Patch Changes
+
+- 75be8a1: Moved bakit to peer dep to avoid runtime conflict
+
 ## 1.0.0-alpha.11
 
 ### Patch Changes
