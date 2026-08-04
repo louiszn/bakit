@@ -31,14 +31,15 @@
 		"typecheck": "tsc --noEmit"
 	},
 	"devDependencies": {
+		"bakit": "workspace:*",
 		"@types/bun": "latest",
 		"@types/yargs-parser": "^21.0.3"
 	},
 	"peerDependencies": {
+		"bakit": "workspace:^",
 		"typescript": "^5"
 	},
 	"dependencies": {
-		"bakit": "workspace:^",
 		"commander": "^15.0.0",
 		"shell-quote": "^1.10.0",
 		"tiny-glob": "^0.2.9",

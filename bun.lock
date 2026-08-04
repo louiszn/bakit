@@ -19,7 +19,7 @@
     },
     "packages/bakit": {
       "name": "bakit",
-      "version": "4.0.0-alpha.13",
+      "version": "4.0.0-alpha.16",
       "dependencies": {
         "@bakit/core": "workspace:*",
         "tiny-glob": "^0.2.9",
@@ -34,9 +34,11 @@
     },
     "packages/command": {
       "name": "@bakit/command",
-      "version": "1.0.0-alpha.6",
+      "version": "1.0.0-alpha.11",
+      "bin": {
+        "bakit-command": "./dist/cli.mjs",
+      },
       "dependencies": {
-        "bakit": "workspace:^",
         "commander": "^15.0.0",
         "shell-quote": "^1.10.0",
         "tiny-glob": "^0.2.9",
@@ -46,14 +48,16 @@
       "devDependencies": {
         "@types/bun": "latest",
         "@types/yargs-parser": "^21.0.3",
+        "bakit": "workspace:*",
       },
       "peerDependencies": {
+        "bakit": "workspace:^",
         "typescript": "^5",
       },
     },
     "packages/core": {
       "name": "@bakit/core",
-      "version": "1.0.0-alpha.11",
+      "version": "1.0.0-alpha.14",
       "dependencies": {
         "@discordjs/collection": "^2.1.1",
         "@discordjs/rest": "^2.6.1",
